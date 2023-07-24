@@ -1,0 +1,29 @@
+* {
+    margin: 0px;
+    padding: 0px;
+}
+
+.section1 {
+    height: 300px;
+    color: white;
+    background-color: rgb(39, 37, 54);
+}
+
+.barcontainer {
+    padding: 15px 40px;
+    background-color: rgb(34, 33, 48);
+}
+
+.shopHome {
+    margin-right: auto;
+}
+.navbar {
+    list-style: none;
+    color: white;
+
+    display: flex;
+    justify-content: flex-end;
+    margin-left: auto;
+    gap: 15px;
+    
+}
