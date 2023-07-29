@@ -1,0 +1,42 @@
+.section2 {
+    background-color: rgb(39, 39, 39);
+    background-image: url(/images/blue-orange.jpg);
+    background-position: center;
+    padding-bottom: 40px;
+    margin-bottom: px;
+}
+
+
+h3 {
+    padding: 10px 0;
+}
+
+.categories {
+    color: white;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 30px;
+}
+
+.first-imag-card {
+    background-color: rgba(236, 234, 234, 0.699);
+    box-shadow: 0px 0px 20px 2px rgba(206, 189, 175, 0.822);
+    border: 1px rgba(0, 0, 0, 0.103) solid;
+    padding: 13px 12px;
+    padding-bottom: 10px;
+    border-radius: 10px;
+}
+.imag-card {
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px 2px rgba(184, 184, 184, 0.548);
+}
+
+.card-name {
+    padding: 5px 0;
+    padding-left: 5px;
+    padding-bottom: 15px;
+    margin-top: 10px;
+    background-color: rgba(186, 185, 212, 0.123);
+    border-radius: 3px;
+}

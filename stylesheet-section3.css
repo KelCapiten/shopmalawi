@@ -1,0 +1,50 @@
+.section3 {
+    background-color: rgba(223, 214, 214, 0.836);
+}
+
+.large-card {
+    display: flex;
+    gap: 60px;
+    padding: 20px 10px;
+    align-items: center;
+}
+
+
+.large-card-info {    
+    border-radius: 5px;
+    padding-left: 20px;
+    flex: 2;
+    max-height: 342px;
+    height: 342px;
+
+}
+
+.large-imag {
+    border-radius: 3px;
+    width: 620px;
+    flex-shrink: 2;
+}
+
+.section4 {
+    padding: 60px;
+}
+
+.container {
+    display: flex;
+    background-color: rgb(22, 150, 255);
+    padding: 30px 60px;
+    border-radius: 7px;
+}
+
+.action-call {
+    color: white;
+    margin: 0;
+    padding: 20px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.signup {
+    width: 200px;
+    align-items: center;
+}
