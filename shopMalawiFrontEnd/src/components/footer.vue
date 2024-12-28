@@ -1,0 +1,106 @@
+<template>
+  <ion-footer>
+    <ion-toolbar>
+      <ion-buttons class="footer-buttons">
+        <ion-button>
+          <div class="button-content">
+            <ion-icon :icon="homeOutline"></ion-icon>
+            <ion-label>Home</ion-label>
+          </div>
+        </ion-button>
+        <ion-button>
+          <div class="button-content">
+            <ion-icon :icon="cartOutline"></ion-icon>
+            <ion-label>Shop</ion-label>
+          </div>
+        </ion-button>
+        <ion-button>
+          <div class="button-content">
+            <ion-icon :icon="newspaperOutline"></ion-icon>
+            <ion-label>Feed</ion-label>
+          </div>
+        </ion-button>
+        <ion-button>
+          <div class="button-content">
+            <ion-icon :icon="pricetagOutline"></ion-icon>
+            <ion-label>Sell</ion-label>
+          </div>
+        </ion-button>
+        <ion-button>
+          <div class="button-content">
+            <ion-icon :icon="personOutline"></ion-icon>
+            <ion-label>Account</ion-label>
+          </div>
+        </ion-button>
+      </ion-buttons>
+    </ion-toolbar>
+  </ion-footer>
+</template>
+
+<script lang="ts">
+import { defineComponent } from "vue";
+import {
+  IonFooter,
+  IonToolbar,
+  IonButtons,
+  IonButton,
+  IonIcon,
+  IonLabel,
+} from "@ionic/vue";
+import {
+  homeOutline,
+  cartOutline,
+  newspaperOutline,
+  pricetagOutline,
+  personOutline,
+} from "ionicons/icons";
+
+export default defineComponent({
+  name: "AppFooter",
+  components: {
+    IonFooter,
+    IonToolbar,
+    IonButtons,
+    IonButton,
+    IonIcon,
+    IonLabel,
+  },
+  setup() {
+    return {
+      homeOutline,
+      cartOutline,
+      newspaperOutline,
+      pricetagOutline,
+      personOutline,
+    };
+  },
+});
+</script>
+
+<style scoped>
+.footer-buttons {
+  display: flex;
+  justify-content: space-around;
+}
+
+ion-button {
+  --padding-start: 0;
+  --padding-end: 0;
+}
+
+.button-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+ion-icon {
+  font-size: 24px;
+  margin-bottom: 4px; /* Space between icon and text */
+}
+
+ion-label {
+  font-size: 12px;
+}
+</style>

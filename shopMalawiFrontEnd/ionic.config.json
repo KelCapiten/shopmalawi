@@ -1,0 +1,7 @@
+{
+  "name": "shopMalawiFrontEnd",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite"
+}
