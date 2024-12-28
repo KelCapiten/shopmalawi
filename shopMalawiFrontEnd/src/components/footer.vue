@@ -2,31 +2,31 @@
   <ion-footer>
     <ion-toolbar>
       <ion-buttons class="footer-buttons">
-        <ion-button>
+        <ion-button router-link="/">
           <div class="button-content">
             <ion-icon :icon="homeOutline"></ion-icon>
             <ion-label>Home</ion-label>
           </div>
         </ion-button>
-        <ion-button>
+        <ion-button router-link="/shop">
           <div class="button-content">
             <ion-icon :icon="cartOutline"></ion-icon>
             <ion-label>Shop</ion-label>
           </div>
         </ion-button>
-        <ion-button>
+        <ion-button router-link="/feed">
           <div class="button-content">
             <ion-icon :icon="newspaperOutline"></ion-icon>
             <ion-label>Feed</ion-label>
           </div>
         </ion-button>
-        <ion-button>
+        <ion-button router-link="/sell">
           <div class="button-content">
             <ion-icon :icon="pricetagOutline"></ion-icon>
             <ion-label>Sell</ion-label>
           </div>
         </ion-button>
-        <ion-button>
+        <ion-button router-link="/account">
           <div class="button-content">
             <ion-icon :icon="personOutline"></ion-icon>
             <ion-label>Account</ion-label>
@@ -97,7 +97,7 @@ ion-button {
 
 ion-icon {
   font-size: 24px;
-  margin-bottom: 4px; /* Space between icon and text */
+  margin-bottom: 4px;
 }
 
 ion-label {
