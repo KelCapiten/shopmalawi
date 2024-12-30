@@ -14,7 +14,8 @@
       </ion-buttons>
     </ion-toolbar>
 
-    <ion-toolbar>
+    <!-- Search Bar -->
+    <ion-toolbar class="search-bar" v-if="showSearchBar">
       <ion-searchbar
         placeholder="Search products..."
         :debounce="500"
@@ -24,7 +25,8 @@
       ></ion-searchbar>
     </ion-toolbar>
 
-    <ion-toolbar>
+    <!-- Category Segment -->
+    <ion-toolbar v-if="showCategorySegment">
       <ion-segment scrollable class="category-segment">
         <ion-segment-button
           v-for="category in categories"
@@ -44,6 +46,7 @@ import {
   IonHeader,
   IonToolbar,
   IonButtons,
+  IonButton,
   IonSearchbar,
   IonSegment,
   IonSegmentButton,
@@ -58,6 +61,7 @@ export default defineComponent({
     IonHeader,
     IonToolbar,
     IonButtons,
+    IonButton,
     IonSearchbar,
     IonSegment,
     IonSegmentButton,
@@ -76,6 +80,14 @@ export default defineComponent({
         { value: "electronics", label: "Electronics" },
         // Add more default categories
       ],
+    },
+    showSearchBar: {
+      type: Boolean,
+      default: true, // Show search bar by default
+    },
+    showCategorySegment: {
+      type: Boolean,
+      default: true, // Show category segment by default
     },
   },
   setup() {
@@ -102,6 +114,10 @@ export default defineComponent({
   object-fit: contain;
 }
 
+.search-bar {
+  padding: 0 20px;
+}
+
 ion-searchbar.custom-searchbar {
   --background: var(--ion-background-color);
   --placeholder-color: var(--ion-text-color);
@@ -113,9 +129,13 @@ ion-searchbar.custom-searchbar {
   border: 2px solid var(--ion-text-color);
 }
 
+/* Add a solid background color to the header and toolbar */
 ion-header,
 ion-toolbar {
-  --background: transparent;
+  --background: var(
+    --ion-background-color
+  ); /* Use the theme's background color */
+  background: var(--ion-background-color); /* Fallback for older browsers */
   box-shadow: none;
   border: none;
 }

@@ -1,8 +1,13 @@
 <template>
   <div class="home-page">
-    <AppHeader />
-    <AppBody />
-    <AppFooter />
+    <!-- Fixed Header -->
+    <AppHeader class="fixed-header" />
+
+    <!-- Scrollable Body -->
+    <AppBody class="scrollable-body" />
+
+    <!-- Fixed Footer -->
+    <AppFooter class="fixed-footer" />
   </div>
 </template>
 
@@ -26,23 +31,32 @@ export default {
 .home-page {
   display: flex;
   flex-direction: column;
-  min-height: 100vh; /* Ensure the page takes up at least the full viewport height */
-  padding-left: 16px; /* Small space to the left */
-  padding-right: 16px; /* Small space to the right */
+  min-height: 100vh;
 }
 
-/* Ensure the body takes up the remaining space between the header and footer */
-.home-page > :nth-child(2) {
+/* Fixed Header */
+.fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+/* Scrollable Body */
+.scrollable-body {
   flex: 1;
+  overflow-y: auto;
+  padding-top: 60px;
+  padding-bottom: 60px;
 }
 
-/* Optional: Add some spacing between components */
-.home-page > * {
-  margin-bottom: 20px;
-}
-
-/* Remove margin from the last component (footer) */
-.home-page > :last-child {
-  margin-bottom: 0;
+/* Fixed Footer */
+.fixed-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
 }
 </style>

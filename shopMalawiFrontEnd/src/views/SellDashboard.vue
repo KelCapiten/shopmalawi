@@ -1,36 +1,75 @@
 <template>
   <ion-page>
-    <ion-header>
-      <ion-toolbar color="primary">
-        <ion-title>Sell Dashboard</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <AppHeader :showSearchBar="false" :showCategorySegment="false" />
+
     <ion-content class="ion-padding">
-      <div class="sell-form">
-        <ion-item>
-          <ion-label position="floating">Item Name</ion-label>
-          <ion-input v-model="item.name" required></ion-input>
-        </ion-item>
+      <div class="form-container">
+        <h2 class="form-title">Sell Your Item</h2>
 
-        <ion-item>
-          <ion-label position="floating">Description</ion-label>
-          <ion-textarea
-            v-model="item.description"
-            :rows="4"
+        <!-- Upload Images Section -->
+        <div class="form-group">
+          <label class="form-label">Upload Images</label>
+          <div class="upload-area" @click="triggerFileInput">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              ref="fileInput"
+              @change="handleImageUpload"
+              style="display: none"
+            />
+            <div v-if="images.length === 0" class="upload-placeholder">
+              <ion-icon
+                :icon="cloudUploadOutline"
+                class="upload-icon"
+              ></ion-icon>
+              <p>Upload up to 4 images</p>
+            </div>
+            <div v-else class="image-preview">
+              <swiper :pagination="paginationOptions" :modules="[Pagination]">
+                <swiper-slide v-for="(image, index) in images" :key="index">
+                  <img
+                    :src="image.url"
+                    alt="Uploaded Image"
+                    class="uploaded-image"
+                  />
+                </swiper-slide>
+              </swiper>
+            </div>
+          </div>
+        </div>
+
+        <!-- Item Name Input -->
+        <div class="form-group">
+          <label class="form-label">Item Name</label>
+          <ion-input
+            class="form-input"
+            v-model="item.name"
+            placeholder="Enter item name"
             required
-          ></ion-textarea>
-        </ion-item>
+          ></ion-input>
+        </div>
 
-        <ion-item>
-          <ion-label position="floating">Price</ion-label>
-          <ion-input v-model="item.price" type="number" required></ion-input>
-        </ion-item>
+        <!-- Price Input -->
+        <div class="form-group">
+          <label class="form-label">Price</label>
+          <ion-input
+            class="form-input"
+            :value="priceInput"
+            type="number"
+            placeholder="Enter price"
+            required
+            @ionInput="handlePriceInput"
+          ></ion-input>
+        </div>
 
-        <ion-item>
-          <ion-label>Category</ion-label>
+        <!-- Category Selection -->
+        <div class="form-group">
+          <label class="form-label">Category</label>
           <ion-select
+            class="form-input"
             v-model="item.category"
-            placeholder="Select Category"
+            placeholder="Select category"
             required
           >
             <ion-select-option value="electronics"
@@ -41,24 +80,32 @@
             <ion-select-option value="sports">Sports</ion-select-option>
             <ion-select-option value="books">Books</ion-select-option>
           </ion-select>
-        </ion-item>
+        </div>
 
-        <ion-item>
-          <ion-label>Upload Image</ion-label>
-          <input type="file" accept="image/*" @change="handleImageUpload" />
-        </ion-item>
+        <!-- Description Input -->
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <ion-textarea
+            class="form-input textarea"
+            v-model="item.description"
+            placeholder="Enter a brief description"
+            :rows="5"
+            required
+          ></ion-textarea>
+        </div>
 
+        <!-- Submit Button -->
         <ion-button
-          expand="full"
+          expand="block"
+          class="submit-button"
           color="primary"
           @click="submitItem"
-          class="submit-button"
         >
           Sell Item
         </ion-button>
       </div>
 
-      <!-- Success/Error Toast -->
+      <!-- Toast Notification -->
       <ion-toast
         :is-open="showToast"
         :message="toastMessage"
@@ -68,7 +115,6 @@
       ></ion-toast>
     </ion-content>
 
-    <!-- Add the Footer Component -->
     <AppFooter />
   </ion-page>
 </template>
@@ -76,116 +122,241 @@
 <script lang="ts">
 import {
   IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
   IonContent,
-  IonItem,
-  IonLabel,
   IonInput,
   IonTextarea,
   IonSelect,
   IonSelectOption,
   IonButton,
   IonToast,
+  IonIcon,
 } from "@ionic/vue";
-import { ref } from "vue";
-import AppFooter from "@/components/footer.vue"; // Import the Footer component
+import { ref, computed, defineComponent } from "vue";
+import { cloudUploadOutline } from "ionicons/icons";
+import { Swiper, SwiperSlide } from "swiper/vue";
+import { Pagination } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
+import AppFooter from "../components/footer.vue";
+import AppHeader from "../components/header.vue";
 
-export default {
+interface Item {
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+}
+
+interface Image {
+  url: string;
+  file: File;
+}
+
+export default defineComponent({
   name: "SellDashboard",
   components: {
     IonPage,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
     IonContent,
-    IonItem,
-    IonLabel,
     IonInput,
     IonTextarea,
     IonSelect,
     IonSelectOption,
     IonButton,
     IonToast,
-    AppFooter, // Register the Footer component
+    IonIcon,
+    Swiper,
+    SwiperSlide,
+    AppFooter,
+    AppHeader,
   },
   setup() {
-    const item = ref({
+    // Reactive state for the item being sold
+    const item = ref<Item>({
       name: "",
       description: "",
-      price: "",
+      price: 0,
       category: "",
-      image: null as File | null,
     });
 
+    // Reactive state for uploaded images
+    const images = ref<Image[]>([]);
+
+    // Toast notification states
     const showToast = ref(false);
     const toastMessage = ref("");
     const toastColor = ref("success");
 
+    // Reference to the hidden file input element
+    const fileInput = ref<HTMLInputElement | null>(null);
+
+    // Separate reactive state for price input as string
+    const priceInput = ref<string>("");
+
+    // Swiper pagination options
+    const paginationOptions = computed(() => ({
+      clickable: true,
+      dynamicBullets: true,
+    }));
+
+    // Function to trigger the hidden file input
+    const triggerFileInput = () => {
+      fileInput.value?.click();
+    };
+
+    // Function to handle image uploads
     const handleImageUpload = (event: Event) => {
       const target = event.target as HTMLInputElement;
-      if (target.files && target.files[0]) {
-        item.value.image = target.files[0];
+      if (target.files && target.files.length > 0) {
+        const files = Array.from(target.files).slice(0, 4);
+        images.value = files.map((file) => ({
+          url: URL.createObjectURL(file),
+          file,
+        }));
       }
     };
 
+    // Function to handle price input and ensure it's a number
+    const handlePriceInput = (event: CustomEvent) => {
+      const value = event.detail.value;
+      priceInput.value = value; // Update the input binding
+      const parsedValue = parseFloat(value);
+      item.value.price = isNaN(parsedValue) ? 0 : parsedValue;
+      console.log("Price:", item.value.price, typeof item.value.price);
+    };
+
+    // Function to submit the item
     const submitItem = () => {
       if (
         !item.value.name ||
         !item.value.description ||
-        !item.value.price ||
+        item.value.price <= 0 ||
         !item.value.category
       ) {
-        toastMessage.value = "Please fill all fields.";
+        toastMessage.value = "Please fill all fields with valid data.";
         toastColor.value = "danger";
         showToast.value = true;
         return;
       }
 
-      // Simulate successful submission
+      // TODO: Implement the logic to send `item.value` and `images.value` to your backend
+
       toastMessage.value = "Item added successfully!";
       toastColor.value = "success";
       showToast.value = true;
 
-      // Reset form
+      // Reset the form
       item.value = {
         name: "",
         description: "",
-        price: "",
+        price: 0,
         category: "",
-        image: null,
       };
+      priceInput.value = "";
+      images.value = [];
     };
 
     return {
       item,
+      images,
       showToast,
       toastMessage,
       toastColor,
+      fileInput,
+      cloudUploadOutline,
+      triggerFileInput,
       handleImageUpload,
+      handlePriceInput,
       submitItem,
+      priceInput,
+      paginationOptions,
+      Pagination,
     };
   },
-};
+});
 </script>
 
 <style scoped>
-.sell-form {
-  max-width: 600px;
+.form-container {
+  max-width: 500px;
   margin: 0 auto;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  background-color: #ffffff;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-ion-item {
+.form-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #333;
+}
+
+.form-group {
   margin-bottom: 20px;
 }
 
-.submit-button {
-  margin-top: 30px;
+.form-label {
+  font-weight: bold;
+  margin-bottom: 5px;
+  display: block;
+  font-size: 0.9rem;
+  color: #555;
 }
 
-ion-toast {
-  --background: var(--ion-color-primary);
-  --color: white;
+.form-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  font-size: 0.9rem;
+}
+
+.textarea {
+  resize: none;
+  padding-top: 5px;
+  text-align: start;
+}
+
+.upload-area {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  height: 150px;
+  text-align: center;
+  cursor: pointer;
+  background-color: #f9f9f9;
+}
+
+.upload-placeholder {
+  color: #777;
+}
+
+.upload-icon {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.image-preview {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.uploaded-image {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.submit-button {
+  margin-top: 10px;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 8px;
 }
 </style>
