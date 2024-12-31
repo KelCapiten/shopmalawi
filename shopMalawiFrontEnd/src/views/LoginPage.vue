@@ -2,15 +2,12 @@
   <ion-page>
     <ion-content class="ion-padding">
       <div class="login-container">
-        <!-- Logo Section -->
         <div
           class="logo-container"
           :class="{ 'logo-center': !logoFocused, 'logo-top': logoFocused }"
         >
           <img src="/assets/theLogo2.jpg" alt="ShopMalawi Logo" class="logo" />
         </div>
-
-        <!-- Login Form Section -->
         <div class="form-container" :class="{ visible: inputsVisible }">
           <div class="input-group">
             <label class="input-label">Phone Number or Username</label>
@@ -33,6 +30,14 @@
           <ion-button expand="block" class="submit-button" @click="handleLogin">
             Log In
           </ion-button>
+          <ion-button
+            expand="block"
+            fill="outline"
+            class="create-account-button"
+            @click="handleCreateAccount"
+          >
+            Create Account
+          </ion-button>
         </div>
       </div>
     </ion-content>
@@ -48,20 +53,17 @@ export default defineComponent({
     return {
       username: "",
       password: "",
-      logoFocused: false, // Track if the logo animation is completed
-      inputsVisible: false, // Control when inputs are shown
+      logoFocused: false,
+      inputsVisible: false,
     };
   },
   mounted() {
-    // Start animation for logo and reveal form after it's done
     setTimeout(() => {
       this.logoFocused = true;
-
-      // Show the input section after the logo finishes moving
       setTimeout(() => {
         this.inputsVisible = true;
-      }, 500); // Matches the logo movement transition duration
-    }, 2000); // Matches the logo focus animation duration
+      }, 500);
+    }, 2000);
   },
   methods: {
     async handleLogin() {
@@ -69,26 +71,27 @@ export default defineComponent({
         alert("Please enter both your phone number/username and password.");
         return;
       }
-
       console.log("Attempting login with:", {
         username: this.username,
         password: this.password,
       });
-
       alert("Login successful!");
+    },
+    handleCreateAccount() {
+      console.log("Navigating to Create Account page...");
+      alert("Redirecting to Create Account!");
     },
   },
 });
 </script>
 
 <style scoped>
-/* Logo Styling */
 .logo-container {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  transition: top 0.5s ease-in-out, transform 0.5s ease-in-out;
+  transition: top 0.5s ease-in-out, transform 0.5s ease-in-out, opacity 0.8s;
 }
 
 .logo {
@@ -110,19 +113,50 @@ export default defineComponent({
   }
 }
 
-/* Center the logo at the start and keep it in the same position after focus */
+@keyframes blurFadeOut {
+  0% {
+    filter: blur(0);
+    opacity: 1;
+  }
+  100% {
+    filter: blur(20px);
+    opacity: 0;
+  }
+}
+
+@keyframes blurFadeIn {
+  0% {
+    filter: blur(20px);
+    opacity: 0;
+  }
+  100% {
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+@media (max-height: 639px) {
+  .logo-container {
+    animation: blurFadeOut 0.8s forwards;
+  }
+}
+
+@media (min-height: 640px) {
+  .logo-container {
+    animation: blurFadeIn 0.8s forwards;
+  }
+}
+
 .logo-center {
   top: 50%;
   transform: translate(-50%, -50%);
 }
 
-/* Move the logo to the top smoothly */
 .logo-top {
-  top: 15%; /* Default for smaller screens */
+  top: 18%;
   transform: translateX(-50%);
 }
 
-/* Login Container */
 .login-container {
   display: flex;
   flex-direction: column;
@@ -137,17 +171,17 @@ export default defineComponent({
   width: 100%;
   max-width: 400px;
   opacity: 0;
-  transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+  transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out,
+    margin-top 0.5s ease-in-out;
   transform: translateY(20px);
 }
 
 .form-container.visible {
   opacity: 1;
   transform: translateY(0);
-  margin-top: 5px; /* Default spacing for smaller screens */
+  margin-top: 5px;
 }
 
-/* Input Styling */
 .input-group {
   margin-bottom: 15px;
   display: flex;
@@ -173,29 +207,26 @@ export default defineComponent({
   color: #aaa;
 }
 
-/* Button Styling */
 .submit-button {
   margin-top: 10px;
 }
 
-/* Responsive Adjustments */
-@media (min-width: 768px) {
-  .logo-top {
-    top: 15%; /* Closer to inputs for medium screens */
-  }
-
-  .form-container.visible {
-    margin-top: 5px; /* Adjust spacing for medium screens */
-  }
+.create-account-button {
+  margin-top: 10px;
+  color: var(--ion-color-primary);
+  --border-color: var(--ion-color-primary);
+  --border-width: 2px;
 }
 
 @media (min-width: 1024px) {
-  .logo-top {
-    top: 10%; /* Closer for larger screens */
-  }
-
   .form-container.visible {
-    margin-top: 5px; /* Reduced spacing for larger screens */
+    margin-top: 5px;
+  }
+}
+
+@media (min-height: 640px) {
+  .form-container.visible {
+    margin-top: 150px;
   }
 }
 </style>
