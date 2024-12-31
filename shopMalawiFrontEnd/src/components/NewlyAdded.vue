@@ -1,10 +1,15 @@
 <template>
-  <div class="newly-added-section">
+  <div v-if="newlyAddedItems.length > 0" class="newly-added-section">
     <h2>Newly Added</h2>
     <div class="scroll-container" ref="scrollContainer" @scroll="handleScroll">
       <div class="item-list">
         <div v-for="item in newlyAddedItems" :key="item.id" class="item">
-          <img :src="item.image" :alt="item.name" class="item-image" />
+          <img
+            v-if="item.images && item.images.length > 0"
+            :src="item.images[0]"
+            :alt="item.name"
+            class="item-image"
+          />
           <p class="item-name">{{ item.name }}</p>
           <p class="item-price">${{ item.price }}</p>
         </div>
@@ -13,7 +18,6 @@
     </div>
   </div>
 </template>
-
 <script>
 import { ref, onMounted } from "vue";
 import axios from "axios";
@@ -21,27 +25,33 @@ import axios from "axios";
 export default {
   name: "NewlyAdded",
   setup() {
-    const newlyAddedItems = ref([]); // Stores the fetched items
-    const loading = ref(false); // Tracks loading state
-    const offset = ref(0); // Tracks the offset for pagination
-    const scrollContainer = ref(null); // Reference to the scroll container
+    const newlyAddedItems = ref([]);
+    const loading = ref(false);
+    const offset = ref(0);
+    const noMoreItems = ref(false);
+    const scrollContainer = ref(null);
 
-    // Fetch newly added items
     const fetchNewlyAddedItems = async () => {
-      if (loading.value) return; // Prevent multiple simultaneous fetches
+      if (loading.value || noMoreItems.value) return;
       loading.value = true;
 
       try {
-        const response = await axios.get("/api/products/newly-added", {
-          params: {
-            limit: 5, // Fetch 5 items at a time
-            offset: offset.value,
-          },
-        });
+        const response = await axios.get(
+          "http://localhost:1994/api/products/newly-added",
+          {
+            params: {
+              limit: 5,
+              offset: offset.value,
+            },
+          }
+        );
 
-        // Append new items to the list
-        newlyAddedItems.value = [...newlyAddedItems.value, ...response.data];
-        offset.value += response.data.length; // Update the offset
+        if (response.data.length === 0) {
+          noMoreItems.value = true;
+        } else {
+          newlyAddedItems.value = [...newlyAddedItems.value, ...response.data];
+          offset.value += response.data.length;
+        }
       } catch (error) {
         console.error("Error fetching newly added items:", error);
       } finally {
@@ -49,18 +59,16 @@ export default {
       }
     };
 
-    // Handle scroll event to load more items
     const handleScroll = () => {
       const container = scrollContainer.value;
       if (
         container.scrollLeft + container.clientWidth >=
         container.scrollWidth - 50
       ) {
-        fetchNewlyAddedItems(); // Fetch more items when the user reaches the end
+        fetchNewlyAddedItems();
       }
     };
 
-    // Fetch initial items when the component is mounted
     onMounted(() => {
       fetchNewlyAddedItems();
     });
@@ -68,6 +76,7 @@ export default {
     return {
       newlyAddedItems,
       loading,
+      noMoreItems,
       scrollContainer,
       handleScroll,
     };
@@ -78,6 +87,7 @@ export default {
 <style scoped>
 .newly-added-section h2 {
   font-size: 1.5rem;
+  margin-bottom: 15px;
 }
 
 .scroll-container {
@@ -89,11 +99,13 @@ export default {
 .item-list {
   display: inline-flex;
   gap: 15px;
+  padding-bottom: 10px;
 }
 
 .item {
   width: 150px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .item-image {
@@ -106,6 +118,7 @@ export default {
 .item-name {
   font-size: 1rem;
   margin: 5px 0;
+  white-space: normal;
 }
 
 .item-price {
@@ -113,12 +126,14 @@ export default {
   color: #666;
 }
 
-.loading {
+.loading,
+.no-more-items {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 150px;
   font-size: 0.9rem;
   color: #666;
+  flex-shrink: 0;
 }
 </style>
