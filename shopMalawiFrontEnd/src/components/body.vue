@@ -1,9 +1,7 @@
 <template>
   <div class="app-body">
-    <!-- Hero Section Placeholder -->
-    <div class="hero-section">
-      <p>Hero Section Placeholder</p>
-    </div>
+    <!-- Newly Added Section -->
+    <NewlyAdded />
 
     <!-- Category Section Placeholder -->
     <div class="category-section">
@@ -20,57 +18,35 @@
       <p>Promotional Section Placeholder</p>
     </div>
 
-    <!-- Additional Placeholder Sections for Scrolling -->
-    <div class="placeholder-section">
-      <p>Placeholder Section 1</p>
+    <!-- Promotional Section Placeholder -->
+    <div class="promotional-section">
+      <p>Promotional Section Placeholder</p>
     </div>
-    <div class="placeholder-section">
-      <p>Placeholder Section 2</p>
+    <!-- Promotional Section Placeholder -->
+    <div class="promotional-section">
+      <p>Promotional Section Placeholder</p>
     </div>
-    <div class="placeholder-section">
-      <p>Placeholder Section 3</p>
-    </div>
-    <div class="placeholder-section">
-      <p>Placeholder Section 4</p>
-    </div>
-    <div class="placeholder-section">
-      <p>Placeholder Section 5</p>
-    </div>
-    <div class="placeholder-section">
-      <p>Placeholder Section 6</p>
-    </div>
-    <div class="placeholder-section">
-      <p>Placeholder Section 7</p>
-    </div>
-    <div class="placeholder-section">
-      <p>Placeholder Section 8</p>
-    </div>
-    <div class="placeholder-section">
-      <p>Placeholder Section 9</p>
-    </div>
-    <div class="placeholder-section">
-      <p>Placeholder Section 10</p>
+    <!-- Promotional Section Placeholder -->
+    <div class="promotional-section">
+      <p>Promotional Section Placeholder</p>
     </div>
   </div>
 </template>
 
 <script>
+import NewlyAdded from "@/components/NewlyAdded.vue"; // Import the NewlyAdded component
+
 export default {
   name: "AppBody",
+  components: {
+    NewlyAdded, // Register the NewlyAdded component
+  },
 };
 </script>
 
 <style scoped>
 .app-body {
-  padding: 20px; /* Add padding for spacing */
-}
-
-.hero-section {
-  height: 200px;
-  background-color: #f4f4f4;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 0px 20px;
 }
 
 .category-section {
@@ -95,19 +71,5 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.placeholder-section {
-  height: 300px; /* Fixed height for each placeholder section */
-  margin: 20px 0;
-  padding: 20px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  color: #555;
 }
 </style>

@@ -1,13 +1,8 @@
 <template>
   <div class="home-page">
-    <!-- Fixed Header -->
-    <AppHeader class="fixed-header" />
-
-    <!-- Scrollable Body -->
-    <AppBody class="scrollable-body" />
-
-    <!-- Fixed Footer -->
-    <AppFooter class="fixed-footer" />
+    <AppHeader class="header" />
+    <AppBody class="body-container" />
+    <AppFooter class="footer" />
   </div>
 </template>
 
@@ -27,36 +22,22 @@ export default {
 </script>
 
 <style scoped>
-/* Root container for the home page */
 .home-page {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
 }
 
-/* Fixed Header */
-.fixed-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
+.header {
+  flex-shrink: 0;
 }
 
-/* Scrollable Body */
-.scrollable-body {
-  flex: 1;
+.body-container {
+  flex-grow: 1;
   overflow-y: auto;
-  padding-top: 60px;
-  padding-bottom: 60px;
 }
 
-/* Fixed Footer */
-.fixed-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
+.footer {
+  flex-shrink: 0;
 }
 </style>

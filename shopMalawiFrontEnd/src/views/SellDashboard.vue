@@ -139,6 +139,7 @@ import "swiper/css";
 import "swiper/css/pagination";
 import AppFooter from "../components/footer.vue";
 import AppHeader from "../components/header.vue";
+import axios from "axios"; // Import axios
 
 interface Item {
   name: string;
@@ -215,17 +216,15 @@ export default defineComponent({
       }
     };
 
-    // Function to handle price input and ensure it's a number
     const handlePriceInput = (event: CustomEvent) => {
       const value = event.detail.value;
-      priceInput.value = value; // Update the input binding
+      priceInput.value = value;
       const parsedValue = parseFloat(value);
       item.value.price = isNaN(parsedValue) ? 0 : parsedValue;
       console.log("Price:", item.value.price, typeof item.value.price);
     };
 
-    // Function to submit the item
-    const submitItem = () => {
+    const submitItem = async () => {
       if (
         !item.value.name ||
         !item.value.description ||
@@ -238,21 +237,58 @@ export default defineComponent({
         return;
       }
 
-      // TODO: Implement the logic to send `item.value` and `images.value` to your backend
+      if (images.value.length === 0) {
+        toastMessage.value = "Please upload at least one image.";
+        toastColor.value = "danger";
+        showToast.value = true;
+        return;
+      }
 
-      toastMessage.value = "Item added successfully!";
-      toastColor.value = "success";
-      showToast.value = true;
+      // Add the current timestamp to the item
+      const now = new Date();
+      const created_at = now.toISOString().slice(0, 19).replace("T", " ");
 
-      // Reset the form
-      item.value = {
-        name: "",
-        description: "",
-        price: 0,
-        category: "",
-      };
-      priceInput.value = "";
-      images.value = [];
+      // Create FormData to send the item and images
+      const formData = new FormData();
+      formData.append("name", item.value.name);
+      formData.append("description", item.value.description);
+      formData.append("price", item.value.price.toString());
+      formData.append("category", item.value.category);
+      formData.append("created_at", created_at);
+
+      // Append all images to FormData
+      images.value.forEach((image) => {
+        formData.append("images", image.file);
+      });
+
+      try {
+        // Send the data to the backend
+        await axios.post("http://localhost:1994/api/products", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        // Show success toast
+        toastMessage.value = "Item added successfully!";
+        toastColor.value = "success";
+        showToast.value = true;
+
+        // Reset the form
+        item.value = {
+          name: "",
+          description: "",
+          price: 0,
+          category: "",
+        };
+        priceInput.value = "";
+        images.value = [];
+      } catch (error) {
+        console.error("Error adding item:", error);
+        toastMessage.value = "Failed to add item. Please try again.";
+        toastColor.value = "danger";
+        showToast.value = true;
+      }
     };
 
     return {
