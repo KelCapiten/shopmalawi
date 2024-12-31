@@ -1,0 +1,13 @@
+{
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@vue/compiler-sfc": "^3.5.13",
+    "@vue/runtime-core": "^3.5.13",
+    "@vue/runtime-dom": "^3.5.13",
+    "vue-tsc": "^2.2.0"
+  },
+  "dependencies": {
+    "@ionic/vue": "^8.4.1",
+    "@ionic/vue-router": "^8.4.1"
+  }
+}

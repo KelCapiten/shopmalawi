@@ -34,12 +34,12 @@
 </template>
 
 <script>
-import NewlyAdded from "@/components/NewlyAdded.vue"; // Import the NewlyAdded component
+import NewlyAdded from "@/components/NewlyAdded.vue";
 
 export default {
   name: "AppBody",
   components: {
-    NewlyAdded, // Register the NewlyAdded component
+    NewlyAdded,
   },
 };
 </script>

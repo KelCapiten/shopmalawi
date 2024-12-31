@@ -116,17 +116,6 @@
 </template>
 
 <script lang="ts">
-import {
-  IonPage,
-  IonContent,
-  IonInput,
-  IonTextarea,
-  IonSelect,
-  IonSelectOption,
-  IonButton,
-  IonToast,
-  IonIcon,
-} from "@ionic/vue";
 import { ref, computed, defineComponent } from "vue";
 import { cloudUploadOutline } from "ionicons/icons";
 import { Swiper, SwiperSlide } from "swiper/vue";
@@ -153,15 +142,6 @@ interface Image {
 export default defineComponent({
   name: "SellDashboard",
   components: {
-    IonPage,
-    IonContent,
-    IonInput,
-    IonTextarea,
-    IonSelect,
-    IonSelectOption,
-    IonButton,
-    IonToast,
-    IonIcon,
     Swiper,
     SwiperSlide,
     AppFooter,

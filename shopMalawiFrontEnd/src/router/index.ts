@@ -1,12 +1,18 @@
 import { createRouter, createWebHistory } from "@ionic/vue-router";
 import { RouteRecordRaw } from "vue-router";
-import HomePage from "../views/HomePage.vue";
-import SellDashboard from "../views/SellDashboard.vue"; // Import the SellDashboard component
+import SellDashboard from "@/views/SellDashboard.vue";
+import HomePage from "@/views/HomePage.vue";
+import LoginPage from "@/views/LoginPage.vue";
 
 const routes: Array<RouteRecordRaw> = [
   {
     path: "/",
-    redirect: "/home",
+    redirect: "/login",
+  },
+  {
+    path: "/login",
+    name: "Login",
+    component: LoginPage,
   },
   {
     path: "/home",
@@ -14,8 +20,7 @@ const routes: Array<RouteRecordRaw> = [
     component: HomePage,
   },
   {
-    path: "/sell", // Add a route for the Sell Dashboard
-    name: "Sell",
+    path: "/sell",
     component: SellDashboard,
   },
 ];

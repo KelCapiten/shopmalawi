@@ -42,31 +42,11 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import {
-  IonHeader,
-  IonToolbar,
-  IonButtons,
-  IonButton,
-  IonSearchbar,
-  IonSegment,
-  IonSegmentButton,
-  IonIcon,
-} from "@ionic/vue";
 import { useThemeStore } from "@/stores/themeStore";
-import { cartOutline } from "ionicons/icons"; // Import the cart icon
+import { cartOutline } from "ionicons/icons";
 
 export default defineComponent({
   name: "ShopMalawiHeader",
-  components: {
-    IonHeader,
-    IonToolbar,
-    IonButtons,
-    IonButton,
-    IonSearchbar,
-    IonSegment,
-    IonSegmentButton,
-    IonIcon,
-  },
   props: {
     logo: {
       type: String,
@@ -83,11 +63,11 @@ export default defineComponent({
     },
     showSearchBar: {
       type: Boolean,
-      default: true, // Show search bar by default
+      default: true,
     },
     showCategorySegment: {
       type: Boolean,
-      default: true, // Show category segment by default
+      default: true,
     },
   },
   setup() {

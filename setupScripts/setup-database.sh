@@ -96,11 +96,11 @@ CREATE TABLE IF NOT EXISTS product_attributes (
     INDEX (product_id)
 ) ENGINE=InnoDB;
 
--- Product Images Table
+-- Product Images Table (Storing Actual Images)
 CREATE TABLE IF NOT EXISTS product_images (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL,
-    image_url VARCHAR(255) NOT NULL,
+    image_data LONGBLOB NOT NULL, -- Stores the binary image data
     alt_text VARCHAR(255),
     is_primary BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

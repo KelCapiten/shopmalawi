@@ -40,14 +40,6 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import {
-  IonFooter,
-  IonToolbar,
-  IonButtons,
-  IonButton,
-  IonIcon,
-  IonLabel,
-} from "@ionic/vue";
-import {
   homeOutline,
   cartOutline,
   newspaperOutline,
@@ -57,14 +49,6 @@ import {
 
 export default defineComponent({
   name: "AppFooter",
-  components: {
-    IonFooter,
-    IonToolbar,
-    IonButtons,
-    IonButton,
-    IonIcon,
-    IonLabel,
-  },
   setup() {
     return {
       homeOutline,
