@@ -1,5 +1,5 @@
 import express from "express";
-import multer from "multer"; // Import multer
+import multer from "multer";
 import { getProducts, addProduct } from "../controllers/productController.js";
 
 // File upload setup
@@ -12,6 +12,6 @@ const router = express.Router();
 router.get("/", getProducts);
 
 // Add a new product
-router.post("/", upload.single("image"), addProduct);
+router.post("/", upload.array("images", 4), addProduct);
 
 export default router;

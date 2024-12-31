@@ -12,20 +12,21 @@ export const getProducts = async (req, res) => {
 
 // Add a Product
 export const addProduct = async (req, res) => {
-  const { name, description, price, category } = req.body;
+  const { name, description, price, category, created_at } = req.body;
 
-  // Check if an image was uploaded
-  if (!req.file) {
-    return res.status(400).json({ error: "Image is required" });
+  // Check if images were uploaded
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ error: "At least one image is required" });
   }
 
-  // Read the image file as a binary buffer
-  const image = req.file.buffer;
+  // Read the image files as binary buffers
+  const images = req.files.map((file) => file.buffer);
 
   try {
+    // Insert the product into the database
     const [result] = await db.query(
-      "INSERT INTO products (name, description, price, category, image) VALUES (?, ?, ?, ?, ?)",
-      [name, description, price, category, image]
+      "INSERT INTO products (name, description, price, category, created_at, images) VALUES (?, ?, ?, ?, ?, ?)",
+      [name, description, price, category, created_at, JSON.stringify(images)] // Store images as a JSON array
     );
 
     res.status(201).json({
@@ -34,7 +35,10 @@ export const addProduct = async (req, res) => {
       description,
       price,
       category,
-      image: `data:image/png;base64,${image.toString("base64")}`, // Return the image as a base64 string (optional)
+      created_at,
+      images: images.map(
+        (image) => `data:image/png;base64,${image.toString("base64")}`
+      ), // Return images as base64 strings
     });
   } catch (error) {
     console.error("Error adding product:", error);
