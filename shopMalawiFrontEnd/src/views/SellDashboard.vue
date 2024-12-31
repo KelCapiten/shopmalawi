@@ -6,7 +6,6 @@
       <div class="form-container">
         <h2 class="form-title">Sell Your Item</h2>
 
-        <!-- Upload Images Section -->
         <div class="form-group">
           <label class="form-label">Upload Images</label>
           <div class="upload-area" @click="triggerFileInput">
@@ -39,7 +38,6 @@
           </div>
         </div>
 
-        <!-- Item Name Input -->
         <div class="form-group">
           <label class="form-label">Item Name</label>
           <ion-input
@@ -50,7 +48,6 @@
           ></ion-input>
         </div>
 
-        <!-- Price Input -->
         <div class="form-group">
           <label class="form-label">Price</label>
           <ion-input
@@ -63,7 +60,6 @@
           ></ion-input>
         </div>
 
-        <!-- Category Selection -->
         <div class="form-group">
           <label class="form-label">Category</label>
           <ion-select
@@ -82,7 +78,6 @@
           </ion-select>
         </div>
 
-        <!-- Description Input -->
         <div class="form-group">
           <label class="form-label">Description</label>
           <ion-textarea
@@ -94,18 +89,17 @@
           ></ion-textarea>
         </div>
 
-        <!-- Submit Button -->
         <ion-button
           expand="block"
           class="submit-button"
           color="primary"
           @click="submitItem"
+          :disabled="isSaving"
         >
           Sell Item
         </ion-button>
       </div>
 
-      <!-- Toast Notification -->
       <ion-toast
         :is-open="showToast"
         :message="toastMessage"
@@ -113,6 +107,8 @@
         @didDismiss="showToast = false"
         :color="toastColor"
       ></ion-toast>
+
+      <SavingOverlay :isSaving="isSaving" />
     </ion-content>
 
     <AppFooter />
@@ -139,7 +135,8 @@ import "swiper/css";
 import "swiper/css/pagination";
 import AppFooter from "../components/footer.vue";
 import AppHeader from "../components/header.vue";
-import axios from "axios"; // Import axios
+import axios from "axios";
+import SavingOverlay from "../components/SavingOverlay.vue";
 
 interface Item {
   name: string;
@@ -169,9 +166,9 @@ export default defineComponent({
     SwiperSlide,
     AppFooter,
     AppHeader,
+    SavingOverlay,
   },
   setup() {
-    // Reactive state for the item being sold
     const item = ref<Item>({
       name: "",
       description: "",
@@ -179,32 +176,23 @@ export default defineComponent({
       category: "",
     });
 
-    // Reactive state for uploaded images
     const images = ref<Image[]>([]);
-
-    // Toast notification states
     const showToast = ref(false);
     const toastMessage = ref("");
     const toastColor = ref("success");
-
-    // Reference to the hidden file input element
     const fileInput = ref<HTMLInputElement | null>(null);
-
-    // Separate reactive state for price input as string
     const priceInput = ref<string>("");
+    const isSaving = ref(false);
 
-    // Swiper pagination options
     const paginationOptions = computed(() => ({
       clickable: true,
       dynamicBullets: true,
     }));
 
-    // Function to trigger the hidden file input
     const triggerFileInput = () => {
       fileInput.value?.click();
     };
 
-    // Function to handle image uploads
     const handleImageUpload = (event: Event) => {
       const target = event.target as HTMLInputElement;
       if (target.files && target.files.length > 0) {
@@ -221,7 +209,6 @@ export default defineComponent({
       priceInput.value = value;
       const parsedValue = parseFloat(value);
       item.value.price = isNaN(parsedValue) ? 0 : parsedValue;
-      console.log("Price:", item.value.price, typeof item.value.price);
     };
 
     const submitItem = async () => {
@@ -244,11 +231,9 @@ export default defineComponent({
         return;
       }
 
-      // Add the current timestamp to the item
       const now = new Date();
       const created_at = now.toISOString().slice(0, 19).replace("T", " ");
 
-      // Create FormData to send the item and images
       const formData = new FormData();
       formData.append("name", item.value.name);
       formData.append("description", item.value.description);
@@ -256,25 +241,23 @@ export default defineComponent({
       formData.append("category", item.value.category);
       formData.append("created_at", created_at);
 
-      // Append all images to FormData
       images.value.forEach((image) => {
         formData.append("images", image.file);
       });
 
+      isSaving.value = true;
+
       try {
-        // Send the data to the backend
         await axios.post("http://localhost:1994/api/products", formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
         });
 
-        // Show success toast
         toastMessage.value = "Item added successfully!";
         toastColor.value = "success";
         showToast.value = true;
 
-        // Reset the form
         item.value = {
           name: "",
           description: "",
@@ -288,6 +271,8 @@ export default defineComponent({
         toastMessage.value = "Failed to add item. Please try again.";
         toastColor.value = "danger";
         showToast.value = true;
+      } finally {
+        isSaving.value = false;
       }
     };
 
@@ -306,6 +291,7 @@ export default defineComponent({
       priceInput,
       paginationOptions,
       Pagination,
+      isSaving,
     };
   },
 });
