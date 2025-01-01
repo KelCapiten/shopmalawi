@@ -7,6 +7,8 @@ DB_PASSWORD="root"
 
 # Admin user details (hardcoded)
 ADMIN_USERNAME="admin"
+ADMIN_NAME="Kelvin"
+ADMIN_LASTNAME="Munyimbili"
 ADMIN_EMAIL="admin@shopMalawi.com"
 ADMIN_PASSWORD="admin123"  # WARNING: Storing passwords in plaintext is insecure
 ADMIN_PHONE="0000000000"
@@ -32,14 +34,21 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(50) NOT NULL UNIQUE,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
+    email VARCHAR(100) DEFAULT 'no-email@example.com', 
     password_hash VARCHAR(255) NOT NULL,
-    phone_number VARCHAR(20),
-    location_id VARCHAR(100) NOT NULL,
-    role_id INT DEFAULT 1, -- References roles table
+    phone_number VARCHAR(20) NOT NULL,
+    location_id VARCHAR(100),
+    role_id INT DEFAULT 1, -- References roles table (customer)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (role_id) REFERENCES roles(id)
+) ENGINE=InnoDB;
+
+-- locations Table
+CREATE TABLE IF NOT EXISTS locations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- User Bank Details Table
@@ -60,13 +69,6 @@ CREATE TABLE IF NOT EXISTS categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- locations Table
-CREATE TABLE IF NOT EXISTS locations (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -282,7 +284,11 @@ INSERT INTO categories (name, description) VALUES
 
 -- Insert locations
 INSERT INTO locations (name) VALUES
-()
+('Karonga'),
+('Mzuzu'),
+('Lilongwe'),
+('Blantyre'),
+('Kasungu');
 
 -- Insert Payment Methods
 INSERT INTO payment_methods (method_name, description) VALUES
@@ -309,8 +315,8 @@ echo "Creating admin user..."
 ADMIN_INSERT_SQL="
 USE \`$DB_NAME\`;
 
-INSERT INTO users (username, email, password_hash, phone_number, role_id)
-VALUES ('$ADMIN_USERNAME', '$ADMIN_EMAIL', '$ADMIN_PASSWORD', '$ADMIN_PHONE',
+INSERT INTO users (first_name, last_name, username, email, password_hash, phone_number, role_id)
+VALUES ('$ADMIN_NAME','$ADMIN_LASTNAME','$ADMIN_USERNAME', '$ADMIN_EMAIL', '$ADMIN_PASSWORD', '$ADMIN_PHONE',
 (SELECT id FROM roles WHERE role_name='admin' LIMIT 1));
 "
 

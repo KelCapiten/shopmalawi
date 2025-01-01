@@ -2,7 +2,7 @@
   <ion-footer>
     <ion-toolbar>
       <ion-buttons class="footer-buttons">
-        <ion-button router-link="/">
+        <ion-button router-link="/home">
           <div class="button-content">
             <ion-icon :icon="homeOutline"></ion-icon>
             <ion-label>Home</ion-label>

@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import mysql from "mysql";
 import productRoutes from "./routes/products.js";
+import usersRouter from "./routes/users.js";
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.locals.db = db;
 
 // Routes
 app.use("/api/products", productRoutes);
+app.use("/api/users", usersRouter);
 
 // Start Server
 app.listen(port, () => {

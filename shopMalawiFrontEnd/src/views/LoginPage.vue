@@ -47,17 +47,28 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/authStore"; // Import the Pinia store
+import { IonPage, IonContent, IonInput, IonButton } from "@ionic/vue";
 
 export default defineComponent({
   name: "LoginPage",
+  components: {
+    IonPage,
+    IonContent,
+    IonInput,
+    IonButton,
+  },
   setup() {
     const router = useRouter();
+    const authStore = useAuthStore(); // Initialize the Pinia store
+
     const navigateToCreateAccount = () => {
       router.push("/create-account");
     };
 
     return {
       navigateToCreateAccount,
+      authStore,
     };
   },
   data() {
@@ -69,6 +80,11 @@ export default defineComponent({
     };
   },
   mounted() {
+    // Redirect authenticated users to the home page
+    if (this.authStore.isAuthenticated()) {
+      this.$router.push("/home");
+    }
+
     setTimeout(() => {
       this.logoFocused = true;
       setTimeout(() => {
@@ -82,11 +98,41 @@ export default defineComponent({
         alert("Please enter both your phone number/username and password.");
         return;
       }
-      console.log("Attempting login with:", {
-        username: this.username,
-        password: this.password,
-      });
-      alert("Login successful!");
+
+      try {
+        // Call the login API
+        const response = await fetch("http://localhost:3000/api/users/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: this.username,
+            password: this.password,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Invalid username or password");
+        }
+
+        const data = await response.json();
+
+        // Store the token and user data in the Pinia store
+        this.authStore.setAuth(data.token, {
+          id: data.id,
+          username: data.username,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          role: data.role,
+        });
+
+        // Redirect to the home page
+        this.$router.push("/home");
+      } catch (error) {
+        console.error("Login failed:", error);
+        alert("Login failed. Please check your credentials and try again.");
+      }
     },
   },
 });

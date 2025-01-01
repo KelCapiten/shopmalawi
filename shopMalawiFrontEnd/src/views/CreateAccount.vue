@@ -75,8 +75,9 @@
               color="success"
               class="form-button"
               @click="submitForm"
+              :disabled="isSaving"
             >
-              Create Account
+              {{ isSaving ? "Creating Account..." : "Create Account" }}
             </ion-button>
           </ion-card-content>
         </ion-card>
@@ -102,12 +103,41 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, reactive } from "vue";
+import { defineComponent, reactive, ref } from "vue";
+import axios from "axios";
+import { useAuthStore } from "../stores/authStore";
+import { useRouter } from "vue-router";
+
+interface RegistrationResponse {
+  id: number;
+  username: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  role: string;
+  token: string;
+}
+
+interface Form {
+  firstName: string;
+  lastName: string;
+  username: string;
+  phoneNumber: string;
+  password: string;
+  confirmPassword: string;
+}
+
+interface Toast {
+  isOpen: boolean;
+  message: string;
+  color: string;
+  duration: number;
+}
 
 export default defineComponent({
   name: "CreateAccount",
   setup() {
-    const form = reactive({
+    const form = reactive<Form>({
       firstName: "",
       lastName: "",
       username: "",
@@ -116,20 +146,25 @@ export default defineComponent({
       confirmPassword: "",
     });
 
-    const toast = reactive({
+    const toast = reactive<Toast>({
       isOpen: false,
       message: "",
       color: "",
       duration: 2000,
     });
 
-    const showToast = (message: string, color: string = "primary") => {
+    const isSaving = ref(false);
+
+    const authStore = useAuthStore();
+    const router = useRouter();
+
+    const showToast = (message: string, color: string = "primary"): void => {
       toast.message = message;
       toast.color = color;
       toast.isOpen = true;
     };
 
-    const validateForm = () => {
+    const submitForm = async (): Promise<void> => {
       if (
         !form.firstName ||
         !form.lastName ||
@@ -141,43 +176,64 @@ export default defineComponent({
           "Please fill all required fields and ensure passwords match.",
           "danger"
         );
-        return false;
+        return;
       }
-      return true;
-    };
-
-    const submitForm = async () => {
-      if (!validateForm()) return;
 
       const payload = {
-        first_name: form.firstName,
-        last_name: form.lastName,
+        firstName: form.firstName,
+        lastName: form.lastName,
         username: form.username,
-        phone_number: form.phoneNumber,
+        phoneNumber: form.phoneNumber,
         password: form.password,
       };
 
+      isSaving.value = true;
+
       try {
-        const response = await fetch("/api/users", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
+        const response = await axios.post<RegistrationResponse>(
+          "http://localhost:1994/api/users/register",
+          payload,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        // Store the token and user data in the Pinia store
+        authStore.setAuth(response.data.token, {
+          id: response.data.id,
+          username: response.data.username,
+          firstName: response.data.firstName,
+          lastName: response.data.lastName,
+          role: response.data.role,
         });
 
-        if (response.ok) {
-          showToast("Account created successfully!", "success");
-        } else {
-          const error = await response.json();
-          showToast(error.message || "Failed to create account.", "danger");
-        }
-      } catch (err) {
-        showToast("An error occurred. Please try again.", "danger");
+        // Redirect the user to the dashboard
+        router.push("/home");
+
+        showToast("Account created successfully!", "success");
+
+        // Reset the form
+        form.firstName = "";
+        form.lastName = "";
+        form.username = "";
+        form.phoneNumber = "";
+        form.password = "";
+        form.confirmPassword = "";
+      } catch (error) {
+        const axiosError = error as {
+          response?: { data?: { error?: string } };
+        };
+        const errorMessage =
+          axiosError.response?.data?.error || "Failed to create account.";
+        showToast(errorMessage, "danger");
+      } finally {
+        isSaving.value = false;
       }
     };
 
-    return { form, toast, submitForm };
+    return { form, toast, isSaving, submitForm };
   },
 });
 </script>
