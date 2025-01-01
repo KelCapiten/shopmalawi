@@ -34,7 +34,7 @@
             expand="block"
             fill="outline"
             class="create-account-button"
-            @click="handleCreateAccount"
+            @click="navigateToCreateAccount"
           >
             Create Account
           </ion-button>
@@ -46,9 +46,20 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
+import { useRouter } from "vue-router";
 
 export default defineComponent({
   name: "LoginPage",
+  setup() {
+    const router = useRouter();
+    const navigateToCreateAccount = () => {
+      router.push("/create-account");
+    };
+
+    return {
+      navigateToCreateAccount,
+    };
+  },
   data() {
     return {
       username: "",
@@ -76,10 +87,6 @@ export default defineComponent({
         password: this.password,
       });
       alert("Login successful!");
-    },
-    handleCreateAccount() {
-      console.log("Navigating to Create Account page...");
-      alert("Redirecting to Create Account!");
     },
   },
 });
@@ -168,6 +175,9 @@ export default defineComponent({
 }
 
 .form-container {
+  background-color: white;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 30px;
   width: 100%;
   max-width: 400px;
   opacity: 0;
@@ -196,15 +206,25 @@ export default defineComponent({
 }
 
 .custom-input {
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --background: white;
+  --border-radius: 5px;
+  --box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
   width: 100%;
-  padding: 10px;
   font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+  border: 1px solid #dcdcdc;
+  padding-left: 12px; /* Add indentation for input text */
+  padding-right: 12px; /* Ensure uniform padding */
+  background: var(--background);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
 }
 
-.custom-input::placeholder {
-  color: #aaa;
+.custom-input:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 4px #4caf50;
 }
 
 .submit-button {

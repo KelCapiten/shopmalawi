@@ -3,6 +3,7 @@ import { RouteRecordRaw } from "vue-router";
 import SellDashboard from "@/views/SellDashboard.vue";
 import HomePage from "@/views/HomePage.vue";
 import LoginPage from "@/views/LoginPage.vue";
+import CreateAccount from "@/views/CreateAccount.vue";
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -22,6 +23,10 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: "/sell",
     component: SellDashboard,
+  },
+  {
+    path: "/create-account",
+    component: CreateAccount,
   },
 ];
 
