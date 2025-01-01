@@ -68,13 +68,13 @@
             placeholder="Select category"
             required
           >
-            <ion-select-option value="electronics"
-              >Electronics</ion-select-option
+            <ion-select-option
+              v-for="category in categories"
+              :key="category.id"
+              :value="category.id"
             >
-            <ion-select-option value="clothing">Clothing</ion-select-option>
-            <ion-select-option value="home">Home</ion-select-option>
-            <ion-select-option value="sports">Sports</ion-select-option>
-            <ion-select-option value="books">Books</ion-select-option>
+              {{ category.name }}
+            </ion-select-option>
           </ion-select>
         </div>
 
@@ -116,7 +116,7 @@
 </template>
 
 <script lang="ts">
-import { ref, computed, defineComponent } from "vue";
+import { ref, computed, defineComponent, onMounted } from "vue";
 import { cloudUploadOutline } from "ionicons/icons";
 import { Swiper, SwiperSlide } from "swiper/vue";
 import { Pagination } from "swiper/modules";
@@ -137,6 +137,11 @@ interface Item {
 interface Image {
   url: string;
   file: File;
+}
+
+interface Category {
+  id: string;
+  name: string;
 }
 
 export default defineComponent({
@@ -163,11 +168,32 @@ export default defineComponent({
     const fileInput = ref<HTMLInputElement | null>(null);
     const priceInput = ref<string>("");
     const isSaving = ref(false);
+    const categories = ref<Category[]>([]); // Store categories
 
     const paginationOptions = computed(() => ({
       clickable: true,
       dynamicBullets: true,
     }));
+
+    // Fetch categories from the backend
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:1994/api/products/categories"
+        );
+        categories.value = response.data;
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        toastMessage.value = "Failed to fetch categories.";
+        toastColor.value = "danger";
+        showToast.value = true;
+      }
+    };
+
+    // Fetch categories when the component is mounted
+    onMounted(() => {
+      fetchCategories();
+    });
 
     const triggerFileInput = () => {
       fileInput.value?.click();
@@ -272,6 +298,7 @@ export default defineComponent({
       paginationOptions,
       Pagination,
       isSaving,
+      categories,
     };
   },
 });

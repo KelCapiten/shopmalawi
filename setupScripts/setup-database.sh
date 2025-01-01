@@ -64,12 +64,14 @@ CREATE TABLE IF NOT EXISTS user_bank_details (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- Categories Table
+-- Categories Table (with parent_id for hierarchical structure)
 CREATE TABLE IF NOT EXISTS categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    parent_id INT DEFAULT NULL, -- References the parent category
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Payment Methods Table
@@ -276,11 +278,34 @@ INSERT INTO roles (role_name, description) VALUES
 ('customer', 'Regular customer with access to purchase products and manage their account'),
 ('admin', 'Administrator with full access to manage the platform');
 
--- Insert Categories
+-- Insert Main Categories
 INSERT INTO categories (name, description) VALUES
 ('Electronics', 'Electronic gadgets and devices'),
 ('Books', 'Wide range of books and literature'),
 ('Clothing', 'Apparel and fashion accessories');
+
+-- Store the IDs of the main categories in variables
+SET @electronics_id = (SELECT id FROM categories WHERE name = 'Electronics');
+SET @books_id = (SELECT id FROM categories WHERE name = 'Books');
+SET @clothing_id = (SELECT id FROM categories WHERE name = 'Clothing');
+
+-- Insert Subcategories for Electronics
+INSERT INTO categories (name, description, parent_id) VALUES
+('TVs', 'Televisions and home entertainment systems', @electronics_id),
+('Phones', 'Smartphones and mobile devices', @electronics_id),
+('Laptops', 'Laptops and notebooks', @electronics_id);
+
+-- Insert Subcategories for Books
+INSERT INTO categories (name, description, parent_id) VALUES
+('Fiction', 'Fictional books and novels', @books_id),
+('Non-Fiction', 'Non-fictional books and literature', @books_id),
+('Educational', 'Educational and academic books', @books_id);
+
+-- Insert Subcategories for Clothing
+INSERT INTO categories (name, description, parent_id) VALUES
+('Men\'s Clothing', 'Clothing for men', @clothing_id),
+('Women\'s Clothing', 'Clothing for women', @clothing_id),
+('Kids\' Clothing', 'Clothing for kids', @clothing_id);
 
 -- Insert locations
 INSERT INTO locations (name) VALUES

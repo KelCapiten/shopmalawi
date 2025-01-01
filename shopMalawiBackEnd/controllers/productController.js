@@ -63,3 +63,38 @@ export const getNewlyAddedProducts = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch newly added products" });
   }
 };
+
+export const getCategories = async (req, res) => {
+  try {
+    // Fetch all categories with their parent_id
+    const [categories] = await db.query(
+      "SELECT id, name, description, parent_id FROM categories"
+    );
+
+    // Organize categories into a hierarchical structure
+    const categoryMap = new Map();
+    const rootCategories = [];
+
+    // Create a map of categories
+    categories.forEach((category) => {
+      categoryMap.set(category.id, { ...category, subcategories: [] });
+    });
+
+    // Build the hierarchy
+    categories.forEach((category) => {
+      if (category.parent_id) {
+        const parentCategory = categoryMap.get(category.parent_id);
+        if (parentCategory) {
+          parentCategory.subcategories.push(categoryMap.get(category.id));
+        }
+      } else {
+        rootCategories.push(categoryMap.get(category.id));
+      }
+    });
+
+    res.status(200).json(rootCategories);
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    res.status(500).json({ message: "Failed to fetch categories" });
+  }
+};

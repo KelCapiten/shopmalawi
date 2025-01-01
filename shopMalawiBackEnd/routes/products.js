@@ -3,6 +3,7 @@ import multer from "multer";
 import {
   addProduct,
   getNewlyAddedProducts,
+  getCategories,
 } from "../controllers/productController.js";
 
 // File upload setup
@@ -16,5 +17,8 @@ router.post("/", upload.array("images", 4), addProduct);
 
 // Get newly added products (added today)
 router.get("/newly-added", getNewlyAddedProducts);
+
+// Fetch categories
+router.get("/categories", getCategories);
 
 export default router;
