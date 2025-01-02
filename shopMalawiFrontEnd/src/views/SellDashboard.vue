@@ -79,6 +79,17 @@
         </div>
 
         <div class="form-group">
+          <label class="form-label">How many do you have for sale?</label>
+          <ion-input
+            class="form-input"
+            type="number"
+            v-model="item.stockQuantity"
+            placeholder="Enter stock quantity"
+            required
+          ></ion-input>
+        </div>
+
+        <div class="form-group">
           <label class="form-label">Description</label>
           <ion-textarea
             class="form-input textarea"
@@ -126,12 +137,14 @@ import AppFooter from "../components/footer.vue";
 import AppHeader from "../components/header.vue";
 import axios from "axios";
 import SavingOverlay from "../components/SavingOverlay.vue";
+import { useAuthStore } from "@/stores/authStore";
 
 interface Item {
   name: string;
   description: string;
   price: number;
   category: string;
+  stockQuantity: number;
 }
 
 interface Image {
@@ -159,6 +172,7 @@ export default defineComponent({
       description: "",
       price: 0,
       category: "",
+      stockQuantity: 0,
     });
 
     const images = ref<Image[]>([]);
@@ -179,7 +193,7 @@ export default defineComponent({
     const fetchCategories = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:1994/api/products/categories"
+          "http://localhost:1994/api/products/getCategories"
         );
         categories.value = response.data;
       } catch (error) {
@@ -218,6 +232,8 @@ export default defineComponent({
     };
 
     const submitItem = async () => {
+      const authStore = useAuthStore(); // Access the auth store
+
       if (
         !item.value.name ||
         !item.value.description ||
@@ -237,15 +253,12 @@ export default defineComponent({
         return;
       }
 
-      const now = new Date();
-      const created_at = now.toISOString().slice(0, 19).replace("T", " ");
-
       const formData = new FormData();
       formData.append("name", item.value.name);
       formData.append("description", item.value.description);
       formData.append("price", item.value.price.toString());
-      formData.append("category", item.value.category);
-      formData.append("created_at", created_at);
+      formData.append("categoryId", item.value.category);
+      formData.append("stockQuantity", item.value.stockQuantity.toString()); // Include stockQuantity
 
       images.value.forEach((image) => {
         formData.append("images", image.file);
@@ -254,21 +267,37 @@ export default defineComponent({
       isSaving.value = true;
 
       try {
-        await axios.post("http://localhost:1994/api/products", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
+        const token = authStore.token; // Get token from the auth store
+        if (!token) {
+          toastMessage.value =
+            "Authentication token is missing. Please log in.";
+          toastColor.value = "danger";
+          showToast.value = true;
+          return;
+        }
+
+        await axios.post(
+          "http://localhost:1994/api/products/addProducts",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+              Authorization: `Bearer ${token}`, // Add token for authentication
+            },
+          }
+        );
 
         toastMessage.value = "Item added successfully!";
         toastColor.value = "success";
         showToast.value = true;
 
+        // Reset form data
         item.value = {
           name: "",
           description: "",
           price: 0,
           category: "",
+          stockQuantity: 0,
         };
         priceInput.value = "";
         images.value = [];

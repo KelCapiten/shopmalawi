@@ -40,6 +40,13 @@
           </ion-button>
         </div>
       </div>
+      <ion-toast
+        :is-open="toast.isOpen"
+        :message="toast.message"
+        :color="toast.color"
+        :duration="toast.duration"
+        @did-dismiss="toast.isOpen = false"
+      ></ion-toast>
     </ion-content>
   </ion-page>
 </template>
@@ -47,8 +54,8 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import { useRouter } from "vue-router";
-import { useAuthStore } from "@/stores/authStore"; // Import the Pinia store
-import { IonPage, IonContent, IonInput, IonButton } from "@ionic/vue";
+import { useAuthStore } from "@/stores/authStore";
+import { IonPage, IonContent, IonInput, IonButton, IonToast } from "@ionic/vue";
 
 export default defineComponent({
   name: "LoginPage",
@@ -57,10 +64,11 @@ export default defineComponent({
     IonContent,
     IonInput,
     IonButton,
+    IonToast,
   },
   setup() {
     const router = useRouter();
-    const authStore = useAuthStore(); // Initialize the Pinia store
+    const authStore = useAuthStore();
 
     const navigateToCreateAccount = () => {
       router.push("/create-account");
@@ -77,10 +85,15 @@ export default defineComponent({
       password: "",
       logoFocused: false,
       inputsVisible: false,
+      toast: {
+        isOpen: false,
+        message: "",
+        color: "",
+        duration: 2000,
+      },
     };
   },
   mounted() {
-    // Redirect authenticated users to the home page
     if (this.authStore.isAuthenticated()) {
       this.$router.push("/home");
     }
@@ -95,13 +108,15 @@ export default defineComponent({
   methods: {
     async handleLogin() {
       if (!this.username || !this.password) {
-        alert("Please enter both your phone number/username and password.");
+        this.showToast(
+          "Please enter both your phone number/username and password",
+          "warning"
+        );
         return;
       }
 
       try {
-        // Call the login API
-        const response = await fetch("http://localhost:3000/api/users/login", {
+        const response = await fetch("http://localhost:1994/api/users/login", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -113,12 +128,33 @@ export default defineComponent({
         });
 
         if (!response.ok) {
-          throw new Error("Invalid username or password");
+          if (response.status === 401) {
+            this.showToast(
+              "Invalid username or account does not exist",
+              "danger"
+            );
+            return;
+          }
+
+          if (response.status === 403) {
+            this.showToast("Incorrect password. Please try again", "danger");
+            return;
+          }
+
+          if (response.status >= 500) {
+            this.showToast("Server error. Please try again later.", "danger");
+            return;
+          }
+
+          this.showToast(
+            "Unexpected error occurred. Please try again.",
+            "danger"
+          );
+          return;
         }
 
         const data = await response.json();
 
-        // Store the token and user data in the Pinia store
         this.authStore.setAuth(data.token, {
           id: data.id,
           username: data.username,
@@ -127,12 +163,23 @@ export default defineComponent({
           role: data.role,
         });
 
-        // Redirect to the home page
+        this.showToast("Login successful!", "success");
         this.$router.push("/home");
-      } catch (error) {
-        console.error("Login failed:", error);
-        alert("Login failed. Please check your credentials and try again.");
+      } catch (error: any) {
+        if (error.name === "TypeError") {
+          this.showToast(
+            "Network error. Please check your connection.",
+            "danger"
+          );
+        } else {
+          this.showToast(`Unexpected error: ${error.message}`, "danger");
+        }
       }
+    },
+    showToast(message: string, color: "success" | "warning" | "danger") {
+      this.toast.message = message;
+      this.toast.color = color;
+      this.toast.isOpen = true;
     },
   },
 });

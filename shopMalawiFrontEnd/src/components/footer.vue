@@ -26,10 +26,10 @@
             <ion-label>Sell</ion-label>
           </div>
         </ion-button>
-        <ion-button router-link="/account">
+        <ion-button router-link="/Profile">
           <div class="button-content">
             <ion-icon :icon="personOutline"></ion-icon>
-            <ion-label>Account</ion-label>
+            <ion-label>Profile</ion-label>
           </div>
         </ion-button>
       </ion-buttons>

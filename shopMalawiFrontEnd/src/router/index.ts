@@ -4,6 +4,7 @@ import SellDashboard from "@/views/SellDashboard.vue";
 import HomePage from "@/views/HomePage.vue";
 import LoginPage from "@/views/LoginPage.vue";
 import CreateAccount from "@/views/CreateAccount.vue";
+import ProfilePage from "@/views/ProfilePage.vue";
 import { useAuthStore } from "@/stores/authStore";
 
 const routes: Array<RouteRecordRaw> = [
@@ -20,16 +21,22 @@ const routes: Array<RouteRecordRaw> = [
     path: "/home",
     name: "Home",
     component: HomePage,
-    meta: { requiresAuth: true }, // Requires authentication
+    meta: { requiresAuth: true },
   },
   {
     path: "/sell",
     component: SellDashboard,
-    meta: { requiresAuth: true }, // Requires authentication
+    meta: { requiresAuth: true },
   },
   {
     path: "/create-account",
     component: CreateAccount,
+  },
+  {
+    path: "/profile",
+    name: "Profile",
+    component: ProfilePage,
+    meta: { requiresAuth: true },
   },
 ];
 

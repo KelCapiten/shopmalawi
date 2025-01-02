@@ -44,6 +44,17 @@ CREATE TABLE IF NOT EXISTS users (
     FOREIGN KEY (role_id) REFERENCES roles(id)
 ) ENGINE=InnoDB;
 
+-- User Images Table (Storing Actual Images)
+CREATE TABLE user_images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    image_path VARCHAR(255) NOT NULL COMMENT 'File path to the stored image',
+    type ENUM('profile', 'ad'),
+    alt_text VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 -- locations Table
 CREATE TABLE IF NOT EXISTS locations (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -88,6 +99,7 @@ CREATE TABLE IF NOT EXISTS products (
     name VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     price DECIMAL(10, 2) NOT NULL COMMENT 'Amount in Malawian Kwacha (MWK)',
+    mark_up_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (mark_up_amount >= 0) COMMENT 'Amount in Malawian Kwacha (MWK)',
     category_id INT,
     stock_quantity INT NOT NULL DEFAULT 0,
     uploaded_by INT NOT NULL, -- References users table
@@ -100,24 +112,33 @@ CREATE TABLE IF NOT EXISTS products (
     INDEX (uploaded_by)
 ) ENGINE=InnoDB;
 
+-- Product Images Table
+CREATE TABLE product_images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL, -- Links to products table
+    image_path VARCHAR(255) NOT NULL COMMENT 'File path to the stored image',
+    alt_text VARCHAR(255),
+    is_primary BOOLEAN DEFAULT FALSE, -- Indicates if this is the main image for the product
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- System Images Table 
+CREATE TABLE system_images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    image_path VARCHAR(255) NOT NULL COMMENT 'File path to the stored image',
+    alt_text VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 -- Product Attributes Table (for variations like size, color)
 CREATE TABLE IF NOT EXISTS product_attributes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL,
     attribute_name VARCHAR(100) NOT NULL,
     attribute_value VARCHAR(100) NOT NULL,
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-    INDEX (product_id)
-) ENGINE=InnoDB;
-
--- Product Images Table (Storing Actual Images)
-CREATE TABLE IF NOT EXISTS product_images (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    product_id INT NOT NULL,
-    image_data LONGBLOB NOT NULL, -- Stores the binary image data
-    alt_text VARCHAR(255),
-    is_primary BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
     INDEX (product_id)
 ) ENGINE=InnoDB;

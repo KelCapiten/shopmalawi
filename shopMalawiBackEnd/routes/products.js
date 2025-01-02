@@ -1,24 +1,19 @@
 import express from "express";
-import multer from "multer";
-import {
-  addProduct,
-  getNewlyAddedProducts,
-  getCategories,
-} from "../controllers/productController.js";
-
-// File upload setup
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+import { authenticateUser } from "../middleware/authMiddleware.js";
+import { addProduct, getCategories } from "../controllers/productController.js";
+import { upload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
-// Add a new product
-router.post("/", upload.array("images", 4), addProduct);
-
-// Get newly added products (added today)
-router.get("/newly-added", getNewlyAddedProducts);
+// Add Product Route
+router.post(
+  "/addProducts",
+  authenticateUser,
+  upload.array("images", 4),
+  addProduct
+);
 
 // Fetch categories
-router.get("/categories", getCategories);
+router.get("/getCategories", getCategories);
 
 export default router;
