@@ -135,7 +135,7 @@ import "swiper/css";
 import "swiper/css/pagination";
 import AppFooter from "../components/footer.vue";
 import AppHeader from "../components/header.vue";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import SavingOverlay from "../components/SavingOverlay.vue";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -182,14 +182,13 @@ export default defineComponent({
     const fileInput = ref<HTMLInputElement | null>(null);
     const priceInput = ref<string>("");
     const isSaving = ref(false);
-    const categories = ref<Category[]>([]); // Store categories
+    const categories = ref<Category[]>([]);
 
     const paginationOptions = computed(() => ({
       clickable: true,
       dynamicBullets: true,
     }));
 
-    // Fetch categories from the backend
     const fetchCategories = async () => {
       try {
         const response = await axios.get(
@@ -204,7 +203,6 @@ export default defineComponent({
       }
     };
 
-    // Fetch categories when the component is mounted
     onMounted(() => {
       fetchCategories();
     });
@@ -232,7 +230,7 @@ export default defineComponent({
     };
 
     const submitItem = async () => {
-      const authStore = useAuthStore(); // Access the auth store
+      const authStore = useAuthStore();
 
       if (
         !item.value.name ||
@@ -258,7 +256,7 @@ export default defineComponent({
       formData.append("description", item.value.description);
       formData.append("price", item.value.price.toString());
       formData.append("categoryId", item.value.category);
-      formData.append("stockQuantity", item.value.stockQuantity.toString()); // Include stockQuantity
+      formData.append("stockQuantity", item.value.stockQuantity.toString());
 
       images.value.forEach((image) => {
         formData.append("images", image.file);
@@ -267,7 +265,7 @@ export default defineComponent({
       isSaving.value = true;
 
       try {
-        const token = authStore.token; // Get token from the auth store
+        const token = authStore.token;
         if (!token) {
           toastMessage.value =
             "Authentication token is missing. Please log in.";
@@ -282,7 +280,7 @@ export default defineComponent({
           {
             headers: {
               "Content-Type": "multipart/form-data",
-              Authorization: `Bearer ${token}`, // Add token for authentication
+              Authorization: `Bearer ${token}`,
             },
           }
         );
@@ -291,7 +289,6 @@ export default defineComponent({
         toastColor.value = "success";
         showToast.value = true;
 
-        // Reset form data
         item.value = {
           name: "",
           description: "",
@@ -303,6 +300,13 @@ export default defineComponent({
         images.value = [];
       } catch (error) {
         console.error("Error adding item:", error);
+
+        // Type-safe error handling
+        if (axios.isAxiosError(error)) {
+          const axiosError = error as AxiosError;
+          console.error("Server response:", axiosError.response?.data);
+        }
+
         toastMessage.value = "Failed to add item. Please try again.";
         toastColor.value = "danger";
         showToast.value = true;
@@ -385,10 +389,12 @@ export default defineComponent({
   align-items: center;
   border: 2px dashed #ccc;
   border-radius: 8px;
-  height: 150px;
+  height: 250px;
   text-align: center;
   cursor: pointer;
   background-color: #f9f9f9;
+  position: relative;
+  overflow: hidden;
 }
 
 .upload-placeholder {
@@ -401,14 +407,43 @@ export default defineComponent({
 }
 
 .image-preview {
+  height: 250px;
+  width: 100%;
   border-radius: 8px;
   overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.swiper {
+  height: 100%;
+}
+
+.swiper-slide {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
 }
 
 .uploaded-image {
-  width: 100%;
-  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
   border-radius: 8px;
+}
+
+.swiper-pagination-bullet {
+  background-color: #000;
+  opacity: 0.5;
+  width: 8px;
+  height: 8px;
+}
+
+.swiper-pagination-bullet-active {
+  background-color: #007aff;
+  opacity: 1;
 }
 
 .submit-button {
