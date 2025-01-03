@@ -301,14 +301,17 @@ INSERT INTO roles (role_name, description) VALUES
 
 -- Insert Main Categories
 INSERT INTO categories (name, description) VALUES
+('Explore', 'Not sure? Look around and see what catches your eye'),
 ('Electronics', 'Electronic gadgets and devices'),
-('Books', 'Wide range of books and literature'),
-('Clothing', 'Apparel and fashion accessories');
+('Cars', 'Wide range of books and literature'),
+('Produce', 'Agricultural products across Malawi'),
+('Services', 'Need something done? Find it here');
 
 -- Store the IDs of the main categories in variables
 SET @electronics_id = (SELECT id FROM categories WHERE name = 'Electronics');
-SET @books_id = (SELECT id FROM categories WHERE name = 'Books');
+SET @car_id = (SELECT id FROM categories WHERE name = 'Cars');
 SET @clothing_id = (SELECT id FROM categories WHERE name = 'Clothing');
+SET @Produce_id = (SELECT id FROM categories WHERE name = 'Produce');
 
 -- Insert Subcategories for Electronics
 INSERT INTO categories (name, description, parent_id) VALUES
@@ -316,11 +319,10 @@ INSERT INTO categories (name, description, parent_id) VALUES
 ('Phones', 'Smartphones and mobile devices', @electronics_id),
 ('Laptops', 'Laptops and notebooks', @electronics_id);
 
--- Insert Subcategories for Books
+-- Insert Subcategories for Cars
 INSERT INTO categories (name, description, parent_id) VALUES
-('Fiction', 'Fictional books and novels', @books_id),
-('Non-Fiction', 'Non-fictional books and literature', @books_id),
-('Educational', 'Educational and academic books', @books_id);
+('Used', 'Buy a local used car', @car_id),
+('IT', 'Buy a newly imported car', @car_id);
 
 -- Insert Subcategories for Clothing
 INSERT INTO categories (name, description, parent_id) VALUES

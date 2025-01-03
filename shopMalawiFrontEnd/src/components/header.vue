@@ -30,20 +30,44 @@
       <ion-segment scrollable class="category-segment">
         <ion-segment-button
           v-for="category in categories"
-          :key="category.value"
-          :value="category.value"
+          :key="category.id"
+          :value="category.id"
+          @click="toggleSubcategories(category.id)"
         >
-          {{ category.label }}
+          {{ category.name }}
         </ion-segment-button>
       </ion-segment>
     </ion-toolbar>
+
+    <!-- Subcategories Section -->
+    <div v-if="visibleCategoryId !== null" class="subcategory-container">
+      <ion-segment scrollable>
+        <ion-segment-button
+          v-for="sub in categories.find((cat) => cat.id === visibleCategoryId)
+            ?.subcategories"
+          :key="sub.id"
+          :value="sub.id"
+        >
+          {{ sub.name }}
+        </ion-segment-button>
+      </ion-segment>
+    </div>
   </ion-header>
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent, ref, onMounted } from "vue";
 import { useThemeStore } from "@/stores/themeStore";
+import axios from "axios";
 import { cartOutline } from "ionicons/icons";
+
+type Category = {
+  id: number;
+  name: string;
+  description?: string;
+  parent_id?: number;
+  subcategories?: Category[];
+};
 
 export default defineComponent({
   name: "ShopMalawiHeader",
@@ -51,15 +75,6 @@ export default defineComponent({
     logo: {
       type: String,
       default: "/assets/logo.png",
-    },
-    categories: {
-      type: Array,
-      default: () => [
-        { value: "explore", label: "Explore" },
-        { value: "women", label: "Women's" },
-        { value: "electronics", label: "Electronics" },
-        // Add more default categories
-      ],
     },
     showSearchBar: {
       type: Boolean,
@@ -72,17 +87,53 @@ export default defineComponent({
   },
   setup() {
     const theme = useThemeStore();
+    const categories = ref<Category[]>([]);
+    const visibleCategoryId = ref<number | null>(null);
+    const toastMessage = ref("");
+    const toastColor = ref("");
+    const showToast = ref(false);
+
+    // Fetch categories from the database
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:1994/api/products/getCategories"
+        );
+        categories.value = response.data;
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        toastMessage.value = "Failed to fetch categories.";
+        toastColor.value = "danger";
+        showToast.value = true;
+      }
+    };
+
+    // Toggle visibility of subcategories
+    const toggleSubcategories = (categoryId: number) => {
+      visibleCategoryId.value =
+        visibleCategoryId.value === categoryId ? null : categoryId;
+    };
 
     const handleSearch = (event: CustomEvent) => {
-      const query = event.detail.value;
+      const query = event.detail.value?.trim() || "";
       console.log("Search query:", query);
       // Add your search logic here
     };
 
+    onMounted(() => {
+      fetchCategories();
+    });
+
     return {
       theme,
+      categories,
+      visibleCategoryId,
+      toggleSubcategories,
       handleSearch,
-      cartOutline, // Return the cart icon
+      cartOutline,
+      toastMessage,
+      toastColor,
+      showToast,
     };
   },
 });
@@ -109,13 +160,10 @@ ion-searchbar.custom-searchbar {
   border: 2px solid var(--ion-text-color);
 }
 
-/* Add a solid background color to the header and toolbar */
 ion-header,
 ion-toolbar {
-  --background: var(
-    --ion-background-color
-  ); /* Use the theme's background color */
-  background: var(--ion-background-color); /* Fallback for older browsers */
+  --background: var(--ion-background-color);
+  background: var(--ion-background-color);
   box-shadow: none;
   border: none;
 }
@@ -124,28 +172,24 @@ ion-toolbar {
   --background: var(--ion-background-color);
 }
 
-.category-segment ion-segment-button {
-  --color: var(--ion-color-step-200, #666);
-  --indicator-color: var(--ion-color-primary);
+.subcategory-container {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--ion-background-color);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ion-color-step-100);
 }
 
-[data-theme="dark"] .category-segment ion-segment-button {
-  --color: var(--ion-color-step-200, #eee);
+.subcategory-container ion-segment {
+  --background: var(--ion-background-color);
 }
 
-.category-segment ion-segment-button.segment-button-checked {
-  color: var(--ion-color-primary-shade) !important;
+.subcategory-container ion-segment-button {
+  --color: var(--ion-color-step-300);
 }
 
-[data-theme="dark"]
-  .category-segment
-  ion-segment-button.segment-button-checked {
-  color: var(--ion-color-primary-shade) !important;
-  --indicator-color: var(--ion-color-primary-shade);
-}
-
-/* Ensure the cart button is visible */
-ion-button {
-  --color: var(--ion-text-color); /* Use the default text color */
+.subcategory-container ion-segment-button:hover {
+  --color: var(--ion-color-primary);
 }
 </style>
