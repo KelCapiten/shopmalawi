@@ -5,19 +5,19 @@
       <div class="item-list">
         <div v-for="item in newlyAddedItems" :key="item.id" class="item">
           <img
-            v-if="item.images && item.images.length > 0"
-            :src="item.images[0]"
-            :alt="item.name"
+            :src="item.primary_image"
+            alt="Product Image"
             class="item-image"
           />
           <p class="item-name">{{ item.name }}</p>
-          <p class="item-price">${{ item.price }}</p>
+          <p class="item-price">MKW {{ item.price }}</p>
         </div>
         <div v-if="loading" class="loading">Loading more items...</div>
       </div>
     </div>
   </div>
 </template>
+
 <script>
 import { ref, onMounted } from "vue";
 import axios from "axios";
@@ -27,31 +27,21 @@ export default {
   setup() {
     const newlyAddedItems = ref([]);
     const loading = ref(false);
-    const offset = ref(0);
-    const noMoreItems = ref(false);
     const scrollContainer = ref(null);
+    const baseUrl = "http://localhost:1994";
 
     const fetchNewlyAddedItems = async () => {
-      if (loading.value || noMoreItems.value) return;
+      if (loading.value) return;
       loading.value = true;
 
       try {
         const response = await axios.get(
-          "http://localhost:1994/api/products/newly-added",
-          {
-            params: {
-              limit: 5,
-              offset: offset.value,
-            },
-          }
+          `${baseUrl}/api/products/getProductsAddedToday`
         );
-
-        if (response.data.length === 0) {
-          noMoreItems.value = true;
-        } else {
-          newlyAddedItems.value = [...newlyAddedItems.value, ...response.data];
-          offset.value += response.data.length;
-        }
+        newlyAddedItems.value = response.data.map((item) => ({
+          ...item,
+          primary_image: `${baseUrl}${item.primary_image}`,
+        }));
       } catch (error) {
         console.error("Error fetching newly added items:", error);
       } finally {
@@ -76,7 +66,6 @@ export default {
     return {
       newlyAddedItems,
       loading,
-      noMoreItems,
       scrollContainer,
       handleScroll,
     };

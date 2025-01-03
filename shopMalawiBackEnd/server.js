@@ -1,9 +1,10 @@
 import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
-import mysql from "mysql";
+import corsMiddleware from "./middleware/corsMiddleware.js";
+import staticMiddleware from "./middleware/staticMiddleware.js";
+import dbMiddleware from "./middleware/dbMiddleware.js";
 import productRoutes from "./routes/products.js";
-import usersRouter from "./routes/users.js";
+import usersRouters from "./routes/users.js";
 
 dotenv.config();
 
@@ -11,36 +12,16 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-  })
-);
-app.use(express.json());
+app.use(corsMiddleware); // Use CORS middleware
+app.use(express.json()); // Parse JSON request bodies
+app.use("/uploads", staticMiddleware); // Serve static files from the "uploads" directory
 
-// MySQL connection
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-});
-
-db.connect((err) => {
-  if (err) {
-    console.error("Error connecting to MySQL database:", err);
-  } else {
-    console.log("Connected to MySQL database");
-  }
-});
-
-// Attach MySQL connection to app locals
-app.locals.db = db;
+// Database Middleware
+dbMiddleware(app); // Attach MySQL connection to app locals
 
 // Routes
 app.use("/api/products", productRoutes);
-app.use("/api/users", usersRouter);
+app.use("/api/users", usersRouters);
 
 // Start Server
 app.listen(port, () => {

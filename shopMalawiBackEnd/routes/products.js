@@ -1,6 +1,10 @@
 import express from "express";
 import { authenticateUser } from "../middleware/authMiddleware.js";
-import { addProduct, getCategories } from "../controllers/productController.js";
+import {
+  addProduct,
+  getCategories,
+  getProductsAddedToday, // Import the new function
+} from "../controllers/productController.js";
 import { upload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
@@ -15,5 +19,8 @@ router.post(
 
 // Fetch categories
 router.get("/getCategories", getCategories);
+
+// Fetch products added today
+router.get("/getProductsAddedToday", getProductsAddedToday);
 
 export default router;

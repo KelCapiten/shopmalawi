@@ -61,21 +61,25 @@ export const addProduct = async (req, res) => {
         description,
         price,
         markUpAmount,
-        categoryId || null,
-        stockQuantity || 0,
+        categoryId,
+        stockQuantity,
         uploadedBy,
       ]
     );
 
     const productId = productResult.insertId;
 
-    // Insert image paths into product_images table
-    const imageQueries = req.files.map((file, index) =>
-      connection.query(
+    // Modify file paths and insert into product_images table
+    const imageQueries = req.files.map((file, index) => {
+      // Modify the file path for the database
+      const modifiedFilePath = `/${file.path.replace(/\\/g, "/")}`;
+
+      return connection.query(
         `INSERT INTO product_images (product_id, image_path, alt_text, is_primary) VALUES (?, ?, ?, ?)`,
-        [productId, file.path, null, index === 0] // First image is primary
-      )
-    );
+        [productId, modifiedFilePath, null, index === 0]
+      );
+    });
+
     await Promise.all(imageQueries);
 
     // Commit transaction
@@ -91,5 +95,38 @@ export const addProduct = async (req, res) => {
     res.status(500).json({ message: "Failed to add product" });
   } finally {
     connection.release();
+  }
+};
+
+// New endpoint to get products added today
+export const getProductsAddedToday = async (req, res) => {
+  try {
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split("T")[0];
+
+    // Fetch products created today
+    const [products] = await db.query(
+      `SELECT 
+         p.id, 
+         p.name, 
+         p.description, 
+         p.price, 
+         p.mark_up_amount, 
+         p.category_id, 
+         p.stock_quantity, 
+         p.uploaded_by, 
+         p.created_at, 
+         p.updated_at, 
+         pi.image_path AS primary_image 
+       FROM products p 
+       LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1 
+       WHERE DATE(p.created_at) = ?`,
+      [today]
+    );
+
+    res.status(200).json(products);
+  } catch (error) {
+    console.error("Error fetching products added today:", error);
+    res.status(500).json({ message: "Failed to fetch products added today" });
   }
 };

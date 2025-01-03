@@ -77,3 +77,4 @@ capacitor.config.json
 
 # Build files
 www/
+uploads/

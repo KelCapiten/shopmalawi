@@ -5,14 +5,6 @@ DB_NAME="shopMalawi"
 DB_USER="root"
 DB_PASSWORD="root"
 
-# Admin user details (hardcoded)
-ADMIN_USERNAME="admin"
-ADMIN_NAME="Kelvin"
-ADMIN_LASTNAME="Munyimbili"
-ADMIN_EMAIL="admin@shopMalawi.com"
-ADMIN_PASSWORD="admin123"  # WARNING: Storing passwords in plaintext is insecure
-ADMIN_PHONE="0000000000"
-
 # SQL commands to create the database and tables
 SQL_COMMANDS="
 -- Drop the database if it exists and create a new one
@@ -301,9 +293,9 @@ INSERT INTO roles (role_name, description) VALUES
 
 -- Insert Main Categories
 INSERT INTO categories (name, description) VALUES
-('Explore', 'Not sure? Look around and see what catches your eye'),
 ('Electronics', 'Electronic gadgets and devices'),
 ('Cars', 'Wide range of books and literature'),
+('Clothing', 'Men and Women clothing for all ages'),
 ('Produce', 'Agricultural products across Malawi'),
 ('Services', 'Need something done? Find it here');
 
@@ -326,7 +318,7 @@ INSERT INTO categories (name, description, parent_id) VALUES
 
 -- Insert Subcategories for Clothing
 INSERT INTO categories (name, description, parent_id) VALUES
-('Men\'s Clothing', 'Clothing for men', @clothing_id),
+('Men\'s Clothing', 'Clothing for men', @clothing_id) ,
 ('Women\'s Clothing', 'Clothing for women', @clothing_id),
 ('Kids\' Clothing', 'Clothing for kids', @clothing_id);
 
@@ -354,26 +346,6 @@ if [ $? -eq 0 ]; then
     echo "Database and tables created successfully!"
 else
     echo "Failed to set up the database. Please check your MySQL credentials and try again."
-    exit 1
-fi
-
-# Insert Admin User (Hardcoded)
-echo "Creating admin user..."
-
-ADMIN_INSERT_SQL="
-USE \`$DB_NAME\`;
-
-INSERT INTO users (first_name, last_name, username, email, password_hash, phone_number, role_id)
-VALUES ('$ADMIN_NAME','$ADMIN_LASTNAME','$ADMIN_USERNAME', '$ADMIN_EMAIL', '$ADMIN_PASSWORD', '$ADMIN_PHONE',
-(SELECT id FROM roles WHERE role_name='admin' LIMIT 1));
-"
-
-mysql -u"$DB_USER" -p"$DB_PASSWORD" -e "$ADMIN_INSERT_SQL"
-
-if [ $? -eq 0 ]; then
-    echo "Admin user '$ADMIN_USERNAME' created successfully!"
-else
-    echo "Failed to create admin user. Please check the script and try again."
     exit 1
 fi
 

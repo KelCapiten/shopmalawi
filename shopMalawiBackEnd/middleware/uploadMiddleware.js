@@ -1,41 +1,57 @@
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+// Configurable values from environment variables
+const UPLOAD_DIR = process.env.UPLOAD_DIR || "uploads/products";
+const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024; // Default: 5MB
+const ALLOWED_FILE_TYPES = ["image/jpeg", "image/png", "image/gif"];
+
+// Ensure the upload directory exists
+const ensureUploadDirExists = (uploadDir) => {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    console.log(`Directory ${uploadDir} created successfully.`);
+  }
+};
 
 // Configure storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = "uploads/products";
-
-    // Ensure the directory exists
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true }); // Create directory if it doesn't exist
-      console.log(`Directory ${uploadDir} created successfully.`);
-    }
-
-    cb(null, uploadDir); // Directory to store files
+    ensureUploadDirExists(UPLOAD_DIR); // Ensure directory exists
+    cb(null, UPLOAD_DIR); // Directory to store files
   },
   filename: (req, file, cb) => {
+    // Convert the original filename to lowercase
+    const lowercaseName = file.originalname.toLowerCase();
+    // Generate a unique filename with the lowercase extension
     const uniqueName = `${Date.now()}-${Math.round(
       Math.random() * 1e9
-    )}${path.extname(file.originalname)}`;
+    )}${path.extname(lowercaseName)}`;
     cb(null, uniqueName); // Unique filename
   },
 });
 
-// File filter to allow only images
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
+// File filter to allow only specific file types
+const fileFilter = (file, cb) => {
+  if (ALLOWED_FILE_TYPES.includes(file.mimetype)) {
+    cb(null, true); // Accept the file
   } else {
-    cb(new Error("Only image files are allowed!"), false);
+    cb(
+      new Error(
+        `Invalid file type. Only ${ALLOWED_FILE_TYPES.join(", ")} are allowed.`
+      ),
+      false
+    ); // Reject the file
   }
 };
 
 // Multer instance
 export const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // Limit file size to 5MB
+  limits: { fileSize: MAX_FILE_SIZE }, // Limit file size
   fileFilter,
 });
