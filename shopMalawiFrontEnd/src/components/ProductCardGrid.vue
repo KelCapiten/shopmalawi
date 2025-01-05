@@ -1,44 +1,22 @@
 <template>
   <div class="product-card-grid">
     <label class="section-heading">{{ heading }}</label>
-    <ion-grid>
-      <ion-row>
-        <ion-col
-          size="6"
-          size-md="4"
-          v-for="product in products"
-          :key="product.id"
-        >
-          <ion-card>
-            <!-- Display the primary image if available -->
-            <img
-              :src="getPrimaryImage(product.images)"
-              :alt="product.name"
-              class="product-image"
-            />
-            <ion-card-header>
-              <ion-card-subtitle>
-                <!-- Display category name -->
-                <span class="category">{{ product.category }}</span>
-              </ion-card-subtitle>
-              <ion-card-title>{{ product.name }}</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>
-              <!-- Display price -->
-              <div class="price">MWK {{ product.price }}</div>
-              <!-- Display stock quantity -->
-              <div class="stock-info">
-                {{ product.stock_quantity }} in stock
-              </div>
-              <!-- Display uploaded by -->
-              <div class="uploaded-by">
-                Uploaded by: {{ product.uploaded_by }}
-              </div>
-            </ion-card-content>
-          </ion-card>
-        </ion-col>
-      </ion-row>
-    </ion-grid>
+    <div class="horizontal-list">
+      <div v-for="product in products" :key="product.id" class="item">
+        <div class="image-container">
+          <img
+            :src="getPrimaryImage(product.images)"
+            :alt="product.name"
+            class="item-image"
+          />
+        </div>
+        <div class="item-details">
+          <h2 class="product-name">{{ product.name }}</h2>
+          <p class="price">MWK {{ product.price }}</p>
+          <p class="stock-info">{{ product.stock_quantity }} in stock</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -72,55 +50,109 @@ export default defineComponent({
     },
   },
   methods: {
-    // Helper method to get the primary image URL
     getPrimaryImage(
       images: Array<{ image_path: string; is_primary: boolean }>
     ) {
       const primaryImage = images.find((image) => image.is_primary);
       return primaryImage
         ? `http://localhost:1994${primaryImage.image_path}`
-        : "https://via.placeholder.com/150"; // Fallback image if no primary image is found
+        : "https://via.placeholder.com/150";
     },
   },
 });
 </script>
 
 <style scoped>
+.product-card-grid {
+  padding: 16px;
+}
+
 .section-heading {
   font-weight: bold;
   margin-bottom: 5px;
   display: block;
-  font-size: 1rem;
-  color: #2c2c2c;
-}
-
-.product-image {
-  width: 100%;
-  height: 150px;
-  object-fit: cover;
-  border-radius: 8px 8px 0 0;
-}
-
-.category {
   font-size: 0.9rem;
-  color: #666;
+  color: #222222;
 }
 
-.price {
-  font-weight: bold;
-  font-size: 1.2rem;
+.horizontal-list {
+  display: flex;
+  overflow-x: auto;
+  gap: 16px;
+  padding-bottom: 16px;
+  scrollbar-width: none; /* For Firefox */
+  -ms-overflow-style: none; /* For Internet Explorer and Edge */
+}
+
+.horizontal-list::-webkit-scrollbar {
+  display: none; /* For Chrome, Safari, and Opera */
+}
+
+.item {
+  flex: 0 0 auto;
+  width: 150px;
+  text-align: left; /* Align text to the left */
+}
+
+.image-container {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.item-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.item-details {
   margin-top: 8px;
 }
 
-.stock-info {
+/* Swapped styles for name and price */
+.product-name {
   font-size: 0.9rem;
-  color: gray;
-  margin-top: 4px;
+  color: #4e4e4e;
+  margin: 4px 0;
 }
 
-.uploaded-by {
+.price {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #000000;
+  margin: 0;
+}
+
+.stock-info {
   font-size: 0.8rem;
   color: #888;
-  margin-top: 4px;
+  margin: 0;
+}
+
+@media (max-width: 576px) {
+  .item {
+    width: 140px; /* Slightly smaller for mobile */
+  }
+
+  .image-container {
+    width: 140px;
+    height: 140px;
+  }
+
+  .product-name {
+    font-size: 0.8rem;
+  }
+
+  .price {
+    font-size: 0.9rem;
+  }
+
+  .stock-info {
+    font-size: 0.75rem;
+  }
 }
 </style>

@@ -7,7 +7,7 @@
         v-for="subcategory in subcategories"
         :key="subcategory.id"
         :heading="subcategory.name"
-        :products="subcategory.products || []"
+        :products="subcategory.products"
       />
     </ion-content>
     <appFooter />
@@ -55,17 +55,19 @@ export default defineComponent({
       }
     };
 
-    // Combine categories and products
+    // Combine categories and products, and filter out subcategories with no products
     const subcategories = computed(() => {
-      return categories.value.flatMap((category) => {
-        return (category.subcategories || []).map((subcategory: any) => ({
-          id: subcategory.id,
-          name: subcategory.name,
-          products: products.value.filter(
-            (product) => product.category_id === subcategory.id
-          ), // Filter products by subcategory ID
-        }));
-      });
+      return categories.value
+        .flatMap((category) => {
+          return (category.subcategories || []).map((subcategory: any) => ({
+            id: subcategory.id,
+            name: subcategory.name,
+            products: products.value.filter(
+              (product) => product.category_id === subcategory.id
+            ), // Filter products by subcategory ID
+          }));
+        })
+        .filter((subcategory) => subcategory.products.length > 0); // Filter out subcategories with no products
     });
 
     onMounted(() => {
