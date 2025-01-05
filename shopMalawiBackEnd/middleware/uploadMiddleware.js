@@ -36,7 +36,7 @@ const storage = multer.diskStorage({
 });
 
 // File filter to allow only specific file types
-const fileFilter = (file, cb) => {
+const fileFilter = (req, file, cb) => {
   if (ALLOWED_FILE_TYPES.includes(file.mimetype)) {
     cb(null, true); // Accept the file
   } else {
@@ -52,6 +52,6 @@ const fileFilter = (file, cb) => {
 // Multer instance
 export const upload = multer({
   storage,
-  limits: { fileSize: MAX_FILE_SIZE }, // Limit file size
+  limits: { fileSize: MAX_FILE_SIZE },
   fileFilter,
 });

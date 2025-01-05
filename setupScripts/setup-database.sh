@@ -313,8 +313,8 @@ INSERT INTO categories (name, description, parent_id) VALUES
 
 -- Insert Subcategories for Cars
 INSERT INTO categories (name, description, parent_id) VALUES
-('Used', 'Buy a local used car', @car_id),
-('IT', 'Buy a newly imported car', @car_id);
+('Used Cars', 'Buy a local used car', @car_id),
+('IT Cars', 'Buy a newly imported car', @car_id);
 
 -- Insert Subcategories for Clothing
 INSERT INTO categories (name, description, parent_id) VALUES

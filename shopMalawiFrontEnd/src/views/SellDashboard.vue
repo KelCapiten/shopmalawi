@@ -11,7 +11,7 @@
           <div class="upload-area" @click="triggerFileInput">
             <input
               type="file"
-              accept="image/*"
+              accept="image/jpeg, image/png, image/gif"
               multiple
               ref="fileInput"
               @change="handleImageUpload"
@@ -68,12 +68,13 @@
             placeholder="Select category"
             required
           >
+            <!-- Loop through subcategories instead of categories -->
             <ion-select-option
-              v-for="category in categories"
-              :key="category.id"
-              :value="category.id"
+              v-for="subcategory in subcategories"
+              :key="subcategory.id"
+              :value="subcategory.id"
             >
-              {{ category.name }}
+              {{ subcategory.name }}
             </ion-select-option>
           </ion-select>
         </div>
@@ -155,6 +156,7 @@ interface Image {
 interface Category {
   id: string;
   name: string;
+  subcategories: Category[];
 }
 
 export default defineComponent({
@@ -183,6 +185,7 @@ export default defineComponent({
     const priceInput = ref<string>("");
     const isSaving = ref(false);
     const categories = ref<Category[]>([]);
+    const subcategories = ref<Category[]>([]);
 
     const paginationOptions = computed(() => ({
       clickable: true,
@@ -195,6 +198,11 @@ export default defineComponent({
           "http://localhost:1994/api/products/getCategories"
         );
         categories.value = response.data;
+
+        // Extract all subcategories
+        subcategories.value = categories.value.flatMap(
+          (category) => category.subcategories || []
+        );
       } catch (error) {
         console.error("Error fetching categories:", error);
         toastMessage.value = "Failed to fetch categories.";
@@ -331,7 +339,7 @@ export default defineComponent({
       paginationOptions,
       Pagination,
       isSaving,
-      categories,
+      subcategories,
     };
   },
 });

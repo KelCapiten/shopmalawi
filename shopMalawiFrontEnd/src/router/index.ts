@@ -5,6 +5,7 @@ import HomePage from "@/views/HomePage.vue";
 import LoginPage from "@/views/LoginPage.vue";
 import CreateAccount from "@/views/CreateAccount.vue";
 import ProfilePage from "@/views/ProfilePage.vue";
+import ShopPage from "@/views/ShopPage.vue"; // Import ShopPage
 import { useAuthStore } from "@/stores/authStore";
 
 const routes: Array<RouteRecordRaw> = [
@@ -36,6 +37,12 @@ const routes: Array<RouteRecordRaw> = [
     path: "/profile",
     name: "Profile",
     component: ProfilePage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/shop", // New Shop route
+    name: "Shop",
+    component: ShopPage,
     meta: { requiresAuth: true },
   },
 ];

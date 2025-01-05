@@ -3,7 +3,7 @@ import { authenticateUser } from "../middleware/authMiddleware.js";
 import {
   addProduct,
   getCategories,
-  getProductsAddedToday, // Import the new function
+  getAllProducts,
 } from "../controllers/productController.js";
 import { upload } from "../middleware/uploadMiddleware.js";
 
@@ -20,7 +20,7 @@ router.post(
 // Fetch categories
 router.get("/getCategories", getCategories);
 
-// Fetch products added today
-router.get("/getProductsAddedToday", getProductsAddedToday);
+// Fetch all products with filters
+router.get("/getAllProducts", getAllProducts);
 
 export default router;
