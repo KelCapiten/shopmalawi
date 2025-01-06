@@ -5,7 +5,8 @@ import HomePage from "@/views/HomePage.vue";
 import LoginPage from "@/views/LoginPage.vue";
 import CreateAccount from "@/views/CreateAccount.vue";
 import ProfilePage from "@/views/ProfilePage.vue";
-import ShopPage from "@/views/ShopPage.vue"; // Import ShopPage
+import ShopPage from "@/views/ShopPage.vue";
+import SearchResultsPage from "@/views/searchResultsPage.vue";
 import { useAuthStore } from "@/stores/authStore";
 
 const routes: Array<RouteRecordRaw> = [
@@ -30,7 +31,7 @@ const routes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/create-account",
+    path: "/createAccount",
     component: CreateAccount,
   },
   {
@@ -43,6 +44,12 @@ const routes: Array<RouteRecordRaw> = [
     path: "/shop", // New Shop route
     name: "Shop",
     component: ShopPage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/searchResults",
+    name: "SearchResults",
+    component: SearchResultsPage,
     meta: { requiresAuth: true },
   },
 ];

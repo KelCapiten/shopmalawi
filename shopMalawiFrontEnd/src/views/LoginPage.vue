@@ -71,7 +71,7 @@ export default defineComponent({
     const authStore = useAuthStore();
 
     const navigateToCreateAccount = () => {
-      router.push("/create-account");
+      router.push("/createAccount");
     };
 
     return {

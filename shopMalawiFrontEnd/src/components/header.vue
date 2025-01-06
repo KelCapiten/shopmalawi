@@ -17,11 +17,12 @@
     <!-- Search Bar -->
     <ion-toolbar class="search-bar" v-if="showSearchBar">
       <ion-searchbar
-        placeholder="Search products..."
-        :debounce="500"
+        :placeholder="searchPlaceholder"
         show-cancel-button="focus"
         class="custom-searchbar"
-        @ionInput="handleSearch"
+        :value="searchQuery"
+        @ionInput="updateSearchQuery"
+        @keyup.enter="handleSearch"
       ></ion-searchbar>
     </ion-toolbar>
 
@@ -31,10 +32,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent, ref, watch } from "vue";
 import { useThemeStore } from "@/stores/themeStore";
 import { cartOutline } from "ionicons/icons";
 import CategorySegment from "@/components/CategorySegment.vue";
+import { useRouter, useRoute } from "vue-router";
 
 export default defineComponent({
   name: "ShopMalawiHeader",
@@ -51,21 +53,42 @@ export default defineComponent({
       type: Boolean,
       default: true,
     },
+    searchPlaceholder: {
+      type: String,
+      default: "Search products...",
+    },
   },
   components: {
     CategorySegment,
   },
   setup() {
     const theme = useThemeStore();
+    const router = useRouter();
+    const route = useRoute();
+    const searchQuery = ref(route.query.q?.toString() || "");
 
-    const handleSearch = (event: CustomEvent) => {
-      const query = event.detail.value?.trim() || "";
-      console.log("Search query:", query);
-      // Add your search logic here
+    // Update searchQuery when the route query changes
+    watch(
+      () => route.query.q,
+      (newQuery) => {
+        searchQuery.value = newQuery?.toString() || "";
+      }
+    );
+
+    const updateSearchQuery = (event: CustomEvent) => {
+      searchQuery.value = event.detail.value;
+    };
+
+    const handleSearch = () => {
+      if (searchQuery.value.trim()) {
+        router.push({ name: "SearchResults", query: { q: searchQuery.value } });
+      }
     };
 
     return {
       theme,
+      searchQuery,
+      updateSearchQuery,
       handleSearch,
       cartOutline,
     };
@@ -84,14 +107,12 @@ export default defineComponent({
 }
 
 ion-searchbar.custom-searchbar {
-  --background: var(--ion-background-color);
   --placeholder-color: var(--ion-text-color);
   --color: var(--ion-text-color);
   --icon-color: var(--ion-text-color);
-  --border-radius: 50px;
+  --border-radius: 20px;
   border-radius: 50px;
   --box-shadow: none;
-  border: 2px solid var(--ion-text-color);
 }
 
 ion-header,
