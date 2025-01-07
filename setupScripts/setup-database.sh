@@ -67,6 +67,14 @@ CREATE TABLE IF NOT EXISTS user_bank_details (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Payment Methods Table
+CREATE TABLE IF NOT EXISTS payment_methods (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    method_name VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 -- Categories Table (with parent_id for hierarchical structure)
 CREATE TABLE IF NOT EXISTS categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -75,14 +83,6 @@ CREATE TABLE IF NOT EXISTS categories (
     parent_id INT DEFAULT NULL, -- References the parent category
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- Payment Methods Table
-CREATE TABLE IF NOT EXISTS payment_methods (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    method_name VARCHAR(50) NOT NULL UNIQUE,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- Products Table

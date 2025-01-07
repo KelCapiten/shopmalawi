@@ -100,13 +100,12 @@ export const addProduct = async (req, res) => {
   }
 };
 
-// Endpoint to get all products, optionally filtered by category and date range
 export const getAllProducts = async (req, res) => {
   const connection = await db.getConnection();
   try {
-    const { categoryId, startDate, endDate } = req.query; // Get categoryId, startDate, and endDate from query parameters
+    const { categoryId, startDate, endDate } = req.query; // Extract query parameters
 
-    // Base query to get all products along with their images, category name, and uploaded_by username
+    // Base SQL query to retrieve products along with related data
     let query = `
       SELECT 
         p.id, 
@@ -121,7 +120,8 @@ export const getAllProducts = async (req, res) => {
         pi.image_path, 
         pi.alt_text, 
         pi.is_primary,
-        c.name AS category_name
+        c.name AS category_name,
+        p.created_at
       FROM 
         products p
       LEFT JOIN 
@@ -138,38 +138,80 @@ export const getAllProducts = async (req, res) => {
         p.uploaded_by = u.id
     `;
 
-    // Array to hold query parameters
+    // Array to hold parameterized query values
     const queryParams = [];
 
-    // Add WHERE clause if categoryId or date range is provided
-    if (categoryId || startDate || endDate) {
-      query += ` WHERE `;
+    // Initialize an array to build WHERE conditions
+    const whereConditions = [];
 
-      if (categoryId) {
-        query += ` p.category_id = ? `;
-        queryParams.push(categoryId);
+    if (categoryId) {
+      // Convert categoryId to a number for safety
+      const parsedCategoryId = parseInt(categoryId, 10);
+      if (isNaN(parsedCategoryId)) {
+        return res
+          .status(400)
+          .json({ message: "Invalid categoryId parameter" });
       }
 
-      if (categoryId && (startDate || endDate)) {
-        query += ` AND `;
-      }
+      // Check if the provided categoryId is a parent category
+      const [categoryRows] = await connection.query(
+        `SELECT id FROM categories WHERE id = ? AND EXISTS (SELECT 1 FROM categories WHERE parent_id = ?)`,
+        [parsedCategoryId, parsedCategoryId]
+      );
 
-      if (startDate && endDate) {
-        query += ` DATE(p.created_at) BETWEEN ? AND ? `;
-        queryParams.push(startDate, endDate);
-      } else if (startDate) {
-        query += ` DATE(p.created_at) >= ? `;
-        queryParams.push(startDate);
-      } else if (endDate) {
-        query += ` DATE(p.created_at) <= ? `;
-        queryParams.push(endDate);
+      if (categoryRows.length > 0) {
+        // **Parent Category:** Fetch all subcategory IDs
+        const [subRows] = await connection.query(
+          `SELECT id FROM categories WHERE parent_id = ?`,
+          [parsedCategoryId]
+        );
+
+        const subcategoryIds = subRows.map((row) => row.id);
+
+        if (subcategoryIds.length > 0) {
+          // Add condition to filter products belonging to any of the subcategory IDs
+          // AND products directly under the parent category
+          const placeholders = subcategoryIds.map(() => "?").join(",");
+          whereConditions.push(
+            `(p.category_id = ? OR p.category_id IN (${placeholders}))`
+          );
+          queryParams.push(parsedCategoryId, ...subcategoryIds);
+        } else {
+          // **No Subcategories:** Include products directly under the parent category
+          whereConditions.push(`p.category_id = ?`);
+          queryParams.push(parsedCategoryId);
+        }
+      } else {
+        // **Subcategory:** Directly filter products by the provided categoryId
+        whereConditions.push(`p.category_id = ?`);
+        queryParams.push(parsedCategoryId);
       }
     }
 
-    // Execute the query with optional parameters
+    // Handle date range filtering if provided
+    if (startDate && endDate) {
+      whereConditions.push(`DATE(p.created_at) BETWEEN ? AND ?`);
+      queryParams.push(startDate, endDate);
+    } else if (startDate) {
+      whereConditions.push(`DATE(p.created_at) >= ?`);
+      queryParams.push(startDate);
+    } else if (endDate) {
+      whereConditions.push(`DATE(p.created_at) <= ?`);
+      queryParams.push(endDate);
+    }
+
+    // Append WHERE clause if there are any conditions
+    if (whereConditions.length > 0) {
+      query += ` WHERE ` + whereConditions.join(" AND ");
+    }
+
+    // Append ORDER BY clause to sort results by creation date in descending order
+    query += ` ORDER BY p.created_at DESC`;
+
+    // Execute the final query with all parameters
     const [products] = await connection.query(query, queryParams);
 
-    // Group images by product
+    // Process the fetched products to group images by product
     const productsWithImages = products.reduce((acc, product) => {
       const existingProduct = acc.find((p) => p.id === product.id);
       if (existingProduct) {
@@ -186,10 +228,10 @@ export const getAllProducts = async (req, res) => {
           price: product.price,
           mark_up_amount: product.mark_up_amount,
           category_id: product.category_id,
-          category: product.category_name, // Add category name to the response
+          category: product.category_name, // Include category name
           stock_quantity: product.stock_quantity,
           uploaded_by_userID: product.uploaded_by_userID, // Renamed field
-          uploaded_by: product.uploaded_by, // Username of the user who uploaded the product
+          uploaded_by: product.uploaded_by, // Username of the uploader
           images: product.image_path
             ? [
                 {
@@ -204,11 +246,13 @@ export const getAllProducts = async (req, res) => {
       return acc;
     }, []);
 
+    // Send the processed products as a JSON response
     res.status(200).json(productsWithImages);
   } catch (error) {
     console.error("Error fetching products:", error);
     res.status(500).json({ message: "Failed to fetch products" });
   } finally {
+    // Always release the database connection back to the pool
     connection.release();
   }
 };

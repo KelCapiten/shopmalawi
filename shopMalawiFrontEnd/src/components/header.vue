@@ -27,7 +27,10 @@
     </ion-toolbar>
 
     <!-- Category Segment -->
-    <CategorySegment v-if="showCategorySegment" />
+    <CategorySegment
+      v-if="showCategorySegment"
+      @categorySelected="filterByCategory"
+    />
   </ion-header>
 </template>
 
@@ -67,7 +70,7 @@ export default defineComponent({
     const route = useRoute();
     const searchQuery = ref(route.query.q?.toString() || "");
 
-    // Update searchQuery when the route query changes
+    // Watch for route query changes
     watch(
       () => route.query.q,
       (newQuery) => {
@@ -75,14 +78,21 @@ export default defineComponent({
       }
     );
 
+    // Update search query when the user types in the search bar
     const updateSearchQuery = (event: CustomEvent) => {
       searchQuery.value = event.detail.value;
     };
 
+    // Handle search when the user presses Enter
     const handleSearch = () => {
       if (searchQuery.value.trim()) {
         router.push({ name: "SearchResults", query: { q: searchQuery.value } });
       }
+    };
+
+    // Filter products by category and navigate to the Shop page
+    const filterByCategory = (categoryId: number) => {
+      router.push({ name: "shop", query: { categoryId } });
     };
 
     return {
@@ -90,6 +100,7 @@ export default defineComponent({
       searchQuery,
       updateSearchQuery,
       handleSearch,
+      filterByCategory,
       cartOutline,
     };
   },

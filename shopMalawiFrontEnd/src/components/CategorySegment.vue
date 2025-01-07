@@ -1,22 +1,26 @@
 <template>
+  <!-- Top-level categories -->
   <ion-toolbar>
     <ion-segment scrollable class="category-segment">
       <ion-segment-button
         v-for="category in categories"
         :key="category.id"
         :value="category.id"
-        @click="toggleSubcategories(category.id)"
+        @click="toggleCategory(category.id)"
       >
         {{ category.name }}
       </ion-segment-button>
     </ion-segment>
   </ion-toolbar>
+
+  <!-- Subcategories (only visible for the expanded top-level category) -->
   <div v-if="visibleCategoryId !== null" class="subcategory-container">
     <ion-segment scrollable>
       <ion-segment-button
         v-for="sub in subcategories"
         :key="sub.id"
         :value="sub.id"
+        @click="selectSubcategory(sub.id)"
       >
         {{ sub.name }}
       </ion-segment-button>
@@ -28,6 +32,7 @@
 import { defineComponent, ref, computed, onMounted } from "vue";
 import axios from "axios";
 
+/** Type for your category objects */
 type Category = {
   id: number;
   name: string;
@@ -38,14 +43,19 @@ type Category = {
 
 export default defineComponent({
   name: "CategorySegment",
-  setup() {
+
+  /**
+   * Declare that this component can emit "categorySelected".
+   */
+  emits: ["categorySelected"],
+
+  setup(_, { emit }) {
     const categories = ref<Category[]>([]);
     const visibleCategoryId = ref<number | null>(null);
-    const toastMessage = ref("");
-    const toastColor = ref("");
-    const showToast = ref(false);
 
-    // Fetch categories from the database
+    /**
+     * Fetch categories from the DB on mount
+     */
     const fetchCategories = async () => {
       try {
         const response = await axios.get(
@@ -54,23 +64,38 @@ export default defineComponent({
         categories.value = response.data;
       } catch (error) {
         console.error("Error fetching categories:", error);
-        toastMessage.value = "Failed to fetch categories.";
-        toastColor.value = "danger";
-        showToast.value = true;
       }
     };
 
-    // Toggle visibility of subcategories
-    const toggleSubcategories = (categoryId: number) => {
+    /**
+     * When a top-level category is clicked:
+     * 1) Toggle subcategories for that category.
+     * 2) Emit "categorySelected" so the parent knows to filter or navigate.
+     */
+    const toggleCategory = (categoryId: number) => {
       visibleCategoryId.value =
         visibleCategoryId.value === categoryId ? null : categoryId;
+      emit("categorySelected", categoryId);
     };
 
-    const subcategories = computed(
-      () =>
+    /**
+     * When a subcategory is clicked, just emit
+     * "categorySelected" for the parent to handle.
+     */
+    const selectSubcategory = (subcategoryId: number) => {
+      emit("categorySelected", subcategoryId);
+    };
+
+    /**
+     * A computed property that returns the subcategories
+     * of whichever top-level category is currently visible.
+     */
+    const subcategories = computed(() => {
+      return (
         categories.value.find((cat) => cat.id === visibleCategoryId.value)
           ?.subcategories || []
-    );
+      );
+    });
 
     onMounted(() => {
       fetchCategories();
@@ -79,11 +104,9 @@ export default defineComponent({
     return {
       categories,
       visibleCategoryId,
-      toggleSubcategories,
       subcategories,
-      toastMessage,
-      toastColor,
-      showToast,
+      toggleCategory,
+      selectSubcategory,
     };
   },
 });

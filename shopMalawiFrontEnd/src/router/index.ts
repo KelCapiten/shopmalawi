@@ -41,8 +41,8 @@ const routes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/shop", // New Shop route
-    name: "Shop",
+    path: "/shop",
+    name: "shop",
     component: ShopPage,
     meta: { requiresAuth: true },
   },
