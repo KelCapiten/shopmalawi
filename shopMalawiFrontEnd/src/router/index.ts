@@ -7,6 +7,7 @@ import CreateAccount from "@/views/CreateAccount.vue";
 import ProfilePage from "@/views/ProfilePage.vue";
 import ShopPage from "@/views/ShopPage.vue";
 import SearchResultsPage from "@/views/searchResultsPage.vue";
+import ProductPage from "@/views/productPage.vue";
 import { useAuthStore } from "@/stores/authStore";
 
 const routes: Array<RouteRecordRaw> = [
@@ -50,6 +51,12 @@ const routes: Array<RouteRecordRaw> = [
     path: "/searchResults",
     name: "SearchResults",
     component: SearchResultsPage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/product/:id",
+    name: "ProductPage",
+    component: ProductPage,
     meta: { requiresAuth: true },
   },
 ];

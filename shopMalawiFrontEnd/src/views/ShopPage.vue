@@ -1,38 +1,34 @@
 <template>
   <ion-page>
     <appHeader />
-
     <ion-content>
       <div v-if="currentCategory && currentCategoryProducts.length > 0">
         <ProductCardGrid
-          :heading="`${currentCategory.name} Products`"
+          :heading="`${currentCategory.name}`"
           :products="currentCategoryProducts"
+          @navigateToProductPage="navigateToProductPage"
         />
       </div>
-
       <ProductCardGrid
         v-for="subcategory in subcategories"
         :key="subcategory.id"
         :heading="subcategory.name"
         :products="subcategory.products"
+        @navigateToProductPage="navigateToProductPage"
       />
-
       <div v-if="!hasProducts && !isLoading" class="no-products">
         <p>No products found for the selected category.</p>
       </div>
-
       <ion-spinner v-if="isLoading" name="crescent"></ion-spinner>
     </ion-content>
-
     <appFooter />
   </ion-page>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
-
 import appHeader from "@/components/header.vue";
 import appFooter from "@/components/footer.vue";
 import ProductCardGrid from "@/components/ProductCardGrid.vue";
@@ -46,38 +42,29 @@ interface Category {
 
 export default defineComponent({
   name: "ShopPage",
-  components: {
-    appHeader,
-    appFooter,
-    ProductCardGrid,
-  },
+  components: { appHeader, appFooter, ProductCardGrid },
   setup() {
     const route = useRoute();
-
+    const router = useRouter();
     const categories = ref<Category[]>([]);
     const products = ref<any[]>([]);
     const isLoading = ref<boolean>(false);
     const hasProducts = ref<boolean>(false);
     const selectedCategoryId = ref<number | null>(null);
-
     const findCategoryById = (id: number): Category | null => {
       for (const category of categories.value) {
         if (category.id === id) return category;
         if (category.subcategories) {
-          const subcategory = category.subcategories.find(
-            (sub) => sub.id === id
-          );
-          if (subcategory) return subcategory;
+          const sub = category.subcategories.find((sub) => sub.id === id);
+          if (sub) return sub;
         }
       }
       return null;
     };
-
     const currentCategory = computed<Category | null>(() => {
       if (!selectedCategoryId.value) return null;
       return findCategoryById(selectedCategoryId.value);
     });
-
     const currentCategoryProducts = computed(() => {
       if (!selectedCategoryId.value) return [];
       const category = findCategoryById(selectedCategoryId.value);
@@ -86,16 +73,15 @@ export default defineComponent({
         (product) => Number(product.category_id) === Number(category.id)
       );
     });
-
     const subcategories = computed(() => {
       if (!selectedCategoryId.value) {
         return categories.value
           .flatMap((category) =>
-            (category.subcategories || []).map((subcategory: Category) => ({
+            (category.subcategories || []).map((subcategory) => ({
               id: subcategory.id,
               name: subcategory.name,
               products: products.value.filter(
-                (product: any) =>
+                (product) =>
                   Number(product.category_id) === Number(subcategory.id)
               ),
             }))
@@ -104,14 +90,13 @@ export default defineComponent({
       } else {
         const category = findCategoryById(selectedCategoryId.value);
         if (!category) return [];
-
         if (category.subcategories && category.subcategories.length > 0) {
           return category.subcategories
-            .map((subcategory: Category) => ({
+            .map((subcategory) => ({
               id: subcategory.id,
               name: subcategory.name,
               products: products.value.filter(
-                (product: any) =>
+                (product) =>
                   Number(product.category_id) === Number(subcategory.id)
               ),
             }))
@@ -121,7 +106,6 @@ export default defineComponent({
         }
       }
     });
-
     const fetchCategories = async () => {
       try {
         const response = await axios.get(
@@ -129,10 +113,9 @@ export default defineComponent({
         );
         categories.value = response.data;
       } catch (error) {
-        // handle error silently or show user-friendly message
+        console.error(error);
       }
     };
-
     const fetchProducts = async () => {
       try {
         isLoading.value = true;
@@ -144,12 +127,16 @@ export default defineComponent({
         products.value = response.data;
         hasProducts.value = response.data.length > 0;
       } catch (error) {
+        console.error(error);
         hasProducts.value = false;
       } finally {
         isLoading.value = false;
       }
     };
-
+    const navigateToProductPage = (product: any) => {
+      sessionStorage.setItem("selectedProduct", JSON.stringify(product));
+      router.push({ name: "ProductPage", params: { id: product.id } });
+    };
     watch(
       () => route.query.categoryId,
       (newVal) => {
@@ -157,7 +144,6 @@ export default defineComponent({
         fetchProducts();
       }
     );
-
     onMounted(async () => {
       selectedCategoryId.value = route.query.categoryId
         ? Number(route.query.categoryId)
@@ -165,7 +151,6 @@ export default defineComponent({
       await fetchCategories();
       await fetchProducts();
     });
-
     return {
       categories,
       products,
@@ -175,6 +160,7 @@ export default defineComponent({
       currentCategory,
       isLoading,
       hasProducts,
+      navigateToProductPage,
     };
   },
 });
@@ -184,7 +170,6 @@ export default defineComponent({
 ion-content {
   padding: 16px;
 }
-
 .no-products {
   text-align: center;
   margin-top: 20px;

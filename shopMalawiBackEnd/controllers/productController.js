@@ -256,3 +256,103 @@ export const getAllProducts = async (req, res) => {
     connection.release();
   }
 };
+
+// endpoint to get a product by ID
+export const getProductById = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const { id } = req.params;
+
+    // Validate the product ID
+    const parsedId = parseInt(id, 10);
+    if (isNaN(parsedId)) {
+      return res.status(400).json({ message: "Invalid product ID" });
+    }
+
+    // Query to fetch the product by ID along with related data
+    const query = `
+      SELECT 
+        p.id, 
+        p.name, 
+        p.description, 
+        p.price, 
+        p.mark_up_amount, 
+        p.category_id, 
+        p.stock_quantity, 
+        p.uploaded_by AS uploaded_by_userID, 
+        u.username AS uploaded_by,
+        pi.image_path, 
+        pi.alt_text, 
+        pi.is_primary,
+        c.name AS category_name,
+        p.created_at
+      FROM 
+        products p
+      LEFT JOIN 
+        product_images pi 
+      ON 
+        p.id = pi.product_id
+      LEFT JOIN 
+        categories c 
+      ON 
+        p.category_id = c.id
+      LEFT JOIN 
+        users u 
+      ON 
+        p.uploaded_by = u.id
+      WHERE 
+        p.id = ?
+    `;
+
+    // Execute the query
+    const [products] = await connection.query(query, [parsedId]);
+
+    if (products.length === 0) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Process the fetched product to group images
+    const product = products.reduce((acc, item) => {
+      if (!acc) {
+        return {
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          price: item.price,
+          mark_up_amount: item.mark_up_amount,
+          category_id: item.category_id,
+          category: item.category_name,
+          stock_quantity: item.stock_quantity,
+          uploaded_by_userID: item.uploaded_by_userID,
+          uploaded_by: item.uploaded_by,
+          images: item.image_path
+            ? [
+                {
+                  image_path: item.image_path,
+                  alt_text: item.alt_text,
+                  is_primary: item.is_primary,
+                },
+              ]
+            : [],
+        };
+      }
+
+      acc.images.push({
+        image_path: item.image_path,
+        alt_text: item.alt_text,
+        is_primary: item.is_primary,
+      });
+
+      return acc;
+    }, null);
+
+    // Send the product as a JSON response
+    res.status(200).json(product);
+  } catch (error) {
+    console.error("Error fetching product by ID:", error);
+    res.status(500).json({ message: "Failed to fetch product" });
+  } finally {
+    // Release the database connection
+    connection.release();
+  }
+};
