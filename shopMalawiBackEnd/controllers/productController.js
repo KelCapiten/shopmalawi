@@ -126,7 +126,7 @@ export const addProduct = async (req, res) => {
 export const getAllProducts = async (req, res) => {
   const connection = await db.getConnection();
   try {
-    const { subcategory_id, startDate, endDate } = req.query;
+    const { subcategory_id, startDate, endDate, groupBy } = req.query;
 
     // Base SQL query
     let query = `
@@ -226,7 +226,42 @@ export const getAllProducts = async (req, res) => {
       return acc;
     }, []);
 
-    res.status(200).json(productsWithImages);
+    let groupedProducts = [];
+
+    if (groupBy === "maincategory") {
+      // Group by main category
+      const categories = {};
+      productsWithImages.forEach((product) => {
+        if (!categories[product.maincategory_id]) {
+          categories[product.maincategory_id] = {
+            id: product.maincategory_id,
+            name: product.maincategory_name,
+            products: [],
+          };
+        }
+        categories[product.maincategory_id].products.push(product);
+      });
+      groupedProducts = Object.values(categories);
+    } else if (groupBy === "subcategory") {
+      // Group by subcategory
+      const categories = {};
+      productsWithImages.forEach((product) => {
+        if (!categories[product.subcategory_id]) {
+          categories[product.subcategory_id] = {
+            id: product.subcategory_id,
+            name: product.subcategory_name,
+            products: [],
+          };
+        }
+        categories[product.subcategory_id].products.push(product);
+      });
+      groupedProducts = Object.values(categories);
+    } else {
+      // No grouping
+      groupedProducts = productsWithImages;
+    }
+
+    res.status(200).json(groupedProducts);
   } catch (error) {
     console.error("Error fetching products:", error);
     res.status(500).json({ message: "Failed to fetch products" });

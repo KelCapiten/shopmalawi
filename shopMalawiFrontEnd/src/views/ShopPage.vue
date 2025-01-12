@@ -2,13 +2,7 @@
   <ion-page>
     <appHeader />
     <ion-content>
-      <div v-if="currentCategory && currentCategoryProducts.length > 0">
-        <ProductCardGrid
-          :heading="`${currentCategory.name}`"
-          :products="currentCategoryProducts"
-          @navigateToProductPage="navigateToProductPage"
-        />
-      </div>
+      <!-- Products for Subcategories -->
       <ProductCardGrid
         v-for="subcategory in subcategories"
         :key="subcategory.id"
@@ -16,9 +10,13 @@
         :products="subcategory.products"
         @navigateToProductPage="navigateToProductPage"
       />
+
+      <!-- No Products Found -->
       <div v-if="!hasProducts && !isLoading" class="no-products">
         <p>No products found for the selected category.</p>
       </div>
+
+      <!-- Loading Spinner -->
       <ion-spinner v-if="isLoading" name="crescent"></ion-spinner>
     </ion-content>
     <appFooter />
@@ -26,19 +24,12 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted, watch } from "vue";
+import { defineComponent, ref, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import appHeader from "@/components/header.vue";
 import appFooter from "@/components/footer.vue";
 import ProductCardGrid from "@/components/ProductCardGrid.vue";
-
-interface Category {
-  id: number;
-  name: string;
-  parent_id?: number | null;
-  subcategories?: Category[];
-}
 
 export default defineComponent({
   name: "ShopPage",
@@ -46,97 +37,37 @@ export default defineComponent({
   setup() {
     const route = useRoute();
     const router = useRouter();
-    const categories = ref<Category[]>([]);
-    const products = ref<any[]>([]);
-    const isLoading = ref<boolean>(false);
-    const hasProducts = ref<boolean>(false);
+    const subcategories = ref<any[]>([]); // Grouped response by subcategories
+    const isLoading = ref(false);
+    const hasProducts = ref(false);
     const selectedCategoryId = ref<number | null>(null);
-    const findCategoryById = (id: number): Category | null => {
-      for (const category of categories.value) {
-        if (category.id === id) return category;
-        if (category.subcategories) {
-          const sub = category.subcategories.find((sub) => sub.id === id);
-          if (sub) return sub;
-        }
-      }
-      return null;
-    };
-    const currentCategory = computed<Category | null>(() => {
-      if (!selectedCategoryId.value) return null;
-      return findCategoryById(selectedCategoryId.value);
-    });
-    const currentCategoryProducts = computed(() => {
-      if (!selectedCategoryId.value) return [];
-      const category = findCategoryById(selectedCategoryId.value);
-      if (!category) return [];
-      return products.value.filter(
-        (product) => Number(product.category_id) === Number(category.id)
-      );
-    });
-    const subcategories = computed(() => {
-      if (!selectedCategoryId.value) {
-        return categories.value
-          .flatMap((category) =>
-            (category.subcategories || []).map((subcategory) => ({
-              id: subcategory.id,
-              name: subcategory.name,
-              products: products.value.filter(
-                (product) =>
-                  Number(product.category_id) === Number(subcategory.id)
-              ),
-            }))
-          )
-          .filter((subcategory) => subcategory.products.length > 0);
-      } else {
-        const category = findCategoryById(selectedCategoryId.value);
-        if (!category) return [];
-        if (category.subcategories && category.subcategories.length > 0) {
-          return category.subcategories
-            .map((subcategory) => ({
-              id: subcategory.id,
-              name: subcategory.name,
-              products: products.value.filter(
-                (product) =>
-                  Number(product.category_id) === Number(subcategory.id)
-              ),
-            }))
-            .filter((subcategory) => subcategory.products.length > 0);
-        } else {
-          return [];
-        }
-      }
-    });
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(
-          "http://localhost:1994/api/products/getCategories"
-        );
-        categories.value = response.data;
-      } catch (error) {
-        console.error(error);
-      }
-    };
+
+    // Fetch products grouped by subcategories
     const fetchProducts = async () => {
       try {
         isLoading.value = true;
-        let apiUrl = "http://localhost:1994/api/products/getAllProducts";
-        if (selectedCategoryId.value) {
-          apiUrl += `?categoryId=${selectedCategoryId.value}`;
-        }
+        const apiUrl = selectedCategoryId.value
+          ? `http://localhost:1994/api/products/getAllProducts?groupBy=subcategory&subcategory_id=${selectedCategoryId.value}`
+          : "http://localhost:1994/api/products/getAllProducts?groupBy=subcategory";
+
         const response = await axios.get(apiUrl);
-        products.value = response.data;
+        subcategories.value = response.data;
         hasProducts.value = response.data.length > 0;
       } catch (error) {
-        console.error(error);
+        console.error("Error fetching products:", error);
         hasProducts.value = false;
       } finally {
         isLoading.value = false;
       }
     };
+
+    // Navigate to a product page
     const navigateToProductPage = (product: any) => {
       sessionStorage.setItem("selectedProduct", JSON.stringify(product));
       router.push({ name: "ProductPage", params: { id: product.id } });
     };
+
+    // Watch for route changes
     watch(
       () => route.query.categoryId,
       (newVal) => {
@@ -144,20 +75,17 @@ export default defineComponent({
         fetchProducts();
       }
     );
-    onMounted(async () => {
+
+    // Fetch products on component mount
+    onMounted(() => {
       selectedCategoryId.value = route.query.categoryId
         ? Number(route.query.categoryId)
         : null;
-      await fetchCategories();
-      await fetchProducts();
+      fetchProducts();
     });
+
     return {
-      categories,
-      products,
       subcategories,
-      selectedCategoryId,
-      currentCategoryProducts,
-      currentCategory,
       isLoading,
       hasProducts,
       navigateToProductPage,
