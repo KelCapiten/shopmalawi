@@ -50,25 +50,13 @@
         No results found.
       </div>
 
-      <!-- Product Grid -->
-      <ion-grid v-else>
-        <ion-row>
-          <ion-col size="6" v-for="product in products" :key="product.id">
-            <ion-card class="product-card">
-              <ion-img
-                :src="getImageUrl(product.images[0]?.image_path)"
-                alt="Product Image"
-                class="product-image"
-              ></ion-img>
-              <ion-card-content>
-                <h2 class="product-name">{{ product.name }}</h2>
-                <p class="product-price">{{ formatPrice(product.price) }}</p>
-                <p class="product-category">Category: {{ product.category }}</p>
-              </ion-card-content>
-            </ion-card>
-          </ion-col>
-        </ion-row>
-      </ion-grid>
+      <!-- Product Card Grid -->
+      <ProductCardGrid
+        v-else
+        :heading="'Available Products'"
+        :products="products"
+        @navigateToProductPage="navigateToProductPage"
+      />
     </ion-content>
 
     <appFooter />
@@ -80,16 +68,19 @@ import { defineComponent, ref, watch } from "vue";
 import axios from "axios";
 import appHeader from "@/components/header.vue";
 import appFooter from "@/components/footer.vue";
-import { useRoute } from "vue-router";
+import ProductCardGrid from "@/components/ProductCardGrid.vue";
+import { useRoute, useRouter } from "vue-router";
 
 export default defineComponent({
   name: "SearchResultsPage",
   components: {
     appHeader,
     appFooter,
+    ProductCardGrid,
   },
   setup() {
     const route = useRoute();
+    const router = useRouter();
     const query = ref(route.query.q?.toString() || "");
     const products = ref([]);
     const loading = ref(false);
@@ -133,6 +124,11 @@ export default defineComponent({
       }
     };
 
+    const navigateToProductPage = (product) => {
+      sessionStorage.setItem("selectedProduct", JSON.stringify(product));
+      router.push({ name: "ProductPage", params: { id: product.id } });
+    };
+
     const formatPrice = (price) => {
       const numericPrice = parseFloat(price);
       if (isNaN(numericPrice)) return "N/A";
@@ -160,6 +156,7 @@ export default defineComponent({
       fetchProducts,
       formatPrice,
       getImageUrl,
+      navigateToProductPage,
     };
   },
 });
@@ -186,34 +183,6 @@ export default defineComponent({
   text-align: center;
   padding: 20px;
   font-size: 18px;
-  color: var(--ion-text-color);
-}
-
-.product-card {
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.product-image {
-  height: 150px;
-  object-fit: cover;
-}
-
-.product-name {
-  font-size: 16px;
-  font-weight: bold;
-  margin: 10px 0 5px;
-  color: var(--ion-text-color);
-}
-
-.product-price {
-  font-size: 14px;
-  color: var(--ion-color-primary);
-}
-
-.product-category {
-  font-size: 12px;
   color: var(--ion-text-color);
 }
 </style>

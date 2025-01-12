@@ -11,17 +11,24 @@ export const searchProducts = async (req, res) => {
         p.name, 
         p.description, 
         p.price, 
+        p.mark_up_amount, 
+        p.category_id, 
         p.stock_quantity, 
-        c.name AS category_name, 
+        p.uploaded_by AS uploaded_by_userID, 
+        u.username AS uploaded_by,
         pi.image_path, 
         pi.alt_text, 
-        pi.is_primary
+        pi.is_primary,
+        c.name AS category_name,
+        p.created_at
       FROM 
         products p
       LEFT JOIN 
         categories c ON p.category_id = c.id
       LEFT JOIN 
         product_images pi ON p.id = pi.product_id
+      LEFT JOIN 
+        users u ON p.uploaded_by = u.id
       WHERE 
         1 = 1
     `;
@@ -36,8 +43,38 @@ export const searchProducts = async (req, res) => {
 
     // Add category filter
     if (categoryId) {
-      sql += " AND p.category_id = ? ";
-      params.push(categoryId);
+      const parsedCategoryId = parseInt(categoryId, 10);
+      if (isNaN(parsedCategoryId)) {
+        return res
+          .status(400)
+          .json({ message: "Invalid categoryId parameter" });
+      }
+
+      const [categoryRows] = await db.query(
+        `SELECT id FROM categories WHERE id = ? AND EXISTS (SELECT 1 FROM categories WHERE parent_id = ?)`,
+        [parsedCategoryId, parsedCategoryId]
+      );
+
+      if (categoryRows.length > 0) {
+        const [subRows] = await db.query(
+          `SELECT id FROM categories WHERE parent_id = ?`,
+          [parsedCategoryId]
+        );
+
+        const subcategoryIds = subRows.map((row) => row.id);
+
+        if (subcategoryIds.length > 0) {
+          const placeholders = subcategoryIds.map(() => "?").join(",");
+          sql += ` AND (p.category_id = ? OR p.category_id IN (${placeholders})) `;
+          params.push(parsedCategoryId, ...subcategoryIds);
+        } else {
+          sql += " AND p.category_id = ? ";
+          params.push(parsedCategoryId);
+        }
+      } else {
+        sql += " AND p.category_id = ? ";
+        params.push(parsedCategoryId);
+      }
     }
 
     // Add price range filter
@@ -82,8 +119,12 @@ export const searchProducts = async (req, res) => {
           name: product.name,
           description: product.description,
           price: product.price,
-          stock_quantity: product.stock_quantity,
+          mark_up_amount: product.mark_up_amount,
+          category_id: product.category_id,
           category: product.category_name,
+          stock_quantity: product.stock_quantity,
+          uploaded_by_userID: product.uploaded_by_userID,
+          uploaded_by: product.uploaded_by,
           images: product.image_path
             ? [
                 {
