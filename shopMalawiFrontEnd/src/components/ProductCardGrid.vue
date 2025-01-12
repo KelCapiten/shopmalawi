@@ -6,12 +6,7 @@
         v-for="product in products"
         :key="product.id"
         class="item"
-        @click="
-          () => {
-            console.log('Product clicked:', product);
-            $emit('navigateToProductPage', product);
-          }
-        "
+        @click="() => $emit('navigateToProductPage', product)"
       >
         <div class="image-container">
           <img
@@ -32,6 +27,7 @@
 
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
+
 export default defineComponent({
   name: "ProductCardGrid",
   props: {
@@ -41,14 +37,18 @@ export default defineComponent({
         Array<{
           id: number;
           name: string;
-          price: number;
+          description: string;
+          price: string;
+          mark_up_amount: string;
+          category_id: number;
           category: string;
           stock_quantity: number;
+          uploaded_by_userID: number;
           uploaded_by: string;
           images: Array<{
             image_path: string;
-            alt_text: string;
-            is_primary: boolean;
+            alt_text: string | null;
+            is_primary: number;
           }>;
         }>
       >,
@@ -57,9 +57,13 @@ export default defineComponent({
   },
   methods: {
     getPrimaryImage(
-      images: Array<{ image_path: string; is_primary: boolean }>
+      images: Array<{
+        image_path: string;
+        alt_text: string | null;
+        is_primary: number;
+      }>
     ) {
-      const primaryImage = images.find((image) => image.is_primary);
+      const primaryImage = images.find((image) => image.is_primary === 1);
       return primaryImage
         ? `http://localhost:1994${primaryImage.image_path}`
         : "https://via.placeholder.com/150";
@@ -126,23 +130,5 @@ export default defineComponent({
   font-size: 0.8rem;
   color: #888;
   margin: 0;
-}
-@media (max-width: 576px) {
-  .item {
-    width: 140px;
-  }
-  .image-container {
-    width: 140px;
-    height: 140px;
-  }
-  .product-name {
-    font-size: 0.8rem;
-  }
-  .price {
-    font-size: 0.9rem;
-  }
-  .stock-info {
-    font-size: 0.75rem;
-  }
 }
 </style>

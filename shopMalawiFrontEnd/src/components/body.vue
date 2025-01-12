@@ -28,18 +28,15 @@
 import { defineComponent, ref } from "vue";
 import ProductCardGrid from "@/components/ProductCardGrid.vue";
 import axios from "axios";
-import { useRouter } from "vue-router"; // Import useRouter to access the router instance
+import { useRouter } from "vue-router";
 
 export default defineComponent({
   name: "AppBody",
   components: { ProductCardGrid },
   setup() {
     const baseUrl = "http://localhost:1994";
-
-    // Use Vue Router
     const router = useRouter();
 
-    // Define the type for a product
     type Product = {
       id: number;
       name: string;
@@ -60,7 +57,6 @@ export default defineComponent({
 
     const newlyAddedItems = ref<Product[]>([]);
 
-    // Fetch newly added products
     const getOneWeekAgoDate = (): string => {
       const date = new Date();
       date.setDate(date.getDate() - 7);
@@ -73,12 +69,7 @@ export default defineComponent({
         const response = await axios.get<Product[]>(
           `${baseUrl}/api/products/getAllProducts?startDate=${oneWeekAgo}`
         );
-
-        // Map the response directly since products are in response.data
-        newlyAddedItems.value = response.data.map((item: Product) => ({
-          ...item,
-          currentImageIndex: 0, // For slideshow compatibility if needed
-        }));
+        newlyAddedItems.value = response.data; // Use raw API response directly
       } catch (error) {
         console.error("Error fetching newly added items:", error);
       }
@@ -88,7 +79,7 @@ export default defineComponent({
 
     const navigateToProductPage = (product: Product) => {
       sessionStorage.setItem("selectedProduct", JSON.stringify(product));
-      router.push({ name: "ProductPage", params: { id: product.id } }); // Use router to navigate
+      router.push({ name: "ProductPage", params: { id: product.id } });
     };
 
     return {
