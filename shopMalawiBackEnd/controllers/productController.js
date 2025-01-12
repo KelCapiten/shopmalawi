@@ -38,7 +38,7 @@ export const getCategories = async (req, res) => {
 
 // endpoint to add products
 export const addProduct = async (req, res) => {
-  const { name, description, price, categoryId, stockQuantity } = req.body;
+  const { name, description, price, subcategory_id, stockQuantity } = req.body;
 
   if (!name || !description || !price || !req.files || req.files.length === 0) {
     return res.status(400).json({
@@ -51,19 +51,43 @@ export const addProduct = async (req, res) => {
 
   const connection = await db.getConnection();
   try {
+    // Fetch maincategory_id, subcategory_name, and maincategory_name
+    const [categoryInfo] = await connection.query(
+      `SELECT 
+         c1.name AS subcategory_name, 
+         c1.id AS subcategory_id,
+         c2.name AS maincategory_name, 
+         c2.id AS maincategory_id
+       FROM categories c1
+       LEFT JOIN categories c2 ON c1.parent_id = c2.id
+       WHERE c1.id = ?`,
+      [subcategory_id]
+    );
+
+    if (categoryInfo.length === 0) {
+      return res.status(400).json({ message: "Invalid subcategory_id" });
+    }
+
+    const { maincategory_id, maincategory_name, subcategory_name } =
+      categoryInfo[0];
+
     // Start transaction
     await connection.beginTransaction();
 
     // Insert product
     const [productResult] = await connection.query(
-      `INSERT INTO products (name, description, price, mark_up_amount, category_id, stock_quantity, uploaded_by) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO products 
+       (name, description, price, mark_up_amount, subcategory_id, subcategory_name, maincategory_id, maincategory_name, stock_quantity, uploaded_by) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name,
         description,
         price,
         markUpAmount,
-        categoryId,
+        subcategory_id,
+        subcategory_name,
+        maincategory_id,
+        maincategory_name,
         stockQuantity,
         uploadedBy,
       ]
@@ -71,11 +95,9 @@ export const addProduct = async (req, res) => {
 
     const productId = productResult.insertId;
 
-    // Modify file paths and insert into product_images table
+    // Insert image paths into product_images table
     const imageQueries = req.files.map((file, index) => {
-      // Modify the file path for the database
       const modifiedFilePath = `/${file.path.replace(/\\/g, "/")}`;
-
       return connection.query(
         `INSERT INTO product_images (product_id, image_path, alt_text, is_primary) VALUES (?, ?, ?, ?)`,
         [productId, modifiedFilePath, null, index === 0]
@@ -100,12 +122,13 @@ export const addProduct = async (req, res) => {
   }
 };
 
+// endpoint to get all products with optional filters
 export const getAllProducts = async (req, res) => {
   const connection = await db.getConnection();
   try {
-    const { categoryId, startDate, endDate } = req.query; // Extract query parameters
+    const { subcategory_id, startDate, endDate } = req.query;
 
-    // Base SQL query to retrieve products along with related data
+    // Base SQL query
     let query = `
       SELECT 
         p.id, 
@@ -113,14 +136,16 @@ export const getAllProducts = async (req, res) => {
         p.description, 
         p.price, 
         p.mark_up_amount, 
-        p.category_id, 
+        p.subcategory_id, 
+        p.subcategory_name, 
+        p.maincategory_id, 
+        p.maincategory_name, 
         p.stock_quantity, 
         p.uploaded_by AS uploaded_by_userID, 
         u.username AS uploaded_by,
         pi.image_path, 
         pi.alt_text, 
         pi.is_primary,
-        c.name AS category_name,
         p.created_at
       FROM 
         products p
@@ -129,66 +154,21 @@ export const getAllProducts = async (req, res) => {
       ON 
         p.id = pi.product_id
       LEFT JOIN 
-        categories c 
-      ON 
-        p.category_id = c.id
-      LEFT JOIN 
         users u 
       ON 
         p.uploaded_by = u.id
     `;
 
-    // Array to hold parameterized query values
     const queryParams = [];
-
-    // Initialize an array to build WHERE conditions
     const whereConditions = [];
 
-    if (categoryId) {
-      // Convert categoryId to a number for safety
-      const parsedCategoryId = parseInt(categoryId, 10);
-      if (isNaN(parsedCategoryId)) {
-        return res
-          .status(400)
-          .json({ message: "Invalid categoryId parameter" });
-      }
-
-      // Check if the provided categoryId is a parent category
-      const [categoryRows] = await connection.query(
-        `SELECT id FROM categories WHERE id = ? AND EXISTS (SELECT 1 FROM categories WHERE parent_id = ?)`,
-        [parsedCategoryId, parsedCategoryId]
-      );
-
-      if (categoryRows.length > 0) {
-        // **Parent Category:** Fetch all subcategory IDs
-        const [subRows] = await connection.query(
-          `SELECT id FROM categories WHERE parent_id = ?`,
-          [parsedCategoryId]
-        );
-
-        const subcategoryIds = subRows.map((row) => row.id);
-
-        if (subcategoryIds.length > 0) {
-          // Add condition to filter products belonging to any of the subcategory IDs
-          // AND products directly under the parent category
-          const placeholders = subcategoryIds.map(() => "?").join(",");
-          whereConditions.push(
-            `(p.category_id = ? OR p.category_id IN (${placeholders}))`
-          );
-          queryParams.push(parsedCategoryId, ...subcategoryIds);
-        } else {
-          // **No Subcategories:** Include products directly under the parent category
-          whereConditions.push(`p.category_id = ?`);
-          queryParams.push(parsedCategoryId);
-        }
-      } else {
-        // **Subcategory:** Directly filter products by the provided categoryId
-        whereConditions.push(`p.category_id = ?`);
-        queryParams.push(parsedCategoryId);
-      }
+    // Filter by subcategory_id if provided
+    if (subcategory_id) {
+      whereConditions.push(`p.subcategory_id = ?`);
+      queryParams.push(parseInt(subcategory_id, 10));
     }
 
-    // Handle date range filtering if provided
+    // Filter by date range if provided
     if (startDate && endDate) {
       whereConditions.push(`DATE(p.created_at) BETWEEN ? AND ?`);
       queryParams.push(startDate, endDate);
@@ -200,18 +180,16 @@ export const getAllProducts = async (req, res) => {
       queryParams.push(endDate);
     }
 
-    // Append WHERE clause if there are any conditions
     if (whereConditions.length > 0) {
       query += ` WHERE ` + whereConditions.join(" AND ");
     }
 
-    // Append ORDER BY clause to sort results by creation date in descending order
     query += ` ORDER BY p.created_at DESC`;
 
-    // Execute the final query with all parameters
+    // Execute query
     const [products] = await connection.query(query, queryParams);
 
-    // Process the fetched products to group images by product
+    // Process products
     const productsWithImages = products.reduce((acc, product) => {
       const existingProduct = acc.find((p) => p.id === product.id);
       if (existingProduct) {
@@ -227,11 +205,13 @@ export const getAllProducts = async (req, res) => {
           description: product.description,
           price: product.price,
           mark_up_amount: product.mark_up_amount,
-          category_id: product.category_id,
-          category: product.category_name, // Include category name
+          subcategory_id: product.subcategory_id,
+          subcategory_name: product.subcategory_name,
+          maincategory_id: product.maincategory_id,
+          maincategory_name: product.maincategory_name,
           stock_quantity: product.stock_quantity,
-          uploaded_by_userID: product.uploaded_by_userID, // Renamed field
-          uploaded_by: product.uploaded_by, // Username of the uploader
+          uploaded_by_userID: product.uploaded_by_userID,
+          uploaded_by: product.uploaded_by,
           images: product.image_path
             ? [
                 {
@@ -246,13 +226,11 @@ export const getAllProducts = async (req, res) => {
       return acc;
     }, []);
 
-    // Send the processed products as a JSON response
     res.status(200).json(productsWithImages);
   } catch (error) {
     console.error("Error fetching products:", error);
     res.status(500).json({ message: "Failed to fetch products" });
   } finally {
-    // Always release the database connection back to the pool
     connection.release();
   }
 };
@@ -277,14 +255,16 @@ export const getProductById = async (req, res) => {
         p.description, 
         p.price, 
         p.mark_up_amount, 
-        p.category_id, 
+        p.subcategory_id, 
+        p.subcategory_name, 
+        p.maincategory_id, 
+        p.maincategory_name, 
         p.stock_quantity, 
         p.uploaded_by AS uploaded_by_userID, 
         u.username AS uploaded_by,
         pi.image_path, 
         pi.alt_text, 
         pi.is_primary,
-        c.name AS category_name,
         p.created_at
       FROM 
         products p
@@ -292,10 +272,6 @@ export const getProductById = async (req, res) => {
         product_images pi 
       ON 
         p.id = pi.product_id
-      LEFT JOIN 
-        categories c 
-      ON 
-        p.category_id = c.id
       LEFT JOIN 
         users u 
       ON 
@@ -320,8 +296,10 @@ export const getProductById = async (req, res) => {
           description: item.description,
           price: item.price,
           mark_up_amount: item.mark_up_amount,
-          category_id: item.category_id,
-          category: item.category_name,
+          subcategory_id: item.subcategory_id,
+          subcategory_name: item.subcategory_name,
+          maincategory_id: item.maincategory_id,
+          maincategory_name: item.maincategory_name,
           stock_quantity: item.stock_quantity,
           uploaded_by_userID: item.uploaded_by_userID,
           uploaded_by: item.uploaded_by,
@@ -352,7 +330,6 @@ export const getProductById = async (req, res) => {
     console.error("Error fetching product by ID:", error);
     res.status(500).json({ message: "Failed to fetch product" });
   } finally {
-    // Release the database connection
     connection.release();
   }
 };

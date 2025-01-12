@@ -92,15 +92,20 @@ CREATE TABLE IF NOT EXISTS products (
     description TEXT NOT NULL,
     price DECIMAL(10, 2) NOT NULL COMMENT 'Amount in Malawian Kwacha (MWK)',
     mark_up_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (mark_up_amount >= 0) COMMENT 'Amount in Malawian Kwacha (MWK)',
-    category_id INT,
+    subcategory_id INT,
+    subcategory_name VARCHAR(100),
+    maincategory_id INT,
+    maincategory_name VARCHAR(100),
     stock_quantity INT NOT NULL DEFAULT 0,
     uploaded_by INT NOT NULL, -- References users table
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FULLTEXT (name, description),
-    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+    FOREIGN KEY (subcategory_id) REFERENCES categories(id) ON DELETE SET NULL,
+    FOREIGN KEY (maincategory_id) REFERENCES categories(id) ON DELETE SET NULL,
     FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX (category_id),
+    INDEX (subcategory_id),
+    INDEX (maincategory_id),
     INDEX (uploaded_by)
 ) ENGINE=InnoDB;
 
