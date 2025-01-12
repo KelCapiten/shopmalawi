@@ -48,7 +48,7 @@ export default defineComponent({
         isLoading.value = true;
         const apiUrl = selectedCategoryId.value
           ? `http://localhost:1994/api/products/getAllProducts?category_id=${selectedCategoryId.value}`
-          : "http://localhost:1994/api/products/getAllProducts";
+          : "http://localhost:1994/api/products/getAllProducts?groupBy=subcategory";
 
         const response = await axios.get(apiUrl);
         subcategories.value = response.data;
