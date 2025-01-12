@@ -126,7 +126,7 @@ export const addProduct = async (req, res) => {
 export const getAllProducts = async (req, res) => {
   const connection = await db.getConnection();
   try {
-    const { subcategory_id, startDate, endDate, groupBy } = req.query;
+    const { category_id, startDate, endDate, groupBy } = req.query;
 
     // Base SQL query
     let query = `
@@ -162,10 +162,34 @@ export const getAllProducts = async (req, res) => {
     const queryParams = [];
     const whereConditions = [];
 
-    // Filter by subcategory_id if provided
-    if (subcategory_id) {
-      whereConditions.push(`p.subcategory_id = ?`);
-      queryParams.push(parseInt(subcategory_id, 10));
+    // Determine if category_id is a main category or subcategory
+    let isMainCategory = false;
+    let categoryName = null;
+    if (category_id) {
+      const [category] = await connection.query(
+        `SELECT name, parent_id FROM categories WHERE id = ?`,
+        [category_id]
+      );
+
+      if (category.length > 0) {
+        isMainCategory = category[0].parent_id === null;
+        categoryName = category[0].name;
+      }
+    }
+
+    // Filter by category_id
+    if (category_id) {
+      if (isMainCategory) {
+        // If it's a main category, include all products in its subcategories
+        whereConditions.push(`(p.maincategory_id = ? OR p.subcategory_id IN (
+          SELECT id FROM categories WHERE parent_id = ?
+        ))`);
+        queryParams.push(parseInt(category_id, 10), parseInt(category_id, 10));
+      } else {
+        // If it's a subcategory, include only products in that subcategory
+        whereConditions.push(`p.subcategory_id = ?`);
+        queryParams.push(parseInt(category_id, 10));
+      }
     }
 
     // Filter by date range if provided
@@ -226,42 +250,89 @@ export const getAllProducts = async (req, res) => {
       return acc;
     }, []);
 
-    let groupedProducts = [];
+    let response;
 
-    if (groupBy === "maincategory") {
-      // Group by main category
-      const categories = {};
-      productsWithImages.forEach((product) => {
-        if (!categories[product.maincategory_id]) {
-          categories[product.maincategory_id] = {
-            id: product.maincategory_id,
-            name: product.maincategory_name,
-            products: [],
-          };
-        }
-        categories[product.maincategory_id].products.push(product);
-      });
-      groupedProducts = Object.values(categories);
-    } else if (groupBy === "subcategory") {
-      // Group by subcategory
-      const categories = {};
-      productsWithImages.forEach((product) => {
-        if (!categories[product.subcategory_id]) {
-          categories[product.subcategory_id] = {
-            id: product.subcategory_id,
-            name: product.subcategory_name,
-            products: [],
-          };
-        }
-        categories[product.subcategory_id].products.push(product);
-      });
-      groupedProducts = Object.values(categories);
+    // If category_id is provided
+    if (category_id) {
+      if (groupBy === "maincategory") {
+        // Group by main category
+        const categories = {};
+        productsWithImages.forEach((product) => {
+          if (!categories[product.maincategory_id]) {
+            categories[product.maincategory_id] = {
+              id: product.maincategory_id,
+              name: product.maincategory_name,
+              products: [],
+            };
+          }
+          categories[product.maincategory_id].products.push(product);
+        });
+        response = Object.values(categories);
+      } else if (groupBy === "subcategory") {
+        // Group by subcategory
+        const categories = {};
+        productsWithImages.forEach((product) => {
+          if (!categories[product.subcategory_id]) {
+            categories[product.subcategory_id] = {
+              id: product.subcategory_id,
+              name: product.subcategory_name,
+              products: [],
+            };
+          }
+          categories[product.subcategory_id].products.push(product);
+        });
+        response = Object.values(categories);
+      } else {
+        // No grouping, return the filtered products in the specified format
+        response = [
+          {
+            id: parseInt(category_id, 10),
+            name: categoryName,
+            products: productsWithImages,
+          },
+        ];
+      }
     } else {
-      // No grouping
-      groupedProducts = productsWithImages;
+      // No category_id filtering, return as before
+      let groupedProducts = [];
+
+      if (groupBy === "maincategory") {
+        // Group by main category
+        const categories = {};
+        productsWithImages.forEach((product) => {
+          if (!categories[product.maincategory_id]) {
+            categories[product.maincategory_id] = {
+              id: product.maincategory_id,
+              name: product.maincategory_name,
+              products: [],
+            };
+          }
+          categories[product.maincategory_id].products.push(product);
+        });
+        groupedProducts = Object.values(categories);
+      } else if (groupBy === "subcategory") {
+        // Group by subcategory
+        const categories = {};
+        productsWithImages.forEach((product) => {
+          if (!categories[product.subcategory_id]) {
+            categories[product.subcategory_id] = {
+              id: product.subcategory_id,
+              name: product.subcategory_name,
+              products: [],
+            };
+          }
+          categories[product.subcategory_id].products.push(product);
+        });
+        groupedProducts = Object.values(categories);
+      } else {
+        // No grouping
+        groupedProducts = productsWithImages;
+      }
+
+      response = groupedProducts;
     }
 
-    res.status(200).json(groupedProducts);
+    res.status(200).json(response);
   } catch (error) {
     console.error("Error fetching products:", error);
     res.status(500).json({ message: "Failed to fetch products" });

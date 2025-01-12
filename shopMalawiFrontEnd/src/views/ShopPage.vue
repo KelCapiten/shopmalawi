@@ -42,17 +42,21 @@ export default defineComponent({
     const hasProducts = ref(false);
     const selectedCategoryId = ref<number | null>(null);
 
-    // Fetch products grouped by subcategories
+    // Fetch products grouped by subcategories or as a single category
     const fetchProducts = async () => {
       try {
         isLoading.value = true;
         const apiUrl = selectedCategoryId.value
-          ? `http://localhost:1994/api/products/getAllProducts?groupBy=subcategory&subcategory_id=${selectedCategoryId.value}`
-          : "http://localhost:1994/api/products/getAllProducts?groupBy=subcategory";
+          ? `http://localhost:1994/api/products/getAllProducts?category_id=${selectedCategoryId.value}`
+          : "http://localhost:1994/api/products/getAllProducts";
 
         const response = await axios.get(apiUrl);
         subcategories.value = response.data;
-        hasProducts.value = response.data.length > 0;
+
+        // Check if there are any products
+        hasProducts.value = subcategories.value.some(
+          (subcategory) => subcategory.products.length > 0
+        );
       } catch (error) {
         console.error("Error fetching products:", error);
         hasProducts.value = false;

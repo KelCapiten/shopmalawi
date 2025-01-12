@@ -6,8 +6,6 @@
       <ion-toolbar>
         <ion-title>Search Results</ion-title>
       </ion-toolbar>
-
-      <!-- Filters and Sorting -->
       <ion-toolbar class="filter-toolbar">
         <div class="filter-container">
           <ion-select
@@ -27,36 +25,38 @@
           </ion-select>
           <ion-input
             placeholder="Min Price"
-            type="number"
-            v-model.number="minPrice"
+            type="text"
+            pattern="[0-9]*"
+            :value="minPriceDisplay"
+            @ionInput="handleMinPriceInput"
             class="filter-item"
-            @ionBlur="fetchProducts"
           ></ion-input>
           <ion-input
             placeholder="Max Price"
-            type="number"
-            v-model.number="maxPrice"
+            type="text"
+            pattern="[0-9]*"
+            :value="maxPriceDisplay"
+            @ionInput="handleMaxPriceInput"
             class="filter-item"
-            @ionBlur="fetchProducts"
           ></ion-input>
         </div>
       </ion-toolbar>
     </ion-header>
 
     <ion-content>
-      <!-- Loading and No Results -->
       <div v-if="loading" class="loading">Loading...</div>
-      <div v-else-if="products.length === 0" class="no-results">
+      <div v-else-if="subcategories.length === 0" class="no-results">
         No results found.
       </div>
-
-      <!-- Product Card Grid -->
-      <ProductCardGrid
-        v-else
-        :heading="'Available Products'"
-        :products="products"
-        @navigateToProductPage="navigateToProductPage"
-      />
+      <template v-else>
+        <div v-for="subcategory in subcategories" :key="subcategory.id">
+          <ProductCardGrid
+            :heading="subcategory.name"
+            :products="subcategory.products"
+            @navigateToProductPage="navigateToProductPage"
+          />
+        </div>
+      </template>
     </ion-content>
 
     <appFooter />
@@ -64,7 +64,7 @@
 </template>
 
 <script>
-import { defineComponent, ref, watch } from "vue";
+import { defineComponent, ref, computed, watch } from "vue";
 import axios from "axios";
 import appHeader from "@/components/header.vue";
 import appFooter from "@/components/footer.vue";
@@ -82,20 +82,35 @@ export default defineComponent({
     const route = useRoute();
     const router = useRouter();
     const query = ref(route.query.q?.toString() || "");
-    const products = ref([]);
+    const subcategories = ref([]);
     const loading = ref(false);
     const sortBy = ref("priceAsc");
-    const minPrice = ref(null);
-    const maxPrice = ref(null);
+    const minPrice = ref(undefined);
+    const maxPrice = ref(undefined);
+    let debounceTimer = null;
 
-    // Watch for changes in the route query
-    watch(
-      () => route.query.q,
-      (newQuery) => {
-        query.value = newQuery?.toString() || "";
-        fetchProducts();
-      }
-    );
+    const minPriceDisplay = computed({
+      get: () =>
+        minPrice.value === undefined ? "" : minPrice.value.toString(),
+      set: (value) => {
+        minPrice.value = value === "" ? undefined : Number(value);
+      },
+    });
+
+    const maxPriceDisplay = computed({
+      get: () =>
+        maxPrice.value === undefined ? "" : maxPrice.value.toString(),
+      set: (value) => {
+        maxPrice.value = value === "" ? undefined : Number(value);
+      },
+    });
+
+    const debounce = (func, delay) => {
+      return (...args) => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => func(...args), delay);
+      };
+    };
 
     const fetchProducts = async () => {
       loading.value = true;
@@ -103,59 +118,63 @@ export default defineComponent({
         const params = {
           query: query.value,
           sortBy: sortBy.value,
+          priceRange:
+            minPrice.value !== undefined || maxPrice.value !== undefined
+              ? `${minPrice.value || ""},${maxPrice.value || ""}`
+              : undefined,
         };
-
-        if (minPrice.value) params.priceRange = `${minPrice.value},`;
-        if (maxPrice.value)
-          params.priceRange = params.priceRange
-            ? `${params.priceRange}${maxPrice.value}`
-            : `,${maxPrice.value}`;
 
         const response = await axios.get(
           "http://localhost:1994/api/search/searchProducts",
           { params }
         );
-        products.value = response.data;
+
+        subcategories.value = response.data;
       } catch (error) {
-        console.error("Error fetching search results:", error);
-        products.value = [];
+        console.error("Error fetching products:", error);
       } finally {
         loading.value = false;
       }
     };
+
+    const handleMinPriceInput = (event) => {
+      const value = event.target.value;
+      minPriceDisplay.value = value;
+      debounce(fetchProducts, 500)();
+    };
+
+    const handleMaxPriceInput = (event) => {
+      const value = event.target.value;
+      maxPriceDisplay.value = value;
+      debounce(fetchProducts, 500)();
+    };
+
+    watch(
+      () => route.query.q,
+      (newQuery) => {
+        query.value = newQuery?.toString() || "";
+        minPrice.value = undefined;
+        maxPrice.value = undefined;
+        fetchProducts();
+      },
+      { immediate: true }
+    );
 
     const navigateToProductPage = (product) => {
       sessionStorage.setItem("selectedProduct", JSON.stringify(product));
       router.push({ name: "ProductPage", params: { id: product.id } });
     };
 
-    const formatPrice = (price) => {
-      const numericPrice = parseFloat(price);
-      if (isNaN(numericPrice)) return "N/A";
-      return `MWK${numericPrice.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-      })}`;
-    };
-
-    const getImageUrl = (imagePath) => {
-      return imagePath
-        ? `http://localhost:1994${imagePath}`
-        : "/assets/default-image.jpg";
-    };
-
-    // Fetch products on component mount
-    fetchProducts();
-
     return {
       query,
-      products,
+      subcategories,
       loading,
       sortBy,
-      minPrice,
-      maxPrice,
+      minPriceDisplay,
+      maxPriceDisplay,
       fetchProducts,
-      formatPrice,
-      getImageUrl,
+      handleMinPriceInput,
+      handleMaxPriceInput,
       navigateToProductPage,
     };
   },
