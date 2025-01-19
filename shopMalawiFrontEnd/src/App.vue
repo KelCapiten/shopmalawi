@@ -15,7 +15,3 @@ export default defineComponent({
   },
 });
 </script>
-
-<style>
-/* Global styles */
-</style>

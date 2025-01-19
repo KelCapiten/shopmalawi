@@ -1,123 +1,222 @@
 <template>
   <ion-page>
-    <ion-header>
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button></ion-back-button>
-        </ion-buttons>
-        <ion-title>{{ product?.name || "Product Details" }}</ion-title>
-      </ion-toolbar>
-    </ion-header>
-    <ion-content>
-      <div v-if="product">
-        <!-- Swiper Container -->
-        <swiper
-          :slides-per-view="1"
-          :pagination="{ clickable: true }"
-          :autoplay="{ delay: 3000 }"
-        >
-          <swiper-slide v-for="(image, index) in product.images" :key="index">
-            <img
-              :src="formatImagePath(image.image_path)"
-              :alt="image.alt_text || 'Product Image'"
-            />
-          </swiper-slide>
-        </swiper>
+    <ShareToolbar class="fixed-toolbar" />
 
-        <ion-card>
-          <ion-card-header>
-            <ion-card-title>{{ product.name }}</ion-card-title>
-            <ion-card-subtitle
-              >MWK {{ parseFloat(product.price).toFixed(2) }}</ion-card-subtitle
-            >
-          </ion-card-header>
-          <ion-card-content>
-            <p>{{ product.description }}</p>
-          </ion-card-content>
-        </ion-card>
-        <ion-item>
-          <ion-label>Quantity</ion-label>
-          <ion-input type="number" v-model="quantity" min="1"></ion-input>
-        </ion-item>
-        <ion-button expand="block" @click="addToCart">Add to Cart</ion-button>
-        <ion-button expand="block" color="secondary" @click="buyNow"
-          >Buy Now</ion-button
+    <ion-content @ionScroll="handleScroll" :scrollEvents="true">
+      <div v-if="product">
+        <div
+          class="swiper-container"
+          :style="{ transform: `scale(${zoomFactor})` }"
         >
+          <swiper
+            ref="swiperRef"
+            @swiper="onSwiperInit"
+            @slideChange="onSlideChange"
+            :slides-per-view="1"
+            :pagination="{ clickable: true }"
+          >
+            <swiper-slide v-for="(image, index) in product.images" :key="index">
+              <img
+                :src="formatImagePath(image.image_path)"
+                :alt="image.alt_text || 'Product Image'"
+              />
+            </swiper-slide>
+          </swiper>
+        </div>
+
+        <div class="scrollable-content">
+          <ProductImagesRow
+            class="transparent-row"
+            v-model="selectedImageIndex"
+            :images="product.images"
+          />
+
+          <div class="white-content">
+            <PriceDisplay
+              :price="product.price"
+              :stock="product.stock_quantity"
+              :countdownEnd="new Date(Date.now() + 86400000)"
+            />
+
+            <ion-card>
+              <ion-card-header>
+                <ion-card-title>{{ product.name }}</ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+                <p>{{ product.description }}</p>
+              </ion-card-content>
+            </ion-card>
+            <ion-card>
+              <ion-card-header>
+                <ion-card-title>{{ product.name }}</ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+                <p>{{ product.description }}</p>
+              </ion-card-content>
+            </ion-card>
+            <ion-card>
+              <ion-card-header>
+                <ion-card-title>{{ product.name }}</ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+                <p>{{ product.description }}</p>
+              </ion-card-content>
+            </ion-card>
+            <ion-card>
+              <ion-card-header>
+                <ion-card-title>{{ product.name }}</ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+                <p>{{ product.description }}</p>
+              </ion-card-content>
+            </ion-card>
+            <ion-card>
+              <ion-card-header>
+                <ion-card-title>{{ product.name }}</ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+                <p>{{ product.description }}</p>
+              </ion-card-content>
+            </ion-card>
+          </div>
+        </div>
       </div>
       <div v-else>
         <p>Loading product details...</p>
       </div>
     </ion-content>
+
+    <div class="buy-segment-wrapper">
+      <BuySegment />
+    </div>
   </ion-page>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from "vue";
+import { defineComponent, ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
-
-// Import Swiper and its styles
 import { Swiper, SwiperSlide } from "swiper/vue";
-import "swiper/swiper-bundle.css"; // Swiper styles
+import "swiper/swiper-bundle.css";
+import PriceDisplay from "@/components/PriceDisplay.vue";
+import BuySegment from "@/components/BuySegment.vue";
+import ShareToolbar from "@/components/ShareToolbar.vue";
+import ProductImagesRow from "@/components/ProductImagesRow.vue";
 
 export default defineComponent({
   name: "ProductPage",
   components: {
     Swiper,
     SwiperSlide,
+    PriceDisplay,
+    BuySegment,
+    ShareToolbar,
+    ProductImagesRow,
   },
   setup() {
     const router = useRouter();
     const product = ref<any>(null);
-    const quantity = ref(1);
+    const zoomFactor = ref(1);
+    const selectedImageIndex = ref(0);
+    const swiperRef = ref<any>(null);
 
-    const loadProduct = () => {
-      const storedProduct = sessionStorage.getItem("selectedProduct");
-      if (storedProduct) {
-        product.value = JSON.parse(storedProduct);
+    function onSwiperInit(swiperInstance: any) {
+      swiperRef.value = swiperInstance;
+    }
+
+    function onSlideChange() {
+      if (swiperRef.value) {
+        selectedImageIndex.value = swiperRef.value.activeIndex;
+      }
+    }
+
+    watch(selectedImageIndex, (newIndex) => {
+      if (swiperRef.value) {
+        swiperRef.value.slideTo(newIndex);
+      }
+    });
+
+    function loadProduct() {
+      const stored = sessionStorage.getItem("selectedProduct");
+      if (stored) {
+        product.value = JSON.parse(stored);
       } else {
         router.replace({ name: "shop" });
       }
+    }
+
+    function formatImagePath(path: string) {
+      return `http://localhost:1994${path}`;
+    }
+
+    function handleScroll(event: CustomEvent) {
+      const factor = 0.0005;
+      zoomFactor.value = 1 + event.detail.scrollTop * factor;
+    }
+
+    onMounted(loadProduct);
+
+    return {
+      product,
+      zoomFactor,
+      selectedImageIndex,
+      swiperRef,
+      onSwiperInit,
+      onSlideChange,
+      formatImagePath,
+      handleScroll,
     };
-
-    const formatImagePath = (path: string) => `http://localhost:1994${path}`;
-
-    const addToCart = () => {
-      console.log(
-        "Product added to cart:",
-        product.value,
-        "Quantity:",
-        quantity.value
-      );
-    };
-
-    const buyNow = () => {
-      console.log(
-        "Proceeding to buy:",
-        product.value,
-        "Quantity:",
-        quantity.value
-      );
-    };
-
-    onMounted(() => {
-      loadProduct();
-    });
-
-    return { product, quantity, addToCart, buyNow, formatImagePath };
   },
 });
 </script>
 
 <style scoped>
-/* Add custom styles for Swiper if needed */
-.swiper {
-  width: 100%;
-  height: 300px; /* Adjust height as needed */
+.fixed-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
 }
 
-.swiper-slide img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.swiper-container {
+  height: 50vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  overflow: hidden;
+  transition: transform 0.5s ease-out;
+}
+
+.scrollable-content {
+  position: relative;
+  z-index: 2;
+  margin-top: 42vh;
+  background: transparent !important;
+}
+
+.white-content {
+  background-color: #fff;
+}
+
+.buy-segment-wrapper {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+</style>
+
+<style>
+ion-content::part(scroll) {
+  /* Hide scrollbars for Firefox */
+  scrollbar-width: none;
+}
+
+/* Hide scrollbars for Chrome, Safari, Edge */
+ion-content::part(scroll)::-webkit-scrollbar {
+  display: none;
 }
 </style>

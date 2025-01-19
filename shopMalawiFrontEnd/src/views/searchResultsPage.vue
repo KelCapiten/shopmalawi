@@ -3,9 +3,6 @@
     <appHeader :showCategorySegment="false" />
 
     <ion-header>
-      <ion-toolbar>
-        <ion-title>Search Results</ion-title>
-      </ion-toolbar>
       <ion-toolbar class="filter-toolbar">
         <div class="filter-container">
           <ion-select
