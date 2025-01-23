@@ -6,38 +6,10 @@
       <div class="form-container">
         <h2 class="form-title">Sell Your Item</h2>
 
-        <div class="form-group">
-          <label class="form-label">Upload Images</label>
-          <div class="upload-area" @click="triggerFileInput">
-            <input
-              type="file"
-              accept="image/jpeg, image/png, image/gif"
-              multiple
-              ref="fileInput"
-              @change="handleImageUpload"
-              style="display: none"
-            />
-            <div v-if="images.length === 0" class="upload-placeholder">
-              <ion-icon
-                :icon="cloudUploadOutline"
-                class="upload-icon"
-              ></ion-icon>
-              <p>Upload up to 4 images</p>
-            </div>
-            <div v-else class="image-preview">
-              <swiper :pagination="paginationOptions" :modules="[Pagination]">
-                <swiper-slide v-for="(image, index) in images" :key="index">
-                  <img
-                    :src="image.url"
-                    alt="Uploaded Image"
-                    class="uploaded-image"
-                  />
-                </swiper-slide>
-              </swiper>
-            </div>
-          </div>
-        </div>
+        <!-- Image Uploader -->
+        <ImageUploader @files-selected="handleFilesSelected" />
 
+        <!-- Item Name -->
         <div class="form-group">
           <label class="form-label">Item Name</label>
           <ion-input
@@ -48,6 +20,7 @@
           ></ion-input>
         </div>
 
+        <!-- Price -->
         <div class="form-group">
           <label class="form-label">Price</label>
           <ion-input
@@ -60,6 +33,7 @@
           ></ion-input>
         </div>
 
+        <!-- Category -->
         <div class="form-group">
           <label class="form-label">Category</label>
           <ion-select
@@ -68,7 +42,6 @@
             placeholder="Select category"
             required
           >
-            <!-- Loop through subcategories instead of categories -->
             <ion-select-option
               v-for="subcategory in subcategories"
               :key="subcategory.id"
@@ -79,6 +52,7 @@
           </ion-select>
         </div>
 
+        <!-- Stock Quantity -->
         <div class="form-group">
           <label class="form-label">How many do you have for sale?</label>
           <ion-input
@@ -90,6 +64,7 @@
           ></ion-input>
         </div>
 
+        <!-- Description -->
         <div class="form-group">
           <label class="form-label">Description</label>
           <ion-textarea
@@ -101,6 +76,7 @@
           ></ion-textarea>
         </div>
 
+        <!-- Submit Button -->
         <ion-button
           expand="block"
           class="submit-button"
@@ -112,6 +88,7 @@
         </ion-button>
       </div>
 
+      <!-- Toast -->
       <ion-toast
         :is-open="showToast"
         :message="toastMessage"
@@ -120,25 +97,23 @@
         :color="toastColor"
       ></ion-toast>
 
+      <!-- Saving Overlay -->
       <SavingOverlay :isSaving="isSaving" />
     </ion-content>
 
+    <!-- Footer -->
     <AppFooter />
   </ion-page>
 </template>
 
 <script lang="ts">
-import { ref, computed, defineComponent, onMounted } from "vue";
-import { cloudUploadOutline } from "ionicons/icons";
-import { Swiper, SwiperSlide } from "swiper/vue";
-import { Pagination } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/pagination";
+import { ref, defineComponent, onMounted } from "vue";
+import axios, { AxiosError } from "axios";
+import { useAuthStore } from "@/stores/authStore";
 import AppFooter from "../components/footer.vue";
 import AppHeader from "../components/header.vue";
-import axios, { AxiosError } from "axios";
 import SavingOverlay from "../components/SavingOverlay.vue";
-import { useAuthStore } from "@/stores/authStore";
+import ImageUploader from "@/components/ImageUploader.vue";
 
 interface Item {
   name: string;
@@ -146,11 +121,6 @@ interface Item {
   price: number;
   category: string;
   stockQuantity: number;
-}
-
-interface Image {
-  url: string;
-  file: File;
 }
 
 interface Category {
@@ -162,11 +132,10 @@ interface Category {
 export default defineComponent({
   name: "SellDashboard",
   components: {
-    Swiper,
-    SwiperSlide,
     AppFooter,
     AppHeader,
     SavingOverlay,
+    ImageUploader, // Register the new component
   },
   setup() {
     const item = ref<Item>({
@@ -177,20 +146,14 @@ export default defineComponent({
       stockQuantity: 0,
     });
 
-    const images = ref<Image[]>([]);
+    const files = ref<File[]>([]); // Store uploaded files
     const showToast = ref(false);
     const toastMessage = ref("");
     const toastColor = ref("success");
-    const fileInput = ref<HTMLInputElement | null>(null);
     const priceInput = ref<string>("");
     const isSaving = ref(false);
     const categories = ref<Category[]>([]);
     const subcategories = ref<Category[]>([]);
-
-    const paginationOptions = computed(() => ({
-      clickable: true,
-      dynamicBullets: true,
-    }));
 
     const fetchCategories = async () => {
       try {
@@ -215,19 +178,8 @@ export default defineComponent({
       fetchCategories();
     });
 
-    const triggerFileInput = () => {
-      fileInput.value?.click();
-    };
-
-    const handleImageUpload = (event: Event) => {
-      const target = event.target as HTMLInputElement;
-      if (target.files && target.files.length > 0) {
-        const files = Array.from(target.files).slice(0, 4);
-        images.value = files.map((file) => ({
-          url: URL.createObjectURL(file),
-          file,
-        }));
-      }
+    const handleFilesSelected = (selectedFiles: File[]) => {
+      files.value = selectedFiles;
     };
 
     const handlePriceInput = (event: CustomEvent) => {
@@ -252,7 +204,7 @@ export default defineComponent({
         return;
       }
 
-      if (images.value.length === 0) {
+      if (files.value.length === 0) {
         toastMessage.value = "Please upload at least one image.";
         toastColor.value = "danger";
         showToast.value = true;
@@ -266,8 +218,8 @@ export default defineComponent({
       formData.append("categoryId", item.value.category);
       formData.append("stockQuantity", item.value.stockQuantity.toString());
 
-      images.value.forEach((image) => {
-        formData.append("images", image.file);
+      files.value.forEach((file) => {
+        formData.append("images", file);
       });
 
       isSaving.value = true;
@@ -297,6 +249,7 @@ export default defineComponent({
         toastColor.value = "success";
         showToast.value = true;
 
+        // Reset form
         item.value = {
           name: "",
           description: "",
@@ -305,11 +258,10 @@ export default defineComponent({
           stockQuantity: 0,
         };
         priceInput.value = "";
-        images.value = [];
+        files.value = [];
       } catch (error) {
         console.error("Error adding item:", error);
 
-        // Type-safe error handling
         if (axios.isAxiosError(error)) {
           const axiosError = error as AxiosError;
           console.error("Server response:", axiosError.response?.data);
@@ -325,21 +277,16 @@ export default defineComponent({
 
     return {
       item,
-      images,
+      files,
       showToast,
       toastMessage,
       toastColor,
-      fileInput,
-      cloudUploadOutline,
-      triggerFileInput,
-      handleImageUpload,
-      handlePriceInput,
-      submitItem,
       priceInput,
-      paginationOptions,
-      Pagination,
       isSaving,
       subcategories,
+      handleFilesSelected,
+      handlePriceInput,
+      submitItem,
     };
   },
 });
@@ -389,69 +336,6 @@ export default defineComponent({
   resize: none;
   padding-top: 5px;
   text-align: start;
-}
-
-.upload-area {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border: 2px dashed #ccc;
-  border-radius: 8px;
-  height: 250px;
-  text-align: center;
-  cursor: pointer;
-  background-color: #f9f9f9;
-  position: relative;
-  overflow: hidden;
-}
-
-.upload-placeholder {
-  color: #777;
-}
-
-.upload-icon {
-  font-size: 2rem;
-  margin-bottom: 10px;
-}
-
-.image-preview {
-  height: 250px;
-  width: 100%;
-  border-radius: 8px;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.swiper {
-  height: 100%;
-}
-
-.swiper-slide {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-}
-
-.uploaded-image {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  border-radius: 8px;
-}
-
-.swiper-pagination-bullet {
-  background-color: #000;
-  opacity: 0.5;
-  width: 8px;
-  height: 8px;
-}
-
-.swiper-pagination-bullet-active {
-  background-color: #007aff;
-  opacity: 1;
 }
 
 .submit-button {

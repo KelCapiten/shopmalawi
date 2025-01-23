@@ -4,17 +4,14 @@
       <IonCardSubtitle>Payment method</IonCardSubtitle>
     </IonCardHeader>
     <IonCardContent class="payment-method">
-      <!-- Loading State -->
       <div v-if="loading" class="loading-message">
         Loading payment methods...
       </div>
 
-      <!-- Error State -->
       <div v-if="error" class="error-message">
         Failed to load payment methods. Please try again.
       </div>
 
-      <!-- Display Payment Methods as an Ionic Dropdown -->
       <div v-if="!loading && !error">
         <IonSelect
           v-model="selectedPaymentMethod"
@@ -31,22 +28,32 @@
           </IonSelectOption>
         </IonSelect>
       </div>
+
+      <ImageUploader
+        v-if="selectedPaymentMethod"
+        label="Proof of Payment"
+        placeholderMessage="Upload the transaction screenshots here"
+        @files-selected="handleFilesSelected"
+      />
     </IonCardContent>
   </IonCard>
 </template>
 
 <script>
 import { ref, onMounted } from "vue";
+import ImageUploader from "@/components/ImageUploader.vue";
 
 export default {
   name: "PaymentMethod",
+  components: {
+    ImageUploader,
+  },
   setup() {
-    const paymentMethods = ref([]); // Store payment methods
-    const selectedPaymentMethod = ref(""); // Store selected payment method
-    const loading = ref(true); // Loading state
-    const error = ref(false); // Error state
+    const paymentMethods = ref([]);
+    const selectedPaymentMethod = ref("");
+    const loading = ref(true);
+    const error = ref(false);
 
-    // Fetch payment methods from the API
     const fetchPaymentMethods = async () => {
       try {
         const response = await fetch(
@@ -56,16 +63,19 @@ export default {
           throw new Error("Failed to fetch payment methods");
         }
         const data = await response.json();
-        paymentMethods.value = data; // Update payment methods
+        paymentMethods.value = data;
       } catch (err) {
         console.error("Error fetching payment methods:", err);
-        error.value = true; // Set error state
+        error.value = true;
       } finally {
-        loading.value = false; // Set loading to false
+        loading.value = false;
       }
     };
 
-    // Fetch payment methods when the component is mounted
+    const handleFilesSelected = (files) => {
+      console.log("Files selected:", files);
+    };
+
     onMounted(() => {
       fetchPaymentMethods();
     });
@@ -75,6 +85,7 @@ export default {
       selectedPaymentMethod,
       loading,
       error,
+      handleFilesSelected,
     };
   },
 };
@@ -98,18 +109,17 @@ export default {
   color: var(--ion-color-danger);
 }
 
-/* Custom styles for IonSelect */
 .custom-select {
-  --padding-end: 32px; /* Add padding to the right for the chevron */
+  --padding-end: 32px;
   position: relative;
 }
 
 .custom-select::part(icon) {
   position: absolute;
-  right: 8px; /* Position the chevron on the far right */
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--ion-color-medium); /* Match the chevron color to the theme */
-  transition: transform 0.2s ease-in-out; /* Ensure animation works */
+  color: var(--ion-color-medium);
+  transition: transform 0.2s ease-in-out;
 }
 </style>
