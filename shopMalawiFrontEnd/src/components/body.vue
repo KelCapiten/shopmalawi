@@ -69,7 +69,7 @@ export default defineComponent({
         const response = await axios.get<Product[]>(
           `${baseUrl}/api/products/getAllProducts?startDate=${oneWeekAgo}`
         );
-        newlyAddedItems.value = response.data; // Use raw API response directly
+        newlyAddedItems.value = response.data;
       } catch (error) {
         console.error("Error fetching newly added items:", error);
       }

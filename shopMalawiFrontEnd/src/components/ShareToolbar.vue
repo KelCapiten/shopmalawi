@@ -4,7 +4,7 @@
     <IonToolbar class="transparent-toolbar">
       <!-- Left icon button (Back) -->
       <IonButtons slot="start">
-        <IonButton class="circle-button" fill="clear" @click="onBackClick">
+        <IonButton class="circle-button" fill="clear" @click="router.back()">
           <IonIcon :icon="arrowBack" />
         </IonButton>
       </IonButtons>
@@ -33,11 +33,7 @@ import {
 import { arrowBack, searchOutline, shareSocialOutline } from "ionicons/icons";
 import { useRouter } from "vue-router"; // Import useRouter
 
-const router = useRouter(); // Initialize the router instance
-
-function onBackClick() {
-  router.back(); // Navigate to the previous page
-}
+const router = useRouter();
 
 function onSearchClick() {
   console.log("Search button clicked");

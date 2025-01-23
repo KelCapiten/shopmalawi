@@ -1,13 +1,16 @@
 <template>
+  <!-- Disclaimer rendered as HTML -->
+  <div
+    v-if="props.disclaimerText"
+    class="disclaimer-text"
+    v-html="props.disclaimerText"
+  ></div>
+
   <IonToolbar class="shop-actions-toolbar">
-    <!-- Left icons -->
-    <IonButtons slot="start">
-      <!-- Store icon -->
+    <IonButtons v-if="props.showIcons" slot="start">
       <IonButton fill="clear" shape="round" @click="onStoreClick">
         <IonIcon slot="icon-only" :icon="storefrontOutline" />
       </IonButton>
-
-      <!-- Cart icon with badge -->
       <IonButton
         fill="clear"
         shape="round"
@@ -15,87 +18,120 @@
         class="cart-button"
       >
         <IonIcon slot="start" :icon="cartOutline" />
-        <IonBadge slot="end" color="danger">{{ cartCount }}</IonBadge>
+        <IonBadge slot="end" color="danger">
+          {{ props.cartCount }}
+        </IonBadge>
       </IonButton>
     </IonButtons>
 
-    <!-- Right action buttons -->
     <IonButtons slot="primary">
       <IonButton
         fill="outline"
         color="dark"
         shape="round"
-        @click="onAddToCart"
+        @click="onLeftButtonClick"
         class="action-button"
       >
-        Add to cart
+        {{ props.leftButtonText }}
       </IonButton>
       <IonButton
         fill="solid"
         color="danger"
         shape="round"
-        @click="onBuyNow"
+        @click="onRightButtonClick"
         class="action-button"
       >
-        Buy now
+        {{ props.rightButtonText }}
       </IonButton>
     </IonButtons>
   </IonToolbar>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-import {
-  IonToolbar,
-  IonButtons,
-  IonButton,
-  IonIcon,
-  IonBadge,
-} from "@ionic/vue";
-
-// Import only the icons we need
+import { defineProps, defineEmits } from "vue";
+import { useRouter } from "vue-router";
 import { storefrontOutline, cartOutline } from "ionicons/icons";
 
-// A reactive cart count, for demonstration:
-const cartCount = ref(3);
+const props = defineProps({
+  leftButtonText: {
+    type: String,
+    default: "Add to cart",
+  },
+  rightButtonText: {
+    type: String,
+    default: "Buy now",
+  },
+  showIcons: {
+    type: Boolean,
+    default: true,
+  },
+  cartCount: {
+    type: Number,
+    default: 0,
+  },
+  disclaimerText: {
+    type: String,
+    /**
+     * HTML string that includes a link to '/terms'.
+     * If you override this prop, you can include your own link or plain text.
+     */
+    default:
+      "Upon clicking 'Buy Now', I confirm I have read and acknowledged all <a href='/terms' class='terms-link'>terms and policies</a>.",
+  },
+});
 
-// Example click handlers:
-function onStoreClick() {
-  console.log("Store icon clicked");
+const emit = defineEmits([
+  "left-button-click",
+  "right-button-click",
+  "store-click",
+  "cart-click",
+]);
+
+const router = useRouter();
+
+function onStoreClick(): void {
+  emit("store-click");
+  router.push("/shop");
 }
 
-function onCartClick() {
-  console.log("Cart icon clicked");
+function onCartClick(): void {
+  emit("cart-click");
+  router.push("/cart");
 }
 
-function onAddToCart() {
-  console.log("Add to cart");
+function onLeftButtonClick(): void {
+  emit("left-button-click");
 }
 
-function onBuyNow() {
-  console.log("Buy now");
+function onRightButtonClick(): void {
+  emit("right-button-click");
+  router.push("/pay");
 }
 </script>
 
 <style scoped>
+.disclaimer-text {
+  font-size: 0.6rem;
+  color: #666;
+  margin: 8px 16px;
+  line-height: 1.4;
+}
+
 .shop-actions-toolbar {
-  /* Ensure toolbar doesn’t overflow */
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
-
-  --ion-toolbar-background: #ffffff; /* Adjust toolbar color if desired */
-  --ion-color-danger: #dc0000; /* Matches the “Buy now” red button */
+  --ion-toolbar-background: #ffffff;
+  --ion-color-danger: #dc0000;
 }
 
 .cart-button {
   position: relative;
 }
 
-/* Set consistent width and styling for the action buttons */
 .action-button {
-  width: 140px; /* Adjust to your desired width */
-  font-size: 14px; /* Smaller font size */
-  text-transform: none; /* Normal case (not uppercase) */
+  width: 140px;
+  font-size: 14px;
+  text-transform: none;
 }
 </style>

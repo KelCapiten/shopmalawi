@@ -8,6 +8,7 @@ import ProfilePage from "@/views/ProfilePage.vue";
 import ShopPage from "@/views/ShopPage.vue";
 import SearchResultsPage from "@/views/searchResultsPage.vue";
 import ProductPage from "@/views/productPage.vue";
+import PayPage from "@/views/PayPage.vue"; // Import the PayPage
 import { useAuthStore } from "@/stores/authStore";
 
 const routes: Array<RouteRecordRaw> = [
@@ -59,6 +60,12 @@ const routes: Array<RouteRecordRaw> = [
     component: ProductPage,
     meta: { requiresAuth: true },
   },
+  {
+    path: "/pay",
+    name: "PayPage",
+    component: PayPage,
+    meta: { requiresAuth: true }, // Ensure it requires authentication
+  },
 ];
 
 const router = createRouter({
@@ -69,18 +76,12 @@ const router = createRouter({
 // Utility to manually decode a JWT token
 const decodeToken = (token: string): { exp: number } | null => {
   try {
-    // Split the token into its three parts
     const payloadBase64 = token.split(".")[1];
     if (!payloadBase64) {
       throw new Error("Invalid token format");
     }
-
-    // Decode the base64 payload
     const payloadJson = atob(payloadBase64);
-
-    // Parse the payload as JSON
     const payload = JSON.parse(payloadJson);
-
     return payload;
   } catch (error) {
     console.error("Error decoding token:", error);
@@ -94,8 +95,6 @@ const isTokenValid = (token: string): boolean => {
   if (!payload || !payload.exp) {
     return false;
   }
-
-  // Check if the token is expired
   return payload.exp * 1000 > Date.now();
 };
 

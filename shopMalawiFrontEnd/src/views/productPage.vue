@@ -32,52 +32,17 @@
           />
 
           <div class="white-content">
+            <!-- Price Display -->
             <PriceDisplay
               :price="product.price"
               :stock="product.stock_quantity"
-              :countdownEnd="new Date(Date.now() + 86400000)"
             />
 
-            <ion-card>
-              <ion-card-header>
-                <ion-card-title>{{ product.name }}</ion-card-title>
-              </ion-card-header>
-              <ion-card-content>
-                <p>{{ product.description }}</p>
-              </ion-card-content>
-            </ion-card>
-            <ion-card>
-              <ion-card-header>
-                <ion-card-title>{{ product.name }}</ion-card-title>
-              </ion-card-header>
-              <ion-card-content>
-                <p>{{ product.description }}</p>
-              </ion-card-content>
-            </ion-card>
-            <ion-card>
-              <ion-card-header>
-                <ion-card-title>{{ product.name }}</ion-card-title>
-              </ion-card-header>
-              <ion-card-content>
-                <p>{{ product.description }}</p>
-              </ion-card-content>
-            </ion-card>
-            <ion-card>
-              <ion-card-header>
-                <ion-card-title>{{ product.name }}</ion-card-title>
-              </ion-card-header>
-              <ion-card-content>
-                <p>{{ product.description }}</p>
-              </ion-card-content>
-            </ion-card>
-            <ion-card>
-              <ion-card-header>
-                <ion-card-title>{{ product.name }}</ion-card-title>
-              </ion-card-header>
-              <ion-card-content>
-                <p>{{ product.description }}</p>
-              </ion-card-content>
-            </ion-card>
+            <!-- Product Description -->
+            <div class="product-description">
+              <h3>Description</h3>
+              <p>{{ product.description }}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -200,6 +165,19 @@ export default defineComponent({
   background-color: #fff;
 }
 
+.product-description {
+  padding: 0px 15px;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #333;
+}
+
+.product-description h3 {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
 .buy-segment-wrapper {
   position: fixed;
   bottom: 0;
@@ -211,11 +189,9 @@ export default defineComponent({
 
 <style>
 ion-content::part(scroll) {
-  /* Hide scrollbars for Firefox */
   scrollbar-width: none;
 }
 
-/* Hide scrollbars for Chrome, Safari, Edge */
 ion-content::part(scroll)::-webkit-scrollbar {
   display: none;
 }

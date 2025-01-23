@@ -6,6 +6,7 @@ import dbMiddleware from "./middleware/dbMiddleware.js";
 import productRoutes from "./routes/products.js";
 import usersRouters from "./routes/users.js";
 import searchRoutes from "./routes/search.js";
+import paymentRoutes from "./routes/payments.js";
 
 dotenv.config();
 
@@ -14,6 +15,7 @@ const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(corsMiddleware);
+app.options("*", corsMiddleware);
 app.use(express.json());
 app.use("/uploads", staticMiddleware);
 
@@ -24,6 +26,7 @@ dbMiddleware(app);
 app.use("/api/products", productRoutes);
 app.use("/api/users", usersRouters);
 app.use("/api/search", searchRoutes);
+app.use("/api/payment-methods", paymentRoutes);
 
 // Start Server
 app.listen(port, () => {
