@@ -8,7 +8,8 @@ import ProfilePage from "@/views/ProfilePage.vue";
 import ShopPage from "@/views/ShopPage.vue";
 import SearchResultsPage from "@/views/searchResultsPage.vue";
 import ProductPage from "@/views/productPage.vue";
-import PayPage from "@/views/PayPage.vue"; // Import the PayPage
+import PayPage from "@/views/PayPage.vue";
+import LookingForPage from "@/views/LookingForPage.vue";
 import { useAuthStore } from "@/stores/authStore";
 
 const routes: Array<RouteRecordRaw> = [
@@ -64,7 +65,13 @@ const routes: Array<RouteRecordRaw> = [
     path: "/pay",
     name: "PayPage",
     component: PayPage,
-    meta: { requiresAuth: true }, // Ensure it requires authentication
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/looking-for",
+    name: "LookingFor",
+    component: LookingForPage,
+    meta: { requiresAuth: true },
   },
 ];
 
@@ -73,7 +80,6 @@ const router = createRouter({
   routes,
 });
 
-// Utility to manually decode a JWT token
 const decodeToken = (token: string): { exp: number } | null => {
   try {
     const payloadBase64 = token.split(".")[1];
@@ -89,7 +95,6 @@ const decodeToken = (token: string): { exp: number } | null => {
   }
 };
 
-// Utility to check token validity
 const isTokenValid = (token: string): boolean => {
   const payload = decodeToken(token);
   if (!payload || !payload.exp) {
@@ -98,7 +103,6 @@ const isTokenValid = (token: string): boolean => {
   return payload.exp * 1000 > Date.now();
 };
 
-// Navigation guard to check authentication and token expiry
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
 
@@ -117,13 +121,13 @@ router.beforeEach((to, from, next) => {
     }
 
     if (isTokenValid(token)) {
-      next(); // Token is valid, proceed to the route
+      next();
     } else {
-      authStore.clearAuth(); // Clear auth state
-      next({ name: "Login" }); // Redirect to login
+      authStore.clearAuth();
+      next({ name: "Login" });
     }
   } else {
-    next(); // Route does not require authentication, proceed
+    next();
   }
 });
 

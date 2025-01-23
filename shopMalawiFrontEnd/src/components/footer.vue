@@ -14,10 +14,10 @@
             <ion-label>Shop</ion-label>
           </div>
         </ion-button>
-        <ion-button router-link="/feed">
+        <ion-button router-link="/looking-for">
           <div class="button-content">
-            <ion-icon :icon="newspaperOutline"></ion-icon>
-            <ion-label>Feed</ion-label>
+            <ion-icon :icon="searchOutline"></ion-icon>
+            <ion-label>Looking For</ion-label>
           </div>
         </ion-button>
         <ion-button router-link="/sell">
@@ -42,7 +42,7 @@ import { defineComponent } from "vue";
 import {
   homeOutline,
   cartOutline,
-  newspaperOutline,
+  searchOutline,
   pricetagOutline,
   personOutline,
 } from "ionicons/icons";
@@ -53,7 +53,7 @@ export default defineComponent({
     return {
       homeOutline,
       cartOutline,
-      newspaperOutline,
+      searchOutline,
       pricetagOutline,
       personOutline,
     };

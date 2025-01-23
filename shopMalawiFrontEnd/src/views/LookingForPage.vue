@@ -4,7 +4,7 @@
 
     <ion-content class="ion-padding">
       <div class="form-container">
-        <label class="form-label">What would you like to sell?</label>
+        <label class="form-label">What item are you looking for?</label>
 
         <!-- Image Uploader -->
         <ImageUploader @files-selected="handleFilesSelected" />
@@ -14,52 +14,8 @@
           <label class="form-label">Item Name</label>
           <ion-input
             class="form-input"
-            v-model="item.name"
-            placeholder="Enter item name"
-            required
-          ></ion-input>
-        </div>
-
-        <!-- Price -->
-        <div class="form-group">
-          <label class="form-label">Price</label>
-          <ion-input
-            class="form-input"
-            :value="priceInput"
-            type="number"
-            placeholder="Enter price"
-            required
-            @ionInput="handlePriceInput"
-          ></ion-input>
-        </div>
-
-        <!-- Category -->
-        <div class="form-group">
-          <label class="form-label">Category</label>
-          <ion-select
-            class="form-input"
-            v-model="item.category"
-            placeholder="Select category"
-            required
-          >
-            <ion-select-option
-              v-for="subcategory in subcategories"
-              :key="subcategory.id"
-              :value="subcategory.id"
-            >
-              {{ subcategory.name }}
-            </ion-select-option>
-          </ion-select>
-        </div>
-
-        <!-- Stock Quantity -->
-        <div class="form-group">
-          <label class="form-label">How many do you have for sale?</label>
-          <ion-input
-            class="form-input"
-            type="number"
-            v-model="item.stockQuantity"
-            placeholder="Enter stock quantity"
+            v-model="inquiry.name"
+            placeholder="Enter the name of the item you're looking for"
             required
           ></ion-input>
         </div>
@@ -69,8 +25,8 @@
           <label class="form-label">Description</label>
           <ion-textarea
             class="form-input textarea"
-            v-model="item.description"
-            placeholder="Enter a brief description"
+            v-model="inquiry.description"
+            placeholder="Provide details about the item (e.g., size, color, brand)"
             :rows="5"
             required
           ></ion-textarea>
@@ -81,10 +37,10 @@
           expand="block"
           class="submit-button"
           color="primary"
-          @click="submitItem"
-          :disabled="isSaving"
+          @click="sendInquiry"
+          :disabled="isSending"
         >
-          Sell Item
+          Send Inquiry
         </ion-button>
       </div>
 
@@ -98,7 +54,7 @@
       ></ion-toast>
 
       <!-- Saving Overlay -->
-      <SavingOverlay :isSaving="isSaving" />
+      <SavingOverlay :isSaving="isSending" />
     </ion-content>
 
     <!-- Footer -->
@@ -107,7 +63,7 @@
 </template>
 
 <script lang="ts">
-import { ref, defineComponent, onMounted } from "vue";
+import { ref, defineComponent } from "vue";
 import axios, { AxiosError } from "axios";
 import { useAuthStore } from "@/stores/authStore";
 import AppFooter from "../components/footer.vue";
@@ -115,89 +71,39 @@ import AppHeader from "../components/header.vue";
 import SavingOverlay from "../components/SavingOverlay.vue";
 import ImageUploader from "@/components/ImageUploader.vue";
 
-interface Item {
+interface Inquiry {
   name: string;
   description: string;
-  price: number;
-  category: string;
-  stockQuantity: number;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  subcategories: Category[];
 }
 
 export default defineComponent({
-  name: "SellDashboard",
+  name: "LookingForPage",
   components: {
     AppFooter,
     AppHeader,
     SavingOverlay,
-    ImageUploader, // Register the new component
+    ImageUploader,
   },
   setup() {
-    const item = ref<Item>({
+    const inquiry = ref<Inquiry>({
       name: "",
       description: "",
-      price: 0,
-      category: "",
-      stockQuantity: 0,
     });
 
     const files = ref<File[]>([]); // Store uploaded files
     const showToast = ref(false);
     const toastMessage = ref("");
     const toastColor = ref("success");
-    const priceInput = ref<string>("");
-    const isSaving = ref(false);
-    const categories = ref<Category[]>([]);
-    const subcategories = ref<Category[]>([]);
-
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(
-          "http://localhost:1994/api/products/getCategories"
-        );
-        categories.value = response.data;
-
-        // Extract all subcategories
-        subcategories.value = categories.value.flatMap(
-          (category) => category.subcategories || []
-        );
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-        toastMessage.value = "Failed to fetch categories.";
-        toastColor.value = "danger";
-        showToast.value = true;
-      }
-    };
-
-    onMounted(() => {
-      fetchCategories();
-    });
+    const isSending = ref(false);
 
     const handleFilesSelected = (selectedFiles: File[]) => {
       files.value = selectedFiles;
     };
 
-    const handlePriceInput = (event: CustomEvent) => {
-      const value = event.detail.value;
-      priceInput.value = value;
-      const parsedValue = parseFloat(value);
-      item.value.price = isNaN(parsedValue) ? 0 : parsedValue;
-    };
-
-    const submitItem = async () => {
+    const sendInquiry = async () => {
       const authStore = useAuthStore();
 
-      if (
-        !item.value.name ||
-        !item.value.description ||
-        item.value.price <= 0 ||
-        !item.value.category
-      ) {
+      if (!inquiry.value.name || !inquiry.value.description) {
         toastMessage.value = "Please fill all fields with valid data.";
         toastColor.value = "danger";
         showToast.value = true;
@@ -212,17 +118,14 @@ export default defineComponent({
       }
 
       const formData = new FormData();
-      formData.append("name", item.value.name);
-      formData.append("description", item.value.description);
-      formData.append("price", item.value.price.toString());
-      formData.append("categoryId", item.value.category);
-      formData.append("stockQuantity", item.value.stockQuantity.toString());
+      formData.append("name", inquiry.value.name);
+      formData.append("description", inquiry.value.description);
 
       files.value.forEach((file) => {
         formData.append("images", file);
       });
 
-      isSaving.value = true;
+      isSending.value = true;
 
       try {
         const token = authStore.token;
@@ -235,7 +138,7 @@ export default defineComponent({
         }
 
         await axios.post(
-          "http://localhost:1994/api/products/addProducts",
+          "http://localhost:1994/api/inquiries/sendInquiry",
           formData,
           {
             headers: {
@@ -245,48 +148,41 @@ export default defineComponent({
           }
         );
 
-        toastMessage.value = "Item added successfully!";
+        toastMessage.value = "Inquiry sent successfully!";
         toastColor.value = "success";
         showToast.value = true;
 
         // Reset form
-        item.value = {
+        inquiry.value = {
           name: "",
           description: "",
-          price: 0,
-          category: "",
-          stockQuantity: 0,
         };
-        priceInput.value = "";
         files.value = [];
       } catch (error) {
-        console.error("Error adding item:", error);
+        console.error("Error sending inquiry:", error);
 
         if (axios.isAxiosError(error)) {
           const axiosError = error as AxiosError;
           console.error("Server response:", axiosError.response?.data);
         }
 
-        toastMessage.value = "Failed to add item. Please try again.";
+        toastMessage.value = "Failed to send inquiry. Please try again.";
         toastColor.value = "danger";
         showToast.value = true;
       } finally {
-        isSaving.value = false;
+        isSending.value = false;
       }
     };
 
     return {
-      item,
+      inquiry,
       files,
       showToast,
       toastMessage,
       toastColor,
-      priceInput,
-      isSaving,
-      subcategories,
+      isSending,
       handleFilesSelected,
-      handlePriceInput,
-      submitItem,
+      sendInquiry,
     };
   },
 });

@@ -47,7 +47,7 @@ export default defineComponent({
   props: {
     label: {
       type: String,
-      default: "Upload Images",
+      default: "Product Images",
     },
     placeholderMessage: {
       type: String,
@@ -94,6 +94,9 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.form-label {
+  font-size: small;
+}
 .upload-area {
   display: flex;
   justify-content: center;
