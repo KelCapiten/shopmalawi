@@ -5,7 +5,7 @@
     <ion-content class="ion-padding">
       <!-- Display all inquiries -->
       <div class="inquiries-container">
-        <h2>All Inquiries</h2>
+        <h5>Do you have any of these for sale?</h5>
         <div v-if="inquiries.length > 0" class="inquiries-list">
           <div
             class="inquiry-card"
@@ -28,25 +28,28 @@
                     :alt="`Image ${index + 1}`"
                     class="inquiry-image"
                   />
-                  <span v-if="image.is_primary" class="primary-badge"
-                    >Primary</span
-                  >
                 </div>
               </div>
             </div>
 
             <!-- Description -->
-            <p><strong>Description:</strong> {{ inquiry.description }}</p>
+            <p>
+              <strong>I'm looking for,</strong> {{ inquiry.name }}.
+              {{ inquiry.description }}
+            </p>
           </div>
         </div>
         <p v-else>No inquiries found.</p>
       </div>
 
       <!-- Use the InputForm component -->
-      <InputForm
-        :subcategories="subcategories"
-        @inquiry-sent="handleInquirySent"
-      />
+      <div ref="formSection">
+        <InputForm
+          v-if="showForm"
+          :subcategories="subcategories"
+          @inquiry-sent="handleInquirySent"
+        />
+      </div>
 
       <ion-toast
         :is-open="showToast"
@@ -57,6 +60,13 @@
       ></ion-toast>
 
       <SavingOverlay :isSaving="isSending" />
+
+      <!-- Floating button to toggle the form view -->
+      <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+        <ion-fab-button @click="toggleForm" color="light">
+          <ion-icon :icon="showForm ? close : search"></ion-icon>
+        </ion-fab-button>
+      </ion-fab>
     </ion-content>
 
     <AppFooter />
@@ -70,7 +80,8 @@ import { useAuthStore } from "@/stores/authStore";
 import AppFooter from "../components/footer.vue";
 import AppHeader from "../components/header.vue";
 import SavingOverlay from "../components/SavingOverlay.vue";
-import InputForm from "@/components/InputForm.vue"; // Import the new component
+import InputForm from "@/components/InputForm.vue";
+import { search, close } from "ionicons/icons"; // Import icons
 
 interface Inquiry {
   id: number;
@@ -97,7 +108,7 @@ export default defineComponent({
     AppFooter,
     AppHeader,
     SavingOverlay,
-    InputForm, // Register the new component
+    InputForm,
   },
   setup() {
     const categories = ref<Category[]>([]);
@@ -107,6 +118,8 @@ export default defineComponent({
     const toastMessage = ref("");
     const toastColor = ref("success");
     const isSending = ref(false);
+    const showForm = ref(false); // Control form visibility
+    const formSection = ref<HTMLElement | null>(null); // Reference to the form section
 
     const fetchCategories = async () => {
       try {
@@ -157,6 +170,15 @@ export default defineComponent({
       }
     };
 
+    const toggleForm = () => {
+      showForm.value = !showForm.value; // Toggle form visibility
+      if (showForm.value) {
+        setTimeout(() => {
+          formSection.value?.scrollIntoView({ behavior: "smooth" }); // Scroll to the form
+        }, 100);
+      }
+    };
+
     onMounted(() => {
       fetchCategories();
       fetchInquiries();
@@ -170,6 +192,11 @@ export default defineComponent({
       toastColor,
       isSending,
       handleInquirySent,
+      showForm,
+      formSection,
+      toggleForm,
+      search, // Add the search icon
+      close, // Add the close icon
     };
   },
 });
@@ -179,51 +206,56 @@ export default defineComponent({
 .inquiries-container {
   margin-bottom: 20px;
 }
+
 .inquiries-container h2 {
   margin-bottom: 10px;
 }
+
 .inquiries-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
+
 .inquiry-card {
   border: 1px solid #ccc;
   border-radius: 8px;
   padding: 10px;
   background-color: #f9f9f9;
 }
+
 .inquiry-card h3 {
   margin: 0 0 10px 0;
   font-size: 1.2rem;
 }
+
 .inquiry-images {
   margin-top: 10px;
 }
+
 .image-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 10px;
 }
+
 .image-item {
   position: relative;
+  width: 120px;
+  height: 120px;
   border: 1px solid #ddd;
   border-radius: 5px;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
 .inquiry-image {
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
   display: block;
-}
-.primary-badge {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  background-color: rgba(0, 123, 255, 0.8);
-  color: white;
-  font-size: 0.75rem;
-  padding: 2px 5px;
-  border-radius: 3px;
 }
 </style>

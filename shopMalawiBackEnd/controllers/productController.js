@@ -174,7 +174,7 @@ export const getCategories = async (req, res) => {
 
 // endpoint to add products
 export const addProduct = async (req, res) => {
-  const { name, description, price, subcategory_id, stockQuantity } = req.body;
+  const { name, description, price, category_id, stockQuantity } = req.body;
 
   // Basic validation
   if (!name || !description || !price || !req.files || req.files.length === 0) {
@@ -188,25 +188,29 @@ export const addProduct = async (req, res) => {
 
   const connection = await db.getConnection();
   try {
-    // 1) Fetch maincategory info
+    // 1) Fetch category info
     const [categoryInfo] = await connection.query(
       `SELECT 
-         c1.name AS subcategory_name, 
-         c1.id AS subcategory_id,
+         c1.name AS category_name, 
+         c1.id AS category_id,
+         c1.parent_id,
          c2.name AS maincategory_name, 
          c2.id AS maincategory_id
        FROM categories c1
        LEFT JOIN categories c2 ON c1.parent_id = c2.id
        WHERE c1.id = ?`,
-      [subcategory_id]
+      [category_id]
     );
 
     if (categoryInfo.length === 0) {
-      return res.status(400).json({ message: "Invalid subcategory_id" });
+      return res.status(400).json({ message: "Invalid category_id" });
     }
 
-    const { maincategory_id, maincategory_name, subcategory_name } =
+    const { category_name, parent_id, maincategory_id, maincategory_name } =
       categoryInfo[0];
+
+    // Determine if the category is a main category or subcategory
+    const isMainCategory = parent_id === null;
 
     // 2) Start transaction
     await connection.beginTransaction();
@@ -214,18 +218,20 @@ export const addProduct = async (req, res) => {
     // 3) Insert product into `products` table
     const [productResult] = await connection.query(
       `INSERT INTO products 
-       (name, description, price, mark_up_amount, subcategory_id, subcategory_name, 
-        maincategory_id, maincategory_name, stock_quantity, uploaded_by) 
+       (name, description, price, mark_up_amount, 
+        subcategory_id, subcategory_name, 
+        maincategory_id, maincategory_name, 
+        stock_quantity, uploaded_by) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name,
         description,
         price,
         markUpAmount,
-        subcategory_id,
-        subcategory_name,
-        maincategory_id,
-        maincategory_name,
+        isMainCategory ? category_id : category_id, // subcategory_id
+        isMainCategory ? category_name : category_name, // subcategory_name
+        isMainCategory ? category_id : maincategory_id, // maincategory_id
+        isMainCategory ? category_name : maincategory_name, // maincategory_name
         stockQuantity,
         uploadedBy,
       ]
@@ -234,7 +240,6 @@ export const addProduct = async (req, res) => {
     const productId = productResult.insertId;
 
     // 4) Insert images into `images` table (polymorphic approach)
-    //    imageable_id = productId, imageable_type = 'products'
     const imageQueries = req.files.map((file, index) => {
       const modifiedFilePath = `/${file.path.replace(/\\/g, "/")}`;
       return connection.query(

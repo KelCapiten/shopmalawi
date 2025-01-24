@@ -248,7 +248,7 @@ export default defineComponent({
         formData.append("name", item.value.name);
         formData.append("description", item.value.description);
         formData.append("price", item.value.price.toString());
-        formData.append("subcategory_id", item.value.category);
+        formData.append("category_id", item.value.category);
         formData.append("stockQuantity", item.value.stockQuantity.toString());
 
         // Append images

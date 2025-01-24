@@ -1,12 +1,13 @@
 <template>
   <div class="form-container">
     <label class="form-label">
-      Let the community help you find what you are looking for.
+      Let the community help you find the Item you are looking for.
     </label>
 
     <!-- Reference the uploader so we can call clearImages() later -->
     <ImageUploader
       ref="imageUploaderRef"
+      label="What are you looking for?"
       @files-selected="handleFilesSelected"
     />
 
