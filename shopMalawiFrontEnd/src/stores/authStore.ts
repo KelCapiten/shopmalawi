@@ -31,7 +31,7 @@ export const useAuthStore = defineStore("auth", () => {
     user.value = null;
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    router.push("/login"); // Redirect to login page
+    router.push("/login");
   };
 
   // Check if the user is authenticated

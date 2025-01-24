@@ -6,8 +6,11 @@
       <div class="form-container">
         <label class="form-label">What would you like to sell?</label>
 
-        <!-- Image Uploader -->
-        <ImageUploader @files-selected="handleFilesSelected" />
+        <!-- Reference to ImageUploader so we can call clearImages() -->
+        <ImageUploader
+          ref="imageUploaderRef"
+          @files-selected="handleFilesSelected"
+        />
 
         <!-- Item Name -->
         <div class="form-group">
@@ -108,7 +111,7 @@
 
 <script lang="ts">
 import { ref, defineComponent, onMounted } from "vue";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { useAuthStore } from "@/stores/authStore";
 import AppFooter from "../components/footer.vue";
 import AppHeader from "../components/header.vue";
@@ -135,9 +138,10 @@ export default defineComponent({
     AppFooter,
     AppHeader,
     SavingOverlay,
-    ImageUploader, // Register the new component
+    ImageUploader,
   },
   setup() {
+    // Main item state
     const item = ref<Item>({
       name: "",
       description: "",
@@ -146,26 +150,37 @@ export default defineComponent({
       stockQuantity: 0,
     });
 
-    const files = ref<File[]>([]); // Store uploaded files
+    // Files selected in the ImageUploader
+    const files = ref<File[]>([]);
+
+    // UI states
     const showToast = ref(false);
     const toastMessage = ref("");
     const toastColor = ref("success");
     const priceInput = ref<string>("");
     const isSaving = ref(false);
+
+    // Categories -> subcategories
     const categories = ref<Category[]>([]);
     const subcategories = ref<Category[]>([]);
 
+    // Reference to ImageUploader to clear images after submission
+    const imageUploaderRef = ref<InstanceType<typeof ImageUploader> | null>(
+      null
+    );
+
+    // Fetch categories on mount
     const fetchCategories = async () => {
       try {
         const response = await axios.get(
           "http://localhost:1994/api/products/getCategories"
         );
         categories.value = response.data;
-
-        // Extract all subcategories
-        subcategories.value = categories.value.flatMap(
-          (category) => category.subcategories || []
-        );
+        subcategories.value = categories.value
+          .flatMap((category) =>
+            category.subcategories?.length ? category.subcategories : [category]
+          )
+          .sort((a, b) => a.name.localeCompare(b.name));
       } catch (error) {
         console.error("Error fetching categories:", error);
         toastMessage.value = "Failed to fetch categories.";
@@ -178,10 +193,18 @@ export default defineComponent({
       fetchCategories();
     });
 
+    /**
+     * Called when ImageUploader emits `files-selected`.
+     * We overwrite the local file array.
+     */
     const handleFilesSelected = (selectedFiles: File[]) => {
       files.value = selectedFiles;
     };
 
+    /**
+     * Called when user inputs a price.
+     * We parse it as a float for `item.value.price`.
+     */
     const handlePriceInput = (event: CustomEvent) => {
       const value = event.detail.value;
       priceInput.value = value;
@@ -189,53 +212,53 @@ export default defineComponent({
       item.value.price = isNaN(parsedValue) ? 0 : parsedValue;
     };
 
+    /**
+     * Submits the product (item) to the server.
+     */
     const submitItem = async () => {
-      const authStore = useAuthStore();
-
+      // Basic validation
       if (
         !item.value.name ||
         !item.value.description ||
         item.value.price <= 0 ||
         !item.value.category
       ) {
-        toastMessage.value = "Please fill all fields with valid data.";
-        toastColor.value = "danger";
-        showToast.value = true;
+        showErrorToast("Please fill all fields with valid data.");
         return;
       }
 
       if (files.value.length === 0) {
-        toastMessage.value = "Please upload at least one image.";
-        toastColor.value = "danger";
-        showToast.value = true;
+        showErrorToast("Please upload at least one image.");
         return;
       }
-
-      const formData = new FormData();
-      formData.append("name", item.value.name);
-      formData.append("description", item.value.description);
-      formData.append("price", item.value.price.toString());
-      formData.append("categoryId", item.value.category);
-      formData.append("stockQuantity", item.value.stockQuantity.toString());
-
-      files.value.forEach((file) => {
-        formData.append("images", file);
-      });
 
       isSaving.value = true;
 
       try {
+        // Make sure we have a token
+        const authStore = useAuthStore();
         const token = authStore.token;
         if (!token) {
-          toastMessage.value =
-            "Authentication token is missing. Please log in.";
-          toastColor.value = "danger";
-          showToast.value = true;
+          showErrorToast("Authentication token is missing. Please log in.");
           return;
         }
 
+        // Build FormData
+        const formData = new FormData();
+        formData.append("name", item.value.name);
+        formData.append("description", item.value.description);
+        formData.append("price", item.value.price.toString());
+        formData.append("subcategory_id", item.value.category);
+        formData.append("stockQuantity", item.value.stockQuantity.toString());
+
+        // Append images
+        files.value.forEach((file) => {
+          formData.append("images", file);
+        });
+
+        // Send the request
         await axios.post(
-          "http://localhost:1994/api/products/addProducts",
+          "http://localhost:1994/api/products/addProduct",
           formData,
           {
             headers: {
@@ -245,11 +268,10 @@ export default defineComponent({
           }
         );
 
-        toastMessage.value = "Item added successfully!";
-        toastColor.value = "success";
-        showToast.value = true;
+        // On success
+        showSuccessToast("Item added successfully!");
 
-        // Reset form
+        // Reset the form
         item.value = {
           name: "",
           description: "",
@@ -259,23 +281,40 @@ export default defineComponent({
         };
         priceInput.value = "";
         files.value = [];
+
+        // Also clear images in the ImageUploader
+        imageUploaderRef.value?.clearImages();
       } catch (error) {
         console.error("Error adding item:", error);
-
         if (axios.isAxiosError(error)) {
-          const axiosError = error as AxiosError;
-          console.error("Server response:", axiosError.response?.data);
+          console.error("Server response:", error.response?.data);
         }
-
-        toastMessage.value = "Failed to add item. Please try again.";
-        toastColor.value = "danger";
-        showToast.value = true;
+        showErrorToast("Failed to add item. Please try again.");
       } finally {
         isSaving.value = false;
       }
     };
 
+    /**
+     * Helper to show an error toast
+     */
+    const showErrorToast = (message: string) => {
+      toastMessage.value = message;
+      toastColor.value = "danger";
+      showToast.value = true;
+    };
+
+    /**
+     * Helper to show a success toast
+     */
+    const showSuccessToast = (message: string) => {
+      toastMessage.value = message;
+      toastColor.value = "success";
+      showToast.value = true;
+    };
+
     return {
+      // Reactive states
       item,
       files,
       showToast,
@@ -283,7 +322,13 @@ export default defineComponent({
       toastColor,
       priceInput,
       isSaving,
+      categories,
       subcategories,
+
+      // Refs
+      imageUploaderRef,
+
+      // Methods
       handleFilesSelected,
       handlePriceInput,
       submitItem,
@@ -301,14 +346,6 @@ export default defineComponent({
   border-radius: 10px;
   background-color: #ffffff;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.form-title {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 20px;
-  text-align: center;
-  color: #333;
 }
 
 .form-group {

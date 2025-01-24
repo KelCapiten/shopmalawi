@@ -3,48 +3,51 @@
     <AppHeader :showSearchBar="false" :showCategorySegment="false" />
 
     <ion-content class="ion-padding">
-      <div class="form-container">
-        <label class="form-label">What item are you looking for?</label>
+      <!-- Display all inquiries -->
+      <div class="inquiries-container">
+        <h2>All Inquiries</h2>
+        <div v-if="inquiries.length > 0" class="inquiries-list">
+          <div
+            class="inquiry-card"
+            v-for="inquiry in inquiries"
+            :key="inquiry.id"
+          >
+            <!-- Name with quantity needed in parentheses -->
+            <h3>{{ inquiry.name }} ({{ inquiry.stock_quantity }} needed)</h3>
 
-        <!-- Image Uploader -->
-        <ImageUploader @files-selected="handleFilesSelected" />
+            <!-- Display images -->
+            <div class="inquiry-images">
+              <div class="image-grid">
+                <div
+                  v-for="(image, index) in inquiry.images"
+                  :key="index"
+                  class="image-item"
+                >
+                  <img
+                    :src="`http://localhost:1994${image.image_path}`"
+                    :alt="`Image ${index + 1}`"
+                    class="inquiry-image"
+                  />
+                  <span v-if="image.is_primary" class="primary-badge"
+                    >Primary</span
+                  >
+                </div>
+              </div>
+            </div>
 
-        <!-- Item Name -->
-        <div class="form-group">
-          <label class="form-label">Item Name</label>
-          <ion-input
-            class="form-input"
-            v-model="inquiry.name"
-            placeholder="Enter the name of the item you're looking for"
-            required
-          ></ion-input>
+            <!-- Description -->
+            <p><strong>Description:</strong> {{ inquiry.description }}</p>
+          </div>
         </div>
-
-        <!-- Description -->
-        <div class="form-group">
-          <label class="form-label">Description</label>
-          <ion-textarea
-            class="form-input textarea"
-            v-model="inquiry.description"
-            placeholder="Provide details about the item (e.g., size, color, brand)"
-            :rows="5"
-            required
-          ></ion-textarea>
-        </div>
-
-        <!-- Submit Button -->
-        <ion-button
-          expand="block"
-          class="submit-button"
-          color="primary"
-          @click="sendInquiry"
-          :disabled="isSending"
-        >
-          Send Inquiry
-        </ion-button>
+        <p v-else>No inquiries found.</p>
       </div>
 
-      <!-- Toast -->
+      <!-- Use the InputForm component -->
+      <InputForm
+        :subcategories="subcategories"
+        @inquiry-sent="handleInquirySent"
+      />
+
       <ion-toast
         :is-open="showToast"
         :message="toastMessage"
@@ -53,27 +56,39 @@
         :color="toastColor"
       ></ion-toast>
 
-      <!-- Saving Overlay -->
       <SavingOverlay :isSaving="isSending" />
     </ion-content>
 
-    <!-- Footer -->
     <AppFooter />
   </ion-page>
 </template>
 
 <script lang="ts">
-import { ref, defineComponent } from "vue";
-import axios, { AxiosError } from "axios";
+import { ref, defineComponent, onMounted } from "vue";
+import axios from "axios";
 import { useAuthStore } from "@/stores/authStore";
 import AppFooter from "../components/footer.vue";
 import AppHeader from "../components/header.vue";
 import SavingOverlay from "../components/SavingOverlay.vue";
-import ImageUploader from "@/components/ImageUploader.vue";
+import InputForm from "@/components/InputForm.vue"; // Import the new component
 
 interface Inquiry {
+  id: number;
   name: string;
   description: string;
+  category_name: string;
+  stock_quantity: number;
+  status: string;
+  images: {
+    image_path: string;
+    is_primary: boolean;
+  }[];
+}
+
+interface Category {
+  id: number;
+  name: string;
+  subcategories?: Category[];
 }
 
 export default defineComponent({
@@ -82,162 +97,133 @@ export default defineComponent({
     AppFooter,
     AppHeader,
     SavingOverlay,
-    ImageUploader,
+    InputForm, // Register the new component
   },
   setup() {
-    const inquiry = ref<Inquiry>({
-      name: "",
-      description: "",
-    });
-
-    const files = ref<File[]>([]); // Store uploaded files
+    const categories = ref<Category[]>([]);
+    const subcategories = ref<Category[]>([]);
+    const inquiries = ref<Inquiry[]>([]);
     const showToast = ref(false);
     const toastMessage = ref("");
     const toastColor = ref("success");
     const isSending = ref(false);
 
-    const handleFilesSelected = (selectedFiles: File[]) => {
-      files.value = selectedFiles;
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:1994/api/products/getCategories"
+        );
+        categories.value = response.data;
+        subcategories.value = categories.value
+          .flatMap((category) =>
+            category.subcategories?.length ? category.subcategories : [category]
+          )
+          .sort((a, b) => a.name.localeCompare(b.name));
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        toastMessage.value = "Failed to fetch categories.";
+        toastColor.value = "danger";
+        showToast.value = true;
+      }
     };
 
-    const sendInquiry = async () => {
-      const authStore = useAuthStore();
-
-      if (!inquiry.value.name || !inquiry.value.description) {
-        toastMessage.value = "Please fill all fields with valid data.";
-        toastColor.value = "danger";
-        showToast.value = true;
-        return;
-      }
-
-      if (files.value.length === 0) {
-        toastMessage.value = "Please upload at least one image.";
-        toastColor.value = "danger";
-        showToast.value = true;
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("name", inquiry.value.name);
-      formData.append("description", inquiry.value.description);
-
-      files.value.forEach((file) => {
-        formData.append("images", file);
-      });
-
-      isSending.value = true;
-
+    const fetchInquiries = async () => {
       try {
+        const authStore = useAuthStore();
         const token = authStore.token;
-        if (!token) {
-          toastMessage.value =
-            "Authentication token is missing. Please log in.";
-          toastColor.value = "danger";
-          showToast.value = true;
-          return;
-        }
-
-        await axios.post(
-          "http://localhost:1994/api/inquiries/sendInquiry",
-          formData,
+        const response = await axios.get(
+          "http://localhost:1994/api/products/getInquiries",
           {
             headers: {
-              "Content-Type": "multipart/form-data",
               Authorization: `Bearer ${token}`,
             },
           }
         );
-
-        toastMessage.value = "Inquiry sent successfully!";
-        toastColor.value = "success";
-        showToast.value = true;
-
-        // Reset form
-        inquiry.value = {
-          name: "",
-          description: "",
-        };
-        files.value = [];
+        inquiries.value = response.data;
       } catch (error) {
-        console.error("Error sending inquiry:", error);
-
-        if (axios.isAxiosError(error)) {
-          const axiosError = error as AxiosError;
-          console.error("Server response:", axiosError.response?.data);
-        }
-
-        toastMessage.value = "Failed to send inquiry. Please try again.";
+        console.error("Error fetching inquiries:", error);
+        toastMessage.value = "Failed to fetch inquiries.";
         toastColor.value = "danger";
         showToast.value = true;
-      } finally {
-        isSending.value = false;
       }
     };
 
+    const handleInquirySent = (result: { message: string; color: string }) => {
+      toastMessage.value = result.message;
+      toastColor.value = result.color;
+      showToast.value = true;
+      if (result.color === "success") {
+        fetchInquiries();
+      }
+    };
+
+    onMounted(() => {
+      fetchCategories();
+      fetchInquiries();
+    });
+
     return {
-      inquiry,
-      files,
+      inquiries,
+      subcategories,
       showToast,
       toastMessage,
       toastColor,
       isSending,
-      handleFilesSelected,
-      sendInquiry,
+      handleInquirySent,
     };
   },
 });
 </script>
 
 <style scoped>
-.form-container {
-  max-width: 500px;
-  margin: 0 auto;
-  padding: 20px;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  background-color: #ffffff;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.form-title {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 20px;
-  text-align: center;
-  color: #333;
-}
-
-.form-group {
+.inquiries-container {
   margin-bottom: 20px;
 }
-
-.form-label {
-  font-weight: bold;
-  margin-bottom: 5px;
-  display: block;
-  font-size: 0.9rem;
-  color: #555;
+.inquiries-container h2 {
+  margin-bottom: 10px;
 }
-
-.form-input {
-  width: 100%;
-  padding: 10px;
+.inquiries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.inquiry-card {
   border: 1px solid #ccc;
-  border-radius: 5px;
-  background-color: #f9f9f9;
-  font-size: 0.9rem;
-}
-
-.textarea {
-  resize: none;
-  padding-top: 5px;
-  text-align: start;
-}
-
-.submit-button {
-  margin-top: 10px;
-  font-size: 1rem;
-  font-weight: bold;
   border-radius: 8px;
+  padding: 10px;
+  background-color: #f9f9f9;
+}
+.inquiry-card h3 {
+  margin: 0 0 10px 0;
+  font-size: 1.2rem;
+}
+.inquiry-images {
+  margin-top: 10px;
+}
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+}
+.image-item {
+  position: relative;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.inquiry-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.primary-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background-color: rgba(0, 123, 255, 0.8);
+  color: white;
+  font-size: 0.75rem;
+  padding: 2px 5px;
+  border-radius: 3px;
 }
 </style>

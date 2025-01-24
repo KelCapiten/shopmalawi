@@ -1,90 +1,245 @@
 <template>
-  <ion-page>
-    <ion-header>
-      <ion-toolbar>
-        <ion-title>Profile</ion-title>
-      </ion-toolbar>
-    </ion-header>
+  <IonPage>
+    <!-- Header -->
+    <IonHeader>
+      <IonToolbar>
+        <div class="header-left">
+          <div class="header-avatar">
+            <span class="avatar-initial">{{ userInitial }}</span>
+          </div>
+          <span class="header-username">{{ user.name }}</span>
+        </div>
+        <IonButtons slot="end">
+          <IonButton @click="openSettings">
+            <IonIcon :icon="settingsIcon" />
+          </IonButton>
+        </IonButtons>
+      </IonToolbar>
+    </IonHeader>
 
-    <ion-content :fullscreen="true">
-      <ion-card>
-        <ion-card-header>
-          <ion-card-title>User Profile</ion-card-title>
-        </ion-card-header>
+    <!-- Popover for dropdown menu -->
+    <IonPopover
+      :is-open="showSettings"
+      :event="popoverEvent"
+      translucent
+      @didDismiss="closeSettings"
+    >
+      <IonList>
+        <!-- Only Sign Out option -->
+        <IonItem button color="danger" @click="signOut">Sign Out</IonItem>
+      </IonList>
+    </IonPopover>
 
-        <ion-card-content>
-          <ion-avatar class="profile-avatar">
-            <img src="https://via.placeholder.com/150" alt="User Avatar" />
-          </ion-avatar>
+    <!-- Profile Card -->
+    <IonCard class="profile-card">
+      <IonCardContent>
+        <IonList lines="none">
+          <IonItem>
+            <IonLabel>Username</IonLabel>
+            <IonText>{{ user.email }}</IonText>
+          </IonItem>
+          <IonItem>
+            <IonLabel>Phone Number</IonLabel>
+            <IonText>{{ user.phone }}</IonText>
+          </IonItem>
+        </IonList>
+      </IonCardContent>
+    </IonCard>
 
-          <ion-list>
-            <ion-item>
-              <ion-label>Name:</ion-label>
-              <ion-text>{{ user.name }}</ion-text>
-            </ion-item>
+    <!-- Page Content -->
+    <IonContent>
+      <!-- Square Tiles -->
+      <IonGrid class="action-tiles">
+        <IonRow>
+          <IonCol size="6" @click="goToOrders">
+            <div class="tile">
+              <IonIcon :icon="ordersIcon" class="tile-icon" />
+              <p class="tile-label">Orders</p>
+            </div>
+          </IonCol>
+          <IonCol size="6" @click="goToWishlist">
+            <div class="tile">
+              <IonIcon :icon="wishlistIcon" class="tile-icon" />
+              <p class="tile-label">Wishlist</p>
+            </div>
+          </IonCol>
+        </IonRow>
+        <IonRow>
+          <IonCol size="6" @click="goToCoupons">
+            <div class="tile">
+              <IonIcon :icon="couponsIcon" class="tile-icon" />
+              <p class="tile-label">Coupons</p>
+            </div>
+          </IonCol>
+          <IonCol size="6" @click="goToHistory">
+            <div class="tile">
+              <IonIcon :icon="historyIcon" class="tile-icon" />
+              <p class="tile-label">History</p>
+            </div>
+          </IonCol>
+        </IonRow>
+        <IonRow>
+          <IonCol size="6">
+            <div class="tile" @click="toggleCategoryManager">
+              <IonIcon :icon="settingsIcon" class="tile-icon" />
+              <p class="tile-label">Settings</p>
+            </div>
+          </IonCol>
+        </IonRow>
+      </IonGrid>
 
-            <ion-item>
-              <ion-label>Email:</ion-label>
-              <ion-text>{{ user.email }}</ion-text>
-            </ion-item>
-
-            <ion-item>
-              <ion-label>Phone:</ion-label>
-              <ion-text>{{ user.phone }}</ion-text>
-            </ion-item>
-          </ion-list>
-
-          <ion-button expand="block" color="danger" @click="signOut">
-            Sign Out
-          </ion-button>
-        </ion-card-content>
-      </ion-card>
-    </ion-content>
+      <!-- CategoriesManager Component -->
+      <CategoriesManager v-if="showCategoryManager" />
+    </IonContent>
 
     <appFooter />
-  </ion-page>
+  </IonPage>
 </template>
 
 <script>
+import { computed, ref } from "vue";
 import { useAuthStore } from "@/stores/authStore";
 import appFooter from "@/components/footer.vue";
+import CategoriesManager from "@/components/CategoriesManager.vue"; // Import the CategoriesManager component
+import {
+  settingsOutline,
+  bagHandleOutline,
+  heartOutline,
+  ticketOutline,
+  timeOutline,
+} from "ionicons/icons";
 
 export default {
   name: "ProfilePage",
   components: {
     appFooter,
+    CategoriesManager, // Register the CategoriesManager component
   },
   setup() {
     const authStore = useAuthStore();
 
-    const user = {
-      name: authStore.user?.firstName + " " + authStore.user?.lastName || "N/A",
+    const user = computed(() => ({
+      name:
+        (authStore.user?.firstName || "") +
+        " " +
+        (authStore.user?.lastName || ""),
       email: authStore.user?.username || "N/A",
-      phone: "N/A", // Add phone or other user details if available
+      phone: authStore.user?.phone || "N/A",
+    }));
+
+    const userInitial = computed(() => {
+      const names = user.value.name.split(" ");
+      const initials = names
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase();
+      return initials.charAt(0); // Take only the first initial
+    });
+
+    const settingsIcon = settingsOutline;
+    const ordersIcon = bagHandleOutline;
+    const wishlistIcon = heartOutline;
+    const couponsIcon = ticketOutline;
+    const historyIcon = timeOutline;
+
+    const showSettings = ref(false);
+    const showCategoryManager = ref(false); // Toggles the CategoriesManager visibility
+    const popoverEvent = ref(null);
+
+    const openSettings = (event) => {
+      popoverEvent.value = event;
+      showSettings.value = true;
+    };
+    const closeSettings = () => {
+      showSettings.value = false;
+      popoverEvent.value = null;
+    };
+
+    const toggleCategoryManager = () => {
+      showCategoryManager.value = !showCategoryManager.value;
     };
 
     const signOut = () => {
-      authStore.clearAuth(); // Clear authentication and redirect to login
+      authStore.clearAuth();
+      closeSettings();
     };
+    const goToOrders = () => {};
+    const goToWishlist = () => {};
+    const goToCoupons = () => {};
+    const goToHistory = () => {};
 
     return {
       user,
+      userInitial,
+      showSettings,
+      showCategoryManager,
+      popoverEvent,
+      openSettings,
+      closeSettings,
+      toggleCategoryManager,
       signOut,
+      settingsIcon,
+      ordersIcon,
+      wishlistIcon,
+      couponsIcon,
+      historyIcon,
+      goToOrders,
+      goToWishlist,
+      goToCoupons,
+      goToHistory,
     };
   },
 };
 </script>
 
 <style scoped>
-.profile-avatar {
+.header-left {
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+}
+.header-avatar {
+  width: 32px;
+  height: 32px;
+  background-color: var(--ion-color-primary);
+  border-radius: 50%;
   display: flex;
   justify-content: center;
-  margin-bottom: 20px;
+  align-items: center;
+  font-size: 1rem;
+  color: white;
+  margin-right: 8px;
 }
-
-ion-avatar img {
-  border-radius: 50%;
-  width: 100px;
-  height: 100px;
+.avatar-initial {
+  font-weight: bold;
+  text-transform: uppercase;
+}
+.header-username {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.profile-card {
+  margin: 0.5rem;
+  border-radius: 8px;
+}
+.action-tiles {
+  margin: 0.5rem;
+}
+.tile {
+  background: var(--ion-color-light, #f8f8f8);
+  border-radius: 8px;
+  height: 90px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.tile-icon {
+  font-size: 24px;
+  margin-bottom: 2px;
+  color: var(--ion-color-primary);
+}
+.tile-label {
+  font-size: 0.9rem;
 }
 </style>

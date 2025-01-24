@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS payment_methods (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- Categories Table (with parent_id for hierarchical structure)
+-- Categories Table
 CREATE TABLE IF NOT EXISTS categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
-    price DECIMAL(10, 2) NOT NULL COMMENT 'Amount in Malawian Kwacha (MWK)',
+    price DECIMAL(12, 2) NOT NULL COMMENT 'Amount in Malawian Kwacha (MWK)',
     mark_up_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (mark_up_amount >= 0) COMMENT 'Amount in Malawian Kwacha (MWK)',
     subcategory_id INT,
     subcategory_name VARCHAR(100),
@@ -109,16 +109,31 @@ CREATE TABLE IF NOT EXISTS products (
     INDEX (uploaded_by)
 ) ENGINE=InnoDB;
 
--- Product Images Table
-CREATE TABLE product_images (
+-- Inquiries Table
+CREATE TABLE IF NOT EXISTS product_inquiries (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    product_id INT NOT NULL, -- Links to products table
-    image_path VARCHAR(255) NOT NULL COMMENT 'File path to the stored image',
-    alt_text VARCHAR(255),
-    is_primary BOOLEAN DEFAULT FALSE, -- Indicates if this is the main image for the product
+    name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    category_id INT,
+    stock_quantity INT NOT NULL DEFAULT 0,
+    uploaded_by INT NOT NULL, -- References users table
+    status ENUM('pending', 'resolved', 'closed') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FULLTEXT (name, description),
+    FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX (uploaded_by)
 ) ENGINE=InnoDB;
+
+CREATE TABLE images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    imageable_id INT NOT NULL,
+    imageable_type VARCHAR(50) NOT NULL,
+    image_path VARCHAR(255) NOT NULL,
+    alt_text VARCHAR(255),
+    is_primary BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- System Images Table 
 CREATE TABLE system_images (
@@ -130,7 +145,7 @@ CREATE TABLE system_images (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- Product Attributes Table (for variations like size, color)
+-- Product Attributes Table (for variations like brand, size, color)
 CREATE TABLE IF NOT EXISTS product_attributes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL,

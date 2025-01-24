@@ -1,7 +1,9 @@
 <template>
   <div class="form-group">
     <label class="form-label">{{ label }}</label>
+
     <div class="upload-area" @click="triggerFileInput">
+      <!-- Hidden input for file selection -->
       <input
         type="file"
         accept="image/jpeg, image/png, image/gif"
@@ -10,10 +12,14 @@
         @change="handleImageUpload"
         style="display: none"
       />
+
+      <!-- Display a placeholder if no images are selected -->
       <div v-if="previewImages.length === 0" class="upload-placeholder">
         <ion-icon :icon="cloudUploadOutline" class="upload-icon"></ion-icon>
         <p>{{ placeholderMessage }}</p>
       </div>
+
+      <!-- Swiper carousel for previews, if images exist -->
       <div v-else class="image-preview">
         <swiper :pagination="paginationOptions" :modules="[Pagination]">
           <swiper-slide v-for="(image, index) in previewImages" :key="index">
@@ -59,24 +65,53 @@ export default defineComponent({
     const fileInput = ref<HTMLInputElement | null>(null);
     const previewImages = ref<PreviewImage[]>([]);
 
+    // Pagination options for Swiper
     const paginationOptions = computed(() => ({
       clickable: true,
       dynamicBullets: true,
     }));
 
+    /**
+     * Programmatically open the file picker
+     */
     const triggerFileInput = () => {
       fileInput.value?.click();
     };
 
+    /**
+     * Handle the native file input change event
+     */
     const handleImageUpload = (event: Event) => {
       const target = event.target as HTMLInputElement;
-      if (target.files && target.files.length > 0) {
-        const files = Array.from(target.files).slice(0, 4);
-        previewImages.value = files.map((file) => ({
-          url: URL.createObjectURL(file),
-          file,
-        }));
-        emit("files-selected", files);
+      if (!target.files || target.files.length === 0) {
+        // No files selected or user canceled
+        return;
+      }
+
+      // Limit the selection to 4 images if desired
+      const selectedFiles = Array.from(target.files).slice(0, 4);
+
+      // Overwrite any old previews
+      previewImages.value = selectedFiles.map((file) => ({
+        url: URL.createObjectURL(file),
+        file,
+      }));
+
+      // Emit the files so the parent can handle them
+      emit("files-selected", selectedFiles);
+
+      // Reset the input value so the user can select the same file again if needed
+      target.value = "";
+    };
+
+    /**
+     * Clears the preview images and resets the file input.
+     * The parent can call this via template ref to reset.
+     */
+    const clearImages = () => {
+      previewImages.value = [];
+      if (fileInput.value) {
+        fileInput.value.value = "";
       }
     };
 
@@ -84,10 +119,11 @@ export default defineComponent({
       fileInput,
       previewImages,
       cloudUploadOutline,
-      triggerFileInput,
-      handleImageUpload,
       paginationOptions,
       Pagination,
+      triggerFileInput,
+      handleImageUpload,
+      clearImages,
     };
   },
 });
@@ -97,6 +133,7 @@ export default defineComponent({
 .form-label {
   font-size: small;
 }
+
 .upload-area {
   display: flex;
   justify-content: center;
