@@ -1,7 +1,7 @@
 <template>
   <div class="form-container">
     <label class="form-label">
-      Let the community help you find the Item you are looking for.
+      Let the community help you find the item you are looking for.
     </label>
 
     <!-- Reference the uploader so we can call clearImages() later -->
@@ -37,6 +37,25 @@
           :value="subcategory.id"
         >
           {{ subcategory.name }}
+        </ion-select-option>
+      </ion-select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Select a Location</label>
+      <ion-select
+        class="form-input"
+        v-model="inquiry.location_id"
+        placeholder="Select a location"
+        required
+        aria-label="Location"
+      >
+        <ion-select-option
+          v-for="location in locations"
+          :key="location.id"
+          :value="location.id"
+        >
+          {{ location.name }}
         </ion-select-option>
       </ion-select>
     </div>
@@ -78,7 +97,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from "vue";
+import { defineComponent, ref, onMounted } from "vue";
 import axios from "axios";
 import { useAuthStore } from "@/stores/authStore";
 import ImageUploader from "@/components/ImageUploader.vue";
@@ -87,10 +106,16 @@ interface InquiryForm {
   name: string;
   description: string;
   subcategory_id: number | null;
+  location_id: number | null;
   stock_quantity: number | null;
 }
 
 interface Category {
+  id: number;
+  name: string;
+}
+
+interface Location {
   id: number;
   name: string;
 }
@@ -113,6 +138,7 @@ export default defineComponent({
       name: "",
       description: "",
       subcategory_id: null,
+      location_id: null,
       stock_quantity: null,
     });
 
@@ -126,6 +152,21 @@ export default defineComponent({
     const imageUploaderRef = ref<InstanceType<typeof ImageUploader> | null>(
       null
     );
+
+    // Locations for the location selector
+    const locations = ref<Location[]>([]);
+
+    // Fetch locations when the component is mounted
+    onMounted(async () => {
+      try {
+        const { data } = await axios.get(
+          "http://localhost:1994/api/locations/getLocations"
+        );
+        locations.value = data;
+      } catch (error) {
+        console.error("Failed to fetch locations:", error);
+      }
+    });
 
     // Called whenever the child emits "files-selected"
     const handleFilesSelected = (selectedFiles: File[]) => {
@@ -141,6 +182,7 @@ export default defineComponent({
         !inquiry.value.name ||
         !inquiry.value.description ||
         !inquiry.value.subcategory_id ||
+        !inquiry.value.location_id ||
         inquiry.value.stock_quantity === null
       ) {
         emit("inquiry-sent", {
@@ -162,6 +204,7 @@ export default defineComponent({
       formData.append("name", inquiry.value.name);
       formData.append("description", inquiry.value.description);
       formData.append("category_id", inquiry.value.subcategory_id.toString());
+      formData.append("location_id", inquiry.value.location_id.toString());
       formData.append(
         "stock_quantity",
         inquiry.value.stock_quantity.toString()
@@ -173,7 +216,6 @@ export default defineComponent({
       });
 
       isSending.value = true;
-
       try {
         const token = authStore.token;
         if (!token) {
@@ -186,7 +228,7 @@ export default defineComponent({
 
         // Send the request
         await axios.post(
-          "http://localhost:1994/api/products/addInquiry",
+          "http://localhost:1994/api/inquiries/addInquiry",
           formData,
           {
             headers: {
@@ -207,6 +249,7 @@ export default defineComponent({
           name: "",
           description: "",
           subcategory_id: null,
+          location_id: null,
           stock_quantity: null,
         };
 
@@ -229,6 +272,7 @@ export default defineComponent({
     return {
       inquiry,
       files,
+      locations,
       isSending,
       imageUploaderRef,
       handleFilesSelected,

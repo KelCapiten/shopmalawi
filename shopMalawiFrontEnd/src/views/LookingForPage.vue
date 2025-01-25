@@ -88,7 +88,7 @@ export default defineComponent({
     const fetchCategories = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:1994/api/products/getCategories"
+          "http://localhost:1994/api/categories/getCategories"
         );
         categories.value = response.data;
         subcategories.value = categories.value
@@ -109,7 +109,7 @@ export default defineComponent({
         const authStore = useAuthStore();
         const token = authStore.token;
         const response = await axios.get(
-          "http://localhost:1994/api/products/getInquiries",
+          "http://localhost:1994/api/inquiries/getInquiries",
           {
             headers: {
               Authorization: `Bearer ${token}`,

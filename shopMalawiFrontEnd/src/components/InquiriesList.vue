@@ -120,7 +120,7 @@ export default defineComponent({
 .inquiry-images .image-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px; /* Adjust the gap between images */
+  gap: 5px;
 }
 
 .image-item {
@@ -129,7 +129,7 @@ export default defineComponent({
   border: 1px solid #ddd;
   border-radius: 5px;
   overflow: hidden;
-  flex: 0 0 auto; /* Prevent flex items from growing or shrinking */
+  flex: 0 0 auto;
 }
 
 .inquiry-image {
@@ -143,14 +143,13 @@ export default defineComponent({
   margin: 5px;
   color: #555;
   font-size: 0.65rem;
-  font-style: italic;
 }
 
 /* Location and Sell Button Container */
 .location-and-button {
   display: flex;
-  justify-content: space-between; /* Align items to the far left and far right */
-  align-items: center; /* Vertically center items */
+  justify-content: space-between;
+  align-items: center;
   margin: 0px;
 }
 

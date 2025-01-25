@@ -59,7 +59,7 @@ export default defineComponent({
     const fetchCategories = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:1994/api/products/getCategories"
+          "http://localhost:1994/api/categories/getCategories"
         );
         categories.value = response.data;
       } catch (error) {
