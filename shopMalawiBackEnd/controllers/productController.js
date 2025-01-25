@@ -655,7 +655,7 @@ export const addInquiry = async (req, res) => {
 export const getInquiries = async (req, res) => {
   const connection = await db.getConnection();
   try {
-    // Updated query to JOIN images instead of product_images
+    // Updated query to include location details
     const query = `
       SELECT 
         i.id, 
@@ -666,6 +666,8 @@ export const getInquiries = async (req, res) => {
         i.stock_quantity, 
         i.uploaded_by AS uploaded_by_user_id, 
         u.username AS uploaded_by, 
+        i.location_id,
+        l.name AS location_name,
         i.status, 
         i.created_at, 
         i.updated_at,
@@ -676,6 +678,8 @@ export const getInquiries = async (req, res) => {
         ON i.category_id = c.id
       LEFT JOIN users u 
         ON i.uploaded_by = u.id
+      LEFT JOIN locations l
+        ON i.location_id = l.id
       LEFT JOIN images img
         ON img.imageable_id = i.id
         AND img.imageable_type = 'product_inquiries'
@@ -706,6 +710,8 @@ export const getInquiries = async (req, res) => {
           stock_quantity: row.stock_quantity,
           uploaded_by_user_id: row.uploaded_by_user_id,
           uploaded_by: row.uploaded_by,
+          location_id: row.location_id,
+          location_name: row.location_name,
           status: row.status,
           created_at: row.created_at,
           updated_at: row.updated_at,

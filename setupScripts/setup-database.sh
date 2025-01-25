@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS roles (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- Users Table with Contact Details
+-- Users Table
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     phone_number VARCHAR(20) NOT NULL,
     location_id VARCHAR(100),
-    role_id INT DEFAULT 1, -- References roles table (customer)
+    role_id INT DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (role_id) REFERENCES roles(id)
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS products (
     INDEX (uploaded_by)
 ) ENGINE=InnoDB;
 
--- Inquiries Table
+-- Updated Inquiries Table
 CREATE TABLE IF NOT EXISTS product_inquiries (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -117,12 +117,15 @@ CREATE TABLE IF NOT EXISTS product_inquiries (
     category_id INT,
     stock_quantity INT NOT NULL DEFAULT 0,
     uploaded_by INT NOT NULL, -- References users table
+    location_id INT, -- References locations table
     status ENUM('pending', 'resolved', 'closed') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FULLTEXT (name, description),
     FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX (uploaded_by)
+    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL,
+    INDEX (uploaded_by),
+    INDEX (location_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE images (

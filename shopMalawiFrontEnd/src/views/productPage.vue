@@ -185,9 +185,7 @@ export default defineComponent({
   right: 0;
   z-index: 10;
 }
-</style>
 
-<style>
 ion-content::part(scroll) {
   scrollbar-width: none;
 }

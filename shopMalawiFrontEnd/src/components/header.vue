@@ -58,7 +58,7 @@ export default defineComponent({
     },
     searchPlaceholder: {
       type: String,
-      default: "Search products...",
+      default: "Search for products on ShopMalawi ",
     },
   },
   components: {

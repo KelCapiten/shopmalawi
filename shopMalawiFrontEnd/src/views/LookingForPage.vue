@@ -1,48 +1,10 @@
 <template>
   <ion-page>
-    <AppHeader :showSearchBar="false" :showCategorySegment="false" />
+    <AppHeader :showCategorySegment="false" />
 
     <ion-content class="ion-padding">
-      <!-- Display all inquiries -->
-      <div class="inquiries-container">
-        <h5>Do you have any of these for sale?</h5>
-        <div v-if="inquiries.length > 0" class="inquiries-list">
-          <div
-            class="inquiry-card"
-            v-for="inquiry in inquiries"
-            :key="inquiry.id"
-          >
-            <!-- Name with quantity needed in parentheses -->
-            <h3>{{ inquiry.name }} ({{ inquiry.stock_quantity }} needed)</h3>
+      <InquiriesList :inquiries="inquiries" />
 
-            <!-- Display images -->
-            <div class="inquiry-images">
-              <div class="image-grid">
-                <div
-                  v-for="(image, index) in inquiry.images"
-                  :key="index"
-                  class="image-item"
-                >
-                  <img
-                    :src="`http://localhost:1994${image.image_path}`"
-                    :alt="`Image ${index + 1}`"
-                    class="inquiry-image"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Description -->
-            <p>
-              <strong>I'm looking for,</strong> {{ inquiry.name }}.
-              {{ inquiry.description }}
-            </p>
-          </div>
-        </div>
-        <p v-else>No inquiries found.</p>
-      </div>
-
-      <!-- Use the InputForm component -->
       <div ref="formSection">
         <InputForm
           v-if="showForm"
@@ -77,11 +39,12 @@
 import { ref, defineComponent, onMounted } from "vue";
 import axios from "axios";
 import { useAuthStore } from "@/stores/authStore";
-import AppFooter from "../components/footer.vue";
-import AppHeader from "../components/header.vue";
-import SavingOverlay from "../components/SavingOverlay.vue";
+import AppFooter from "@/components/footer.vue";
+import AppHeader from "@/components/header.vue";
+import SavingOverlay from "@/components/SavingOverlay.vue";
 import InputForm from "@/components/InputForm.vue";
-import { search, close } from "ionicons/icons"; // Import icons
+import InquiriesList from "@/components/InquiriesList.vue";
+import { search, close } from "ionicons/icons";
 
 interface Inquiry {
   id: number;
@@ -109,6 +72,7 @@ export default defineComponent({
     AppHeader,
     SavingOverlay,
     InputForm,
+    InquiriesList, // Register the new component
   },
   setup() {
     const categories = ref<Category[]>([]);
@@ -118,8 +82,8 @@ export default defineComponent({
     const toastMessage = ref("");
     const toastColor = ref("success");
     const isSending = ref(false);
-    const showForm = ref(false); // Control form visibility
-    const formSection = ref<HTMLElement | null>(null); // Reference to the form section
+    const showForm = ref(false);
+    const formSection = ref<HTMLElement | null>(null);
 
     const fetchCategories = async () => {
       try {
@@ -203,59 +167,5 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.inquiries-container {
-  margin-bottom: 20px;
-}
-
-.inquiries-container h2 {
-  margin-bottom: 10px;
-}
-
-.inquiries-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.inquiry-card {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 10px;
-  background-color: #f9f9f9;
-}
-
-.inquiry-card h3 {
-  margin: 0 0 10px 0;
-  font-size: 1.2rem;
-}
-
-.inquiry-images {
-  margin-top: 10px;
-}
-
-.image-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
-}
-
-.image-item {
-  position: relative;
-  width: 120px;
-  height: 120px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.inquiry-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-  display: block;
-}
+/* Add styles specific to the page here */
 </style>
