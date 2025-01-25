@@ -98,7 +98,7 @@ export const addProduct = async (req, res) => {
 export const getAllProducts = async (req, res) => {
   const connection = await db.getConnection();
   try {
-    const { category_id, startDate, endDate, groupBy } = req.query;
+    const { category_id, startDate, endDate, groupBy, uploaded_by } = req.query;
 
     // Base SQL query: note we join on `images i` instead of `product_images pi`
     // Also filter by i.imageable_type = 'products'
@@ -107,8 +107,7 @@ export const getAllProducts = async (req, res) => {
         p.id, 
         p.name, 
         p.description, 
-        p.price, 
-        p.mark_up_amount, 
+        p.price + p.mark_up_amount AS price,  -- Include mark_up_amount in price
         p.subcategory_id, 
         p.subcategory_name, 
         p.maincategory_id, 
@@ -175,6 +174,12 @@ export const getAllProducts = async (req, res) => {
       queryParams.push(endDate);
     }
 
+    // Filter by uploaded_by if provided
+    if (uploaded_by) {
+      whereConditions.push(`p.uploaded_by = ?`);
+      queryParams.push(parseInt(uploaded_by, 10));
+    }
+
     if (whereConditions.length > 0) {
       query += ` WHERE ` + whereConditions.join(" AND ");
     }
@@ -201,8 +206,7 @@ export const getAllProducts = async (req, res) => {
           id: product.id,
           name: product.name,
           description: product.description,
-          price: product.price,
-          mark_up_amount: product.mark_up_amount,
+          price: product.price, // Price already includes mark_up_amount
           subcategory_id: product.subcategory_id,
           subcategory_name: product.subcategory_name,
           maincategory_id: product.maincategory_id,

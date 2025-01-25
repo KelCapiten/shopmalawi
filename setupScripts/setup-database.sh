@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS products (
     INDEX (uploaded_by)
 ) ENGINE=InnoDB;
 
--- Updated Inquiries Table
+-- Inquiries Table
 CREATE TABLE IF NOT EXISTS product_inquiries (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -128,6 +128,18 @@ CREATE TABLE IF NOT EXISTS product_inquiries (
     INDEX (location_id)
 ) ENGINE=InnoDB;
 
+-- Product Offers Table
+CREATE TABLE IF NOT EXISTS product_offers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    inquiries_id INT NOT NULL,
+    FOREIGN KEY fk_product_offers_product_id (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    FOREIGN KEY fk_product_offers_inquiries_id (inquiries_id) REFERENCES product_inquiries(id) ON DELETE CASCADE,
+    INDEX idx_product_id (product_id),
+    INDEX idx_inquiries_id (inquiries_id)
+) ENGINE=InnoDB;
+
+-- Images Table
 CREATE TABLE images (
     id INT AUTO_INCREMENT PRIMARY KEY,
     imageable_id INT NOT NULL,
@@ -136,7 +148,7 @@ CREATE TABLE images (
     alt_text VARCHAR(255),
     is_primary BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+); ENGINE=InnoDB;
 
 -- System Images Table 
 CREATE TABLE system_images (

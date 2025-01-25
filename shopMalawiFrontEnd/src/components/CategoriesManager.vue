@@ -137,7 +137,7 @@ export default {
     async fetchCategories() {
       try {
         const response = await axios.get(
-          "http://localhost:1994/api/products/getCategories"
+          "http://localhost:1994/api/categories/getCategories"
         );
         this.categories = response.data;
       } catch (error) {
@@ -166,7 +166,7 @@ export default {
         const token = authStore.token;
 
         await axios.delete(
-          `http://localhost:1994/api/products/deleteCategory/${id}`,
+          `http://localhost:1994/api/categories/deleteCategory/${id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -190,13 +190,13 @@ export default {
 
         if (this.isEditing) {
           await axios.put(
-            `http://localhost:1994/api/products/updateCategory/${this.form.id}`,
+            `http://localhost:1994/api/categories/updateCategory/${this.form.id}`,
             this.form,
             { headers }
           );
         } else {
           await axios.post(
-            "http://localhost:1994/api/products/addCategory",
+            "http://localhost:1994/api/categories/addCategory",
             {
               name: this.form.name,
               description: this.form.description || null,

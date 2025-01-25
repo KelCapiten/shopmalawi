@@ -39,10 +39,28 @@
           <div class="location-badge" v-if="inquiry.location_name">
             {{ inquiry.location_name }}
           </div>
-          <button class="sell-button" @click="handleSell(inquiry)">
-            Make an offer
+          <button
+            class="sell-button"
+            @click="toggleProductCardGrid(inquiry.id)"
+          >
+            {{
+              visibleProductCardGridId === inquiry.id
+                ? "Cancel"
+                : "Make an offer"
+            }}
           </button>
         </div>
+
+        <!-- ProductCardGrid Component -->
+        <ProductCardGrid
+          v-if="visibleProductCardGridId === inquiry.id"
+          :heading="`Offers made so far.`"
+          infoPosition="side"
+          imageSize="small"
+          :enableCounter="false"
+          :enableSearch="true"
+          @navigateToProductPage="handleProductClick"
+        />
       </div>
     </div>
     <p v-else>No inquiries found.</p>
@@ -50,7 +68,8 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from "vue";
+import { defineComponent, PropType, ref } from "vue";
+import ProductCardGrid from "@/components/ProductCardGrid.vue"; // Adjust the import path as needed
 
 interface Inquiry {
   id: number;
@@ -69,11 +88,32 @@ interface Inquiry {
 
 export default defineComponent({
   name: "InquiriesList",
+  components: {
+    ProductCardGrid,
+  },
   props: {
     inquiries: {
       type: Array as PropType<Inquiry[]>,
       required: true,
     },
+  },
+  setup() {
+    const visibleProductCardGridId = ref<number | null>(null); // Track which inquiry's ProductCardGrid is visible
+
+    const toggleProductCardGrid = (inquiryId: number) => {
+      if (visibleProductCardGridId.value === inquiryId) {
+        // If the same inquiry is clicked again, hide the ProductCardGrid
+        visibleProductCardGridId.value = null;
+      } else {
+        // Show the ProductCardGrid for the clicked inquiry
+        visibleProductCardGridId.value = inquiryId;
+      }
+    };
+
+    return {
+      visibleProductCardGridId,
+      toggleProductCardGrid,
+    };
   },
   methods: {
     formatDate(date: string): string {
@@ -84,10 +124,9 @@ export default defineComponent({
       };
       return new Date(date).toLocaleDateString("en-GB", options);
     },
-    handleSell(inquiry: Inquiry) {
-      // Handle the "Sell" button click
-      console.log("Sell inquiry:", inquiry);
-      // Add your logic here, e.g., open a modal or navigate to a sell page
+    handleProductClick(product: any) {
+      console.log("Product clicked:", product);
+      // Handle navigation to the product page
     },
   },
 });

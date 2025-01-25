@@ -2,8 +2,14 @@ import db from "../config/db.js";
 
 // Endpoint to search for products
 export const searchProducts = async (req, res) => {
-  const { query, subcategory_id, maincategory_id, priceRange, sortBy } =
-    req.query;
+  const {
+    query,
+    subcategory_id,
+    maincategory_id,
+    priceRange,
+    sortBy,
+    uploaded_by,
+  } = req.query;
 
   try {
     let sql = `
@@ -27,7 +33,7 @@ export const searchProducts = async (req, res) => {
       FROM 
         products p
       LEFT JOIN 
-        product_images pi ON p.id = pi.product_id
+        images pi ON p.id = pi.imageable_id AND pi.imageable_type = 'products'
       LEFT JOIN 
         users u ON p.uploaded_by = u.id
       WHERE 
@@ -93,6 +99,19 @@ export const searchProducts = async (req, res) => {
         sql += " AND p.price <= ? ";
         params.push(maxPrice);
       }
+    }
+
+    // Add uploaded_by filter
+    if (uploaded_by) {
+      const parsedUploadedBy = parseInt(uploaded_by, 10);
+      if (isNaN(parsedUploadedBy)) {
+        return res
+          .status(400)
+          .json({ message: "Invalid uploaded_by parameter" });
+      }
+
+      sql += " AND p.uploaded_by = ? ";
+      params.push(parsedUploadedBy);
     }
 
     // Add sorting
