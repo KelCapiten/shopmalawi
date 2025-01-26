@@ -1,23 +1,19 @@
 <template>
   <div class="app-body">
-    <!-- Product Card Grid -->
     <ProductCardGrid
       heading="Newly Added"
       :products="newlyAddedItems"
       @productClicked="navigateToProductPage"
     />
 
-    <!-- Category Section Placeholder -->
     <div class="category-section">
       <p>Category Section Placeholder</p>
     </div>
 
-    <!-- Product List Section Placeholder -->
     <div class="product-list-section">
       <p>Product List Section Placeholder</p>
     </div>
 
-    <!-- Promotional Section Placeholder -->
     <div class="promotional-section">
       <p>Promotional Section Placeholder</p>
     </div>
@@ -42,9 +38,11 @@ export default defineComponent({
       name: string;
       description: string;
       price: string;
-      mark_up_amount: string;
-      category_id: number;
-      category: string;
+      mark_up_amount?: number;
+      subcategory_id?: number;
+      subcategory_name?: string;
+      maincategory_id?: number;
+      maincategory_name?: string;
       stock_quantity: number;
       uploaded_by_userID: number;
       uploaded_by: string;
@@ -69,7 +67,13 @@ export default defineComponent({
         const response = await axios.get<Product[]>(
           `${baseUrl}/api/products/getAllProducts?startDate=${oneWeekAgo}`
         );
-        newlyAddedItems.value = response.data;
+
+        newlyAddedItems.value = response.data.map((product: any) => ({
+          ...product,
+          mark_up_amount: product.mark_up_amount
+            ? parseFloat(product.mark_up_amount)
+            : undefined,
+        }));
       } catch (error) {
         console.error("Error fetching newly added items:", error);
       }

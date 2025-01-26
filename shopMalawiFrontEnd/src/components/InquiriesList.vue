@@ -43,13 +43,14 @@
         </div>
         <ProductCardGrid
           v-if="visibleProductCardGridId === inquiry.id"
-          :heading="`Search and offer your products to this Inquiry`"
+          :heading="`Search and offer your products to this buyer`"
           infoPosition="side"
           imageSize="small"
           :enableCounter="false"
           :enableSearch="true"
           :inquiries_id="inquiry.id"
-          @productClicked="handleProductClick"
+          @associateInquiryToProduct="associateInquiryToProduct"
+          @productClicked="navigateToProductPage"
         />
       </div>
     </div>
@@ -60,6 +61,7 @@
 <script lang="ts">
 import axios from "axios";
 import { defineComponent, PropType, ref } from "vue";
+import { useRouter } from "vue-router"; // Import useRouter
 import { useAuthStore } from "@/stores/authStore";
 import ProductCardGrid from "@/components/ProductCardGrid.vue";
 
@@ -91,15 +93,22 @@ export default defineComponent({
   },
   setup() {
     const visibleProductCardGridId = ref<number | null>(null);
+    const router = useRouter(); // Initialize the router instance
 
     const toggleProductCardGrid = (inquiryId: number) => {
       visibleProductCardGridId.value =
         visibleProductCardGridId.value === inquiryId ? null : inquiryId;
     };
 
+    const navigateToProductPage = (product: any) => {
+      sessionStorage.setItem("selectedProduct", JSON.stringify(product));
+      router.push({ name: "ProductPage", params: { id: product.id } });
+    };
+
     return {
       visibleProductCardGridId,
       toggleProductCardGrid,
+      navigateToProductPage,
     };
   },
   methods: {
@@ -111,7 +120,7 @@ export default defineComponent({
       };
       return new Date(date).toLocaleDateString("en-GB", options);
     },
-    async handleProductClick(product: any) {
+    async associateInquiryToProduct(product: any) {
       const { inquiries_id, id: product_id } = product;
 
       if (!inquiries_id) {
@@ -185,10 +194,12 @@ export default defineComponent({
 }
 
 .image-item {
+  background-color: #fff;
+  padding: 5px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
   width: 90px;
   height: 90px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
   overflow: hidden;
   flex: 0 0 auto;
 }

@@ -1,5 +1,8 @@
 <template>
   <div class="product-card-grid">
+    <label class="section-heading">{{ heading }}</label>
+
+    <!-- Search Results Section -->
     <div v-if="enableSearch" class="search-container">
       <input
         v-model="searchQuery"
@@ -14,7 +17,6 @@
 
     <div v-if="error" class="error-message">{{ error }}</div>
 
-    <label class="section-heading">{{ heading }}</label>
     <div
       :class="[
         'product-list',
@@ -40,15 +42,19 @@
           />
         </div>
         <div class="item-details">
-          <h2 v-if="infoPosition !== 'side'" class="product-name">
-            {{ product.name }}
-          </h2>
           <p class="price">MWK {{ product.price }}</p>
-          <p class="stock-info">{{ product.stock_quantity }} in stock</p>
-          <p v-if="infoPosition === 'side'" class="description">
+          <label class="product-name">
+            {{ product.name }}
+          </label>
+
+          <label class="stock-info">
+            {{ product.stock_quantity }} in stock</label
+          >
+          <p v-if="imageSize !== 'small'" class="description">
             {{ product.description }}
           </p>
         </div>
+
         <div
           v-if="infoPosition === 'side' && enableCounter"
           class="side-counter"
@@ -60,6 +66,61 @@
           <div class="counter-controls">
             <button @click.stop="decrement(product)">-</button>
             <button @click.stop="increment(product)">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Already Offered Products Section -->
+    <label class="section-heading"
+      >Here are the product offers for this request</label
+    >
+    <div class="product-list">
+      <div v-if="isLoadingOffered" class="loading-indicator">Loading...</div>
+      <div v-else-if="errorOffered" class="error-message">
+        {{ errorOffered }}
+      </div>
+      <div v-else>
+        <div
+          v-for="product in offeredProducts"
+          :key="product.id"
+          class="item"
+          :class="[
+            { 'info-side': infoPosition === 'side' },
+            { 'small-image': infoPosition === 'side' && imageSize === 'small' },
+            { 'full-row': infoPosition === 'side' && !enableCounter },
+          ]"
+          @click="$emit('productClicked', product)"
+        >
+          <div class="image-container">
+            <img
+              :src="getPrimaryImage(product.images)"
+              :alt="product.name"
+              class="item-image"
+            />
+          </div>
+          <div class="item-details">
+            <p class="price">MWK {{ product.price }}</p>
+            <label class="product-name">
+              {{ product.name }}
+            </label>
+
+            <label class="stock-info">
+              {{ product.stock_quantity }} in stock</label
+            >
+          </div>
+          <div
+            v-if="infoPosition === 'side' && enableCounter"
+            class="side-counter"
+          >
+            <label class="counter-label">
+              <span class="buy-text">I'd like to buy</span>
+              <span class="count">{{ product.orderCount || 1 }}</span>
+            </label>
+            <div class="counter-controls">
+              <button @click.stop="decrement(product)">-</button>
+              <button @click.stop="increment(product)">+</button>
+            </div>
           </div>
         </div>
       </div>
@@ -77,6 +138,7 @@ import {
   onMounted,
 } from "vue";
 import debounce from "lodash/debounce";
+import axios from "axios";
 import { useAuthStore } from "@/stores/authStore";
 
 interface Image {
@@ -89,7 +151,15 @@ interface Product {
   name: string;
   description: string;
   price: string;
+  mark_up_amount?: number;
+  subcategory_id?: number;
+  subcategory_name?: string;
+  maincategory_id?: number;
+  maincategory_name?: string;
   stock_quantity: number;
+  uploaded_by_userID?: number;
+  uploaded_by?: string;
+  association_date?: string;
   images: Image[];
   orderCount?: number;
   inquiries_id?: number | null;
@@ -136,13 +206,33 @@ export default defineComponent({
     const error = ref("");
     const authStore = useAuthStore();
 
+    // State for Already Offered Products
+    const offeredProducts = ref<Product[]>([]);
+    const isLoadingOffered = ref(false);
+    const errorOffered = ref("");
+
     const loggedInUserId = computed(() => authStore.user?.id);
 
     onMounted(() => {
       if (props.products.length > 0) {
         filteredProducts.value = props.products;
       }
+      if (props.inquiries_id && loggedInUserId.value) {
+        fetchOfferedProducts();
+      }
     });
+
+    // Watch for changes in inquiries_id to refetch offered products
+    watch(
+      () => props.inquiries_id,
+      (newInquiryId) => {
+        if (newInquiryId && loggedInUserId.value) {
+          fetchOfferedProducts();
+        } else {
+          offeredProducts.value = [];
+        }
+      }
+    );
 
     const debouncedSearch = debounce(async (query: string) => {
       if (!props.enableSearch) return;
@@ -158,19 +248,24 @@ export default defineComponent({
       try {
         const API_BASE_URL =
           import.meta.env.VITE_API_BASE_URL || "http://localhost:1994";
-        const response = await fetch(
-          `${API_BASE_URL}/api/search/searchProductsExcludingOffered?query=${encodeURIComponent(
-            query
-          )}&inquiries_id=${props.inquiries_id}&uploaded_by=${
-            loggedInUserId.value
-          }`
+        const response = await axios.get<SearchResponseGroup[]>(
+          `${API_BASE_URL}/api/search/searchProductsExcludingOffered`,
+          {
+            params: {
+              query: query,
+              inquiries_id: props.inquiries_id,
+              uploaded_by: loggedInUserId.value,
+            },
+            headers: {
+              Authorization: `Bearer ${authStore.token}`,
+            },
+          }
         );
-        if (!response.ok) {
-          throw new Error("Failed to fetch products");
-        }
-        const data: SearchResponseGroup[] = await response.json();
-        filteredProducts.value = data.flatMap((group) => group.products);
-      } catch (err) {
+
+        filteredProducts.value = response.data.flatMap(
+          (group) => group.products
+        );
+      } catch (err: any) {
         error.value = "Failed to perform search. Please try again.";
         console.error("Error searching for products:", err);
       } finally {
@@ -225,7 +320,44 @@ export default defineComponent({
 
     const emitProductClicked = (product: Product) => {
       product.inquiries_id = props.inquiries_id;
-      emit("productClicked", product);
+      emit("associateInquiryToProduct", product);
+    };
+
+    // Corrected Method to fetch Already Offered Products using Axios
+    const fetchOfferedProducts = async () => {
+      if (!props.inquiries_id || !loggedInUserId.value) {
+        offeredProducts.value = [];
+        return;
+      }
+
+      isLoadingOffered.value = true;
+      errorOffered.value = "";
+
+      try {
+        const API_BASE_URL =
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:1994";
+
+        const response = await axios.get<Product[]>(
+          `${API_BASE_URL}/api/inquiries/getProductsByInquiryAndUser`,
+          {
+            params: {
+              inquiries_id: props.inquiries_id,
+              uploaded_by: loggedInUserId.value,
+            },
+            headers: {
+              Authorization: `Bearer ${authStore.token}`,
+            },
+          }
+        );
+
+        offeredProducts.value = response.data;
+      } catch (err: any) {
+        errorOffered.value =
+          err.response?.data?.message || "Failed to fetch offered products.";
+        console.error("Error fetching offered products:", err);
+      } finally {
+        isLoadingOffered.value = false;
+      }
     };
 
     return {
@@ -238,12 +370,20 @@ export default defineComponent({
       increment,
       decrement,
       emitProductClicked,
+      // Expose new state properties for the template
+      offeredProducts,
+      isLoadingOffered,
+      errorOffered,
     };
   },
 });
 </script>
 
 <style scoped>
+p {
+  margin: 0px;
+  padding: 0px;
+}
 .product-card-grid {
   padding: 16px;
   width: 100%;
@@ -283,7 +423,6 @@ export default defineComponent({
 
 .section-heading {
   font-weight: bold;
-  margin-bottom: 5px;
   font-size: 0.9rem;
   color: #222;
 }
@@ -291,8 +430,9 @@ export default defineComponent({
 .product-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 16px;
+  gap: 10px;
   width: 100%;
+  margin-bottom: 25px;
 }
 
 .single-column {
@@ -304,7 +444,7 @@ export default defineComponent({
   flex-direction: column;
   text-align: left;
   background-color: #fff;
-  padding: 16px;
+  padding: 5px;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -336,14 +476,13 @@ export default defineComponent({
 }
 
 .item-details {
-  margin-top: 8px;
   flex: 1;
 }
 
 .product-name {
   font-size: 0.9rem;
-  color: #4e4e4e;
-  margin: 4px 0;
+  color: #333333;
+  margin-right: 10px;
 }
 
 .price {
