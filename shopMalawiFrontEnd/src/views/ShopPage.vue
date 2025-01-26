@@ -8,7 +8,7 @@
         :key="subcategory.id"
         :heading="subcategory.name"
         :products="subcategory.products"
-        @navigateToProductPage="navigateToProductPage"
+        @productClicked="navigateToProductPage"
       />
 
       <!-- No Products Found -->

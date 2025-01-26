@@ -3,10 +3,7 @@
     <h5>Do you have any of these for sale?</h5>
     <div v-if="inquiries.length > 0" class="inquiries-list">
       <div class="inquiry-card" v-for="inquiry in inquiries" :key="inquiry.id">
-        <!-- Name with quantity needed in parentheses -->
         <h3>{{ inquiry.name }} ({{ inquiry.stock_quantity }} needed)</h3>
-
-        <!-- Display images -->
         <div class="inquiry-images">
           <div class="image-grid">
             <div
@@ -22,19 +19,13 @@
             </div>
           </div>
         </div>
-
-        <!-- Description -->
         <p>
           <strong>I'm looking for,</strong> {{ inquiry.name }}.
           {{ inquiry.description }}
         </p>
-
-        <!-- Inquiry Date -->
         <div class="inquiry-date" v-if="inquiry.created_at">
           {{ formatDate(inquiry.created_at) }}
         </div>
-
-        <!-- Location Badge and Sell Button -->
         <div class="location-and-button">
           <div class="location-badge" v-if="inquiry.location_name">
             {{ inquiry.location_name }}
@@ -50,16 +41,15 @@
             }}
           </button>
         </div>
-
-        <!-- ProductCardGrid Component -->
         <ProductCardGrid
           v-if="visibleProductCardGridId === inquiry.id"
-          :heading="`Offers made so far.`"
+          :heading="`Search and offer your products to this Inquiry`"
           infoPosition="side"
           imageSize="small"
           :enableCounter="false"
           :enableSearch="true"
-          @navigateToProductPage="handleProductClick"
+          :inquiries_id="inquiry.id"
+          @productClicked="handleProductClick"
         />
       </div>
     </div>
@@ -68,8 +58,10 @@
 </template>
 
 <script lang="ts">
+import axios from "axios";
 import { defineComponent, PropType, ref } from "vue";
-import ProductCardGrid from "@/components/ProductCardGrid.vue"; // Adjust the import path as needed
+import { useAuthStore } from "@/stores/authStore";
+import ProductCardGrid from "@/components/ProductCardGrid.vue";
 
 interface Inquiry {
   id: number;
@@ -98,16 +90,11 @@ export default defineComponent({
     },
   },
   setup() {
-    const visibleProductCardGridId = ref<number | null>(null); // Track which inquiry's ProductCardGrid is visible
+    const visibleProductCardGridId = ref<number | null>(null);
 
     const toggleProductCardGrid = (inquiryId: number) => {
-      if (visibleProductCardGridId.value === inquiryId) {
-        // If the same inquiry is clicked again, hide the ProductCardGrid
-        visibleProductCardGridId.value = null;
-      } else {
-        // Show the ProductCardGrid for the clicked inquiry
-        visibleProductCardGridId.value = inquiryId;
-      }
+      visibleProductCardGridId.value =
+        visibleProductCardGridId.value === inquiryId ? null : inquiryId;
     };
 
     return {
@@ -124,9 +111,45 @@ export default defineComponent({
       };
       return new Date(date).toLocaleDateString("en-GB", options);
     },
-    handleProductClick(product: any) {
-      console.log("Product clicked:", product);
-      // Handle navigation to the product page
+    async handleProductClick(product: any) {
+      const { inquiries_id, id: product_id } = product;
+
+      if (!inquiries_id) {
+        console.error("No inquiries_id associated with the product");
+        return;
+      }
+
+      try {
+        const authStore = useAuthStore();
+        const token = authStore.token;
+
+        const headers = {
+          Authorization: `Bearer ${token}`,
+        };
+
+        const API_BASE_URL =
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:1994";
+
+        const response = await axios.post(
+          `${API_BASE_URL}/api/inquiries/associateInquiryToProduct`,
+          { inquiries_id, product_id },
+          { headers }
+        );
+
+        console.log(
+          "Successfully associated inquiry with product:",
+          response.data
+        );
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err)) {
+          console.error(
+            "Error associating inquiry:",
+            err.response?.data || err.message
+          );
+        } else {
+          console.error("Unexpected error:", err);
+        }
+      }
     },
   },
 });
@@ -155,7 +178,6 @@ export default defineComponent({
   font-size: 1.2rem;
 }
 
-/* Flexbox layout for images */
 .inquiry-images .image-grid {
   display: flex;
   flex-wrap: wrap;
@@ -184,7 +206,6 @@ export default defineComponent({
   font-size: 0.65rem;
 }
 
-/* Location and Sell Button Container */
 .location-and-button {
   display: flex;
   justify-content: space-between;
@@ -206,7 +227,7 @@ export default defineComponent({
   padding: 6px 12px;
   border: none;
   border-radius: 4px;
-  background-color: #007bff; /* Blue color for the button */
+  background-color: #007bff;
   color: #fff;
   font-size: 0.65rem;
   cursor: pointer;
@@ -214,6 +235,6 @@ export default defineComponent({
 }
 
 .sell-button:hover {
-  background-color: #0056b3; /* Darker blue on hover */
+  background-color: #0056b3;
 }
 </style>

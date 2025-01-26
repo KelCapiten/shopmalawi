@@ -30,7 +30,7 @@
           { 'small-image': infoPosition === 'side' && imageSize === 'small' },
           { 'full-row': infoPosition === 'side' && !enableCounter },
         ]"
-        @click="() => $emit('navigateToProductPage', product)"
+        @click="emitProductClicked(product)"
       >
         <div class="image-container">
           <img
@@ -92,6 +92,7 @@ interface Product {
   stock_quantity: number;
   images: Image[];
   orderCount?: number;
+  inquiries_id?: number | null;
 }
 
 interface SearchResponseGroup {
@@ -123,8 +124,12 @@ export default defineComponent({
       type: Boolean,
       default: true,
     },
+    inquiries_id: {
+      type: Number as PropType<number | null>,
+      default: null,
+    },
   },
-  setup(props) {
+  setup(props, { emit }) {
     const searchQuery = ref("");
     const filteredProducts = ref<Product[]>(props.products);
     const isLoading = ref(false);
@@ -154,9 +159,11 @@ export default defineComponent({
         const API_BASE_URL =
           import.meta.env.VITE_API_BASE_URL || "http://localhost:1994";
         const response = await fetch(
-          `${API_BASE_URL}/api/search/searchProducts?query=${encodeURIComponent(
+          `${API_BASE_URL}/api/search/searchProductsExcludingOffered?query=${encodeURIComponent(
             query
-          )}&uploaded_by=${loggedInUserId.value}`
+          )}&inquiries_id=${props.inquiries_id}&uploaded_by=${
+            loggedInUserId.value
+          }`
         );
         if (!response.ok) {
           throw new Error("Failed to fetch products");
@@ -216,6 +223,11 @@ export default defineComponent({
       }
     };
 
+    const emitProductClicked = (product: Product) => {
+      product.inquiries_id = props.inquiries_id;
+      emit("productClicked", product);
+    };
+
     return {
       searchQuery,
       filteredProducts,
@@ -225,6 +237,7 @@ export default defineComponent({
       getPrimaryImage,
       increment,
       decrement,
+      emitProductClicked,
     };
   },
 });

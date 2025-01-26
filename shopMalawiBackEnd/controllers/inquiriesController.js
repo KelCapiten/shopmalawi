@@ -160,3 +160,152 @@ export const getInquiries = async (req, res) => {
     connection.release();
   }
 };
+
+// endpoint to associate an inquiry with product(s)
+export const associateInquiryToProduct = async (req, res) => {
+  const { inquiries_id, product_id } = req.body;
+
+  // Validate required fields
+  if (!inquiries_id || !product_id) {
+    return res.status(400).json({
+      message: "inquiries_id and product_id are required.",
+    });
+  }
+
+  const connection = await db.getConnection();
+
+  try {
+    // Start transaction
+    await connection.beginTransaction();
+
+    // Insert entry into the product_offers table
+    await connection.query(
+      `INSERT INTO product_offers (product_id, inquiries_id) VALUES (?, ?)`,
+      [product_id, inquiries_id]
+    );
+
+    // Commit transaction
+    await connection.commit();
+
+    res.status(201).json({
+      message: "Inquiry successfully associated with the product.",
+    });
+  } catch (error) {
+    console.error("Error associating inquiry with product:", error);
+
+    // Rollback transaction on error
+    await connection.rollback();
+
+    // Handle duplicate entry error
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({
+        message: "This product is already associated with the inquiry.",
+      });
+    }
+
+    res
+      .status(500)
+      .json({ message: "Failed to associate inquiry with the product." });
+  } finally {
+    connection.release();
+  }
+};
+
+//endpoint to get Products Associated with an Inquiry and User
+export const getProductsByInquiryAndUser = async (req, res) => {
+  const { inquiries_id, uploaded_by } = req.query;
+
+  if (!inquiries_id || !uploaded_by) {
+    return res.status(400).json({
+      message: "inquiries_id and uploaded_by are required parameters.",
+    });
+  }
+
+  const connection = await db.getConnection();
+
+  try {
+    const query = `
+      SELECT 
+        p.id, 
+        p.name, 
+        p.description, 
+        p.price, 
+        p.mark_up_amount, 
+        p.subcategory_id, 
+        p.subcategory_name, 
+        p.maincategory_id, 
+        p.maincategory_name, 
+        p.stock_quantity, 
+        p.uploaded_by AS uploaded_by_userID, 
+        u.username AS uploaded_by,
+        i.image_path, 
+        i.alt_text, 
+        i.is_primary,
+        po.created_at AS association_date
+      FROM 
+        product_offers po
+      JOIN 
+        products p ON po.product_id = p.id
+      LEFT JOIN 
+        images i ON p.id = i.imageable_id AND i.imageable_type = 'products'
+      LEFT JOIN 
+        users u ON p.uploaded_by = u.id
+      WHERE 
+        po.inquiries_id = ? 
+        AND p.uploaded_by = ?
+      ORDER BY 
+        po.created_at ASC
+    `;
+
+    const [products] = await connection.query(query, [
+      parseInt(inquiries_id, 10),
+      parseInt(uploaded_by, 10),
+    ]);
+
+    const productsWithImages = products.reduce((acc, product) => {
+      const existingProduct = acc.find((p) => p.id === product.id);
+      if (existingProduct) {
+        if (product.image_path) {
+          existingProduct.images.push({
+            image_path: product.image_path,
+            alt_text: product.alt_text,
+            is_primary: product.is_primary,
+          });
+        }
+      } else {
+        acc.push({
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          mark_up_amount: product.mark_up_amount,
+          subcategory_id: product.subcategory_id,
+          subcategory_name: product.subcategory_name,
+          maincategory_id: product.maincategory_id,
+          maincategory_name: product.maincategory_name,
+          stock_quantity: product.stock_quantity,
+          uploaded_by_userID: product.uploaded_by_userID,
+          uploaded_by: product.uploaded_by,
+          association_date: product.association_date,
+          images: product.image_path
+            ? [
+                {
+                  image_path: product.image_path,
+                  alt_text: product.alt_text,
+                  is_primary: product.is_primary,
+                },
+              ]
+            : [],
+        });
+      }
+      return acc;
+    }, []);
+
+    res.status(200).json(productsWithImages);
+  } catch (error) {
+    console.error("Error fetching products by inquiry and user:", error);
+    res.status(500).json({ message: "Failed to fetch products." });
+  } finally {
+    connection.release();
+  }
+};

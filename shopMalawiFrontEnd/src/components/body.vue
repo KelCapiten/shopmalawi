@@ -4,7 +4,7 @@
     <ProductCardGrid
       heading="Newly Added"
       :products="newlyAddedItems"
-      @navigateToProductPage="navigateToProductPage"
+      @productClicked="navigateToProductPage"
     />
 
     <!-- Category Section Placeholder -->

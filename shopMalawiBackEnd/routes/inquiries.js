@@ -3,6 +3,8 @@ import { authenticateUser } from "../middleware/authMiddleware.js";
 import {
   getInquiries,
   addInquiry,
+  associateInquiryToProduct,
+  getProductsByInquiryAndUser,
 } from "../controllers/inquiriesController.js";
 import { upload } from "../middleware/uploadMiddleware.js";
 
@@ -18,5 +20,15 @@ router.post(
 
 // Fetch all inquiries
 router.get("/getInquiries", getInquiries);
+
+// Fetch all Products Associated with an Inquiry and User
+router.get("/getProductsByInquiryAndUser", getProductsByInquiryAndUser);
+
+// Associate inquiry to products
+router.post(
+  "/associateInquiryToProduct",
+  authenticateUser,
+  associateInquiryToProduct
+);
 
 export default router;

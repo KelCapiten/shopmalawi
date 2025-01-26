@@ -135,6 +135,9 @@ CREATE TABLE IF NOT EXISTS product_offers (
     inquiries_id INT NOT NULL,
     FOREIGN KEY fk_product_offers_product_id (product_id) REFERENCES products(id) ON DELETE CASCADE,
     FOREIGN KEY fk_product_offers_inquiries_id (inquiries_id) REFERENCES product_inquiries(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_product_inquiry (product_id, inquiries_id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_product_id (product_id),
     INDEX idx_inquiries_id (inquiries_id)
 ) ENGINE=InnoDB;
