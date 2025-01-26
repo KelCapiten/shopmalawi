@@ -49,8 +49,7 @@
           :enableCounter="false"
           :enableSearch="true"
           :inquiries_id="inquiry.id"
-          @associateInquiryToProduct="associateInquiryToProduct"
-          @productClicked="navigateToProductPage"
+          @productClicked="handleClick"
         />
       </div>
     </div>
@@ -120,6 +119,7 @@ export default defineComponent({
       };
       return new Date(date).toLocaleDateString("en-GB", options);
     },
+
     async associateInquiryToProduct(product: any) {
       const { inquiries_id, id: product_id } = product;
 
@@ -158,6 +158,14 @@ export default defineComponent({
         } else {
           console.error("Unexpected error:", err);
         }
+      }
+    },
+
+    handleClick(product: any) {
+      if (product.inquiries_id) {
+        this.associateInquiryToProduct(product);
+      } else {
+        this.navigateToProductPage(product);
       }
     },
   },

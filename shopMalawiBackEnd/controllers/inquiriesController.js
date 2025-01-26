@@ -211,6 +211,57 @@ export const associateInquiryToProduct = async (req, res) => {
   }
 };
 
+// endpoint to disassociate an inquiry from product(s)
+export const disassociateInquiryFromProduct = async (req, res) => {
+  const { inquiries_id, product_id } = req.body;
+
+  // Validate required fields
+  if (!inquiries_id || !product_id) {
+    return res.status(400).json({
+      message: "inquiries_id and product_id are required.",
+    });
+  }
+
+  const connection = await db.getConnection();
+
+  try {
+    // Start transaction
+    await connection.beginTransaction();
+
+    // Delete the entry from the product_offers table
+    const result = await connection.query(
+      `DELETE FROM product_offers WHERE inquiries_id = ? AND product_id = ?`,
+      [inquiries_id, product_id]
+    );
+
+    // Check if any rows were affected
+    if (result[0].affectedRows === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        message: "No association found between the inquiry and the product.",
+      });
+    }
+
+    // Commit transaction
+    await connection.commit();
+
+    res.status(200).json({
+      message: "Inquiry successfully disassociated from the product.",
+    });
+  } catch (error) {
+    console.error("Error disassociating inquiry from product:", error);
+
+    // Rollback transaction on error
+    await connection.rollback();
+
+    res.status(500).json({
+      message: "Failed to disassociate inquiry from the product.",
+    });
+  } finally {
+    connection.release();
+  }
+};
+
 //endpoint to get Products Associated with an Inquiry and User
 export const getProductsByInquiryAndUser = async (req, res) => {
   const { inquiries_id, uploaded_by } = req.query;

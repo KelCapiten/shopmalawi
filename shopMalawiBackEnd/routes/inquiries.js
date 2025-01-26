@@ -4,13 +4,14 @@ import {
   getInquiries,
   addInquiry,
   associateInquiryToProduct,
+  disassociateInquiryFromProduct,
   getProductsByInquiryAndUser,
 } from "../controllers/inquiriesController.js";
 import { upload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
-// Add Category
+// Add Inquiry
 router.post(
   "/addInquiry",
   authenticateUser,
@@ -18,17 +19,24 @@ router.post(
   addInquiry
 );
 
-// Fetch all inquiries
-router.get("/getInquiries", getInquiries);
-
-// Fetch all Products Associated with an Inquiry and User
-router.get("/getProductsByInquiryAndUser", getProductsByInquiryAndUser);
-
 // Associate inquiry to products
 router.post(
   "/associateInquiryToProduct",
   authenticateUser,
   associateInquiryToProduct
 );
+
+// Disassociate inquiry from products
+router.post(
+  "/disassociateInquiryFromProduct",
+  authenticateUser,
+  disassociateInquiryFromProduct
+);
+
+// Fetch all inquiries
+router.get("/getInquiries", getInquiries);
+
+// Fetch all Products Associated with an Inquiry and User
+router.get("/getProductsByInquiryAndUser", getProductsByInquiryAndUser);
 
 export default router;

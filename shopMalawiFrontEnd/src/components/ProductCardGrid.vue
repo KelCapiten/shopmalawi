@@ -320,7 +320,7 @@ export default defineComponent({
 
     const emitProductClicked = (product: Product) => {
       product.inquiries_id = props.inquiries_id;
-      emit("associateInquiryToProduct", product);
+      emit("productClicked", product);
     };
 
     // Corrected Method to fetch Already Offered Products using Axios
