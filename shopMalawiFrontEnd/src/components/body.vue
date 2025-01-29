@@ -1,10 +1,23 @@
+<!-- src/components/AppBody.vue -->
 <template>
   <div class="app-body">
-    <ProductCardGrid
+    <ProductDisplay
       heading="Newly Added"
-      :products="newlyAddedItems"
+      :products="products"
+      :isLoading="loading"
+      :error="error"
+      :enableCounter="false"
+      :imageSize="'medium'"
       @productClicked="navigateToProductPage"
     />
+
+    <div v-if="!hasProducts && !loading" class="no-products">
+      <p>No products found for the selected category.</p>
+    </div>
+
+    <div v-if="loading" class="loading-spinner">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
 
     <div class="category-section">
       <p>Category Section Placeholder</p>
@@ -21,73 +34,36 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from "vue";
-import ProductCardGrid from "@/components/ProductCardGrid.vue";
-import axios from "axios";
-import { useRouter } from "vue-router";
+import { defineComponent, onMounted, ref, watch } from "vue";
+import ProductDisplay from "@/components/productDisplay.vue";
+import { useProducts } from "@/composables/useProducts";
+import { getOneWeekAgoDate, navigateToProductPage } from "@/utils/utilities";
 
 export default defineComponent({
   name: "AppBody",
-  components: { ProductCardGrid },
+  components: {
+    ProductDisplay,
+  },
+  emits: ["searchedProductClicked"],
   setup() {
-    const baseUrl = "http://localhost:1994";
-    const router = useRouter();
+    const { products, loading, error, fetchProducts } = useProducts();
+    const hasProducts = ref(false);
 
-    type Product = {
-      id: number;
-      name: string;
-      description: string;
-      price: string;
-      mark_up_amount?: number;
-      subcategory_id?: number;
-      subcategory_name?: string;
-      maincategory_id?: number;
-      maincategory_name?: string;
-      stock_quantity: number;
-      uploaded_by_userID: number;
-      uploaded_by: string;
-      images: Array<{
-        image_path: string;
-        alt_text: string | null;
-        is_primary: number;
-      }>;
-    };
+    onMounted(async () => {
+      const oneWeekAgo = getOneWeekAgoDate();
+      await fetchProducts("subcategory", undefined, oneWeekAgo);
+      hasProducts.value = products.value.length > 0;
+    });
 
-    const newlyAddedItems = ref<Product[]>([]);
-
-    const getOneWeekAgoDate = (): string => {
-      const date = new Date();
-      date.setDate(date.getDate() - 7);
-      return date.toISOString().split("T")[0];
-    };
-
-    const fetchNewlyAddedItems = async (): Promise<void> => {
-      try {
-        const oneWeekAgo = getOneWeekAgoDate();
-        const response = await axios.get<Product[]>(
-          `${baseUrl}/api/products/getAllProducts?startDate=${oneWeekAgo}`
-        );
-
-        newlyAddedItems.value = response.data.map((product: any) => ({
-          ...product,
-          mark_up_amount: product.mark_up_amount
-            ? parseFloat(product.mark_up_amount)
-            : undefined,
-        }));
-      } catch (error) {
-        console.error("Error fetching newly added items:", error);
-      }
-    };
-
-    fetchNewlyAddedItems();
-
-    const navigateToProductPage = (product: Product) => {
-      sessionStorage.setItem("selectedProduct", JSON.stringify(product));
-      router.push({ name: "ProductPage", params: { id: product.id } });
-    };
+    watch(products, (newProducts) => {
+      hasProducts.value = newProducts.length > 0;
+    });
 
     return {
-      newlyAddedItems,
+      products,
+      loading,
+      error,
+      hasProducts,
       navigateToProductPage,
     };
   },
@@ -95,27 +71,32 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.category-section {
-  margin: 20px 0;
-  padding: 10px;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.app-body {
+  padding: 16px;
 }
 
-.product-list-section {
-  padding: 10px;
-  background-color: #fff;
-  margin-bottom: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.no-products {
+  text-align: center;
+  margin-top: 20px;
+  color: #555;
 }
 
-.promotional-section {
-  height: 150px;
-  background-color: #e0e0e0;
+.loading-spinner {
   display: flex;
-  align-items: center;
   justify-content: center;
+  margin-top: 20px;
+}
+
+.category-section,
+.product-list-section,
+.promotional-section {
+  margin-top: 20px;
+}
+
+.category-section p,
+.product-list-section p,
+.promotional-section p {
+  font-size: 1rem;
+  color: #888;
 }
 </style>

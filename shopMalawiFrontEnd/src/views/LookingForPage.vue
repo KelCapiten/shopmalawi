@@ -1,17 +1,19 @@
 <template>
   <ion-page>
-    <AppHeader :showCategorySegment="false" />
+    <appHeader :showCategorySegment="false" />
 
     <ion-content class="ion-padding">
-      <InquiriesList :inquiries="inquiries" />
+      <InquiriesList
+        v-if="!showForm"
+        :inquiries="inquiries"
+        @toggleProductCard="handleToggleProductCard"
+      />
 
-      <div ref="formSection">
-        <InputForm
-          v-if="showForm"
-          :subcategories="subcategories"
-          @inquiry-sent="handleInquirySent"
-        />
-      </div>
+      <transition name="slideForm">
+        <div v-if="showForm" ref="formRef" class="form-container">
+          <InputForm @submit="handleAddInquiry" />
+        </div>
+      </transition>
 
       <ion-toast
         :is-open="showToast"
@@ -19,153 +21,136 @@
         :duration="2000"
         @didDismiss="showToast = false"
         :color="toastColor"
-      ></ion-toast>
+      />
 
-      <SavingOverlay :isSaving="isSending" />
+      <SavingOverlay :isSaving="isSending || loading" />
 
-      <!-- Floating button to toggle the form view -->
       <ion-fab vertical="bottom" horizontal="end" slot="fixed">
         <ion-fab-button @click="toggleForm" color="light">
-          <ion-icon :icon="showForm ? close : search"></ion-icon>
+          <ion-icon :icon="showForm ? close : search" />
         </ion-fab-button>
       </ion-fab>
+
+      <ion-loading
+        v-if="loading"
+        message="Loading inquiries..."
+        :is-open="loading"
+      />
     </ion-content>
 
-    <AppFooter />
+    <appFooter />
   </ion-page>
 </template>
 
 <script lang="ts">
-import { ref, defineComponent, onMounted } from "vue";
-import axios from "axios";
-import { useAuthStore } from "@/stores/authStore";
-import AppFooter from "@/components/footer.vue";
-import AppHeader from "@/components/header.vue";
-import SavingOverlay from "@/components/SavingOverlay.vue";
-import InputForm from "@/components/InputForm.vue";
+import { defineComponent, ref, onMounted, watch, nextTick } from "vue";
+import { useInquiries } from "@/composables/useInquiry";
+import { close, search } from "ionicons/icons";
+import appHeader from "@/components/appHeader.vue";
+import appFooter from "@/components/appFooter.vue";
 import InquiriesList from "@/components/InquiriesList.vue";
-import { search, close } from "ionicons/icons";
-
-interface Inquiry {
-  id: number;
-  name: string;
-  description: string;
-  category_name: string;
-  stock_quantity: number;
-  status: string;
-  images: {
-    image_path: string;
-    is_primary: boolean;
-  }[];
-}
-
-interface Category {
-  id: number;
-  name: string;
-  subcategories?: Category[];
-}
+import InputForm from "@/components/InputForm.vue";
+import SavingOverlay from "@/components/SavingOverlay.vue";
 
 export default defineComponent({
   name: "LookingForPage",
   components: {
-    AppFooter,
-    AppHeader,
-    SavingOverlay,
+    appHeader,
+    appFooter,
+    InquiriesList,
     InputForm,
-    InquiriesList, // Register the new component
+    SavingOverlay,
   },
   setup() {
-    const categories = ref<Category[]>([]);
-    const subcategories = ref<Category[]>([]);
-    const inquiries = ref<Inquiry[]>([]);
+    const { inquiries, fetchInquiries, addInquiry, loading, error } =
+      useInquiries();
+    const showForm = ref(false);
     const showToast = ref(false);
     const toastMessage = ref("");
     const toastColor = ref("success");
     const isSending = ref(false);
-    const showForm = ref(false);
-    const formSection = ref<HTMLElement | null>(null);
-
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(
-          "http://localhost:1994/api/categories/getCategories"
-        );
-        categories.value = response.data;
-        subcategories.value = categories.value
-          .flatMap((category) =>
-            category.subcategories?.length ? category.subcategories : [category]
-          )
-          .sort((a, b) => a.name.localeCompare(b.name));
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-        toastMessage.value = "Failed to fetch categories.";
-        toastColor.value = "danger";
-        showToast.value = true;
-      }
-    };
-
-    const fetchInquiries = async () => {
-      try {
-        const authStore = useAuthStore();
-        const token = authStore.token;
-        const response = await axios.get(
-          "http://localhost:1994/api/inquiries/getInquiries",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        inquiries.value = response.data;
-      } catch (error) {
-        console.error("Error fetching inquiries:", error);
-        toastMessage.value = "Failed to fetch inquiries.";
-        toastColor.value = "danger";
-        showToast.value = true;
-      }
-    };
-
-    const handleInquirySent = (result: { message: string; color: string }) => {
-      toastMessage.value = result.message;
-      toastColor.value = result.color;
-      showToast.value = true;
-      if (result.color === "success") {
-        fetchInquiries();
-      }
-    };
+    const formRef = ref<HTMLElement | null>(null);
 
     const toggleForm = () => {
-      showForm.value = !showForm.value; // Toggle form visibility
-      if (showForm.value) {
-        setTimeout(() => {
-          formSection.value?.scrollIntoView({ behavior: "smooth" }); // Scroll to the form
-        }, 100);
+      showForm.value = !showForm.value;
+    };
+
+    watch(showForm, async (value) => {
+      if (value) {
+        await nextTick();
+        formRef.value?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+
+    const handleAddInquiry = async (payload: any) => {
+      isSending.value = true;
+      try {
+        await addInquiry(payload);
+        toastMessage.value = "Inquiry added successfully";
+        toastColor.value = "success";
+        showToast.value = true;
+        showForm.value = false;
+      } catch {
+        toastMessage.value = "Failed to add inquiry";
+        toastColor.value = "danger";
+        showToast.value = true;
+      } finally {
+        isSending.value = false;
       }
     };
 
+    const handleToggleProductCard = (id: number) => {
+      console.log("Toggle product card for inquiry ID:", id);
+    };
+
+    watch(error, (err) => {
+      if (err) {
+        toastMessage.value = err;
+        toastColor.value = "danger";
+        showToast.value = true;
+      }
+    });
+
     onMounted(() => {
-      fetchCategories();
       fetchInquiries();
     });
 
     return {
       inquiries,
-      subcategories,
+      showForm,
+      toggleForm,
       showToast,
       toastMessage,
       toastColor,
       isSending,
-      handleInquirySent,
-      showForm,
-      formSection,
-      toggleForm,
-      search, // Add the search icon
-      close, // Add the close icon
+      handleAddInquiry,
+      handleToggleProductCard,
+      formRef,
+      close,
+      search,
+      loading,
+      error,
     };
   },
 });
 </script>
 
 <style scoped>
-/* Add styles specific to the page here */
+.slideForm-enter-active,
+.slideForm-leave-active {
+  transition: all 0.3s ease;
+}
+.slideForm-enter-from,
+.slideForm-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+.slideForm-enter-to,
+.slideForm-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+.form-container {
+  margin-top: 1rem;
+}
 </style>

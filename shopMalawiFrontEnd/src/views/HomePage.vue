@@ -7,9 +7,9 @@
 </template>
 
 <script>
-import AppHeader from "@/components/header.vue";
+import AppHeader from "@/components/appHeader.vue";
 import AppBody from "@/components/body.vue";
-import AppFooter from "@/components/footer.vue";
+import AppFooter from "@/components/appFooter.vue";
 
 export default {
   name: "HomePage",

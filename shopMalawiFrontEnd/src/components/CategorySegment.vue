@@ -6,14 +6,14 @@
         v-for="category in categories"
         :key="category.id"
         :value="category.id"
-        @click="toggleCategory(category.id)"
+        @click="selectCategory(category.id)"
       >
         {{ category.name }}
       </ion-segment-button>
     </ion-segment>
   </ion-toolbar>
 
-  <!-- Subcategories (only visible for the expanded top-level category) -->
+  <!-- Subcategories (visible for the expanded top-level category) -->
   <div v-if="visibleCategoryId !== null" class="subcategory-container">
     <ion-segment scrollable>
       <ion-segment-button
@@ -28,88 +28,57 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref, computed, onMounted } from "vue";
-import axios from "axios";
+<script setup lang="ts">
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useCategories } from "@/composables/useCategories";
 
-/** Type for your category objects */
-type Category = {
-  id: number;
-  name: string;
-  description?: string;
-  parent_id?: number;
-  subcategories?: Category[];
-};
+// Composable for categories
+const { categories, fetchCategories } = useCategories();
 
-export default defineComponent({
-  name: "CategorySegment",
+// Track which top-level category is expanded
+const visibleCategoryId = ref<number | null>(null);
 
-  /**
-   * Declare that this component can emit "categorySelected".
-   */
-  emits: ["categorySelected"],
-
-  setup(_, { emit }) {
-    const categories = ref<Category[]>([]);
-    const visibleCategoryId = ref<number | null>(null);
-
-    /**
-     * Fetch categories from the DB on mount
-     */
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(
-          "http://localhost:1994/api/categories/getCategories"
-        );
-        categories.value = response.data;
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-      }
-    };
-
-    /**
-     * When a top-level category is clicked:
-     * 1) Toggle subcategories for that category.
-     * 2) Emit "categorySelected" so the parent knows to filter or navigate.
-     */
-    const toggleCategory = (categoryId: number) => {
-      visibleCategoryId.value =
-        visibleCategoryId.value === categoryId ? null : categoryId;
-      emit("categorySelected", categoryId);
-    };
-
-    /**
-     * When a subcategory is clicked, just emit
-     * "categorySelected" for the parent to handle.
-     */
-    const selectSubcategory = (subcategoryId: number) => {
-      emit("categorySelected", subcategoryId);
-    };
-
-    /**
-     * A computed property that returns the subcategories
-     * of whichever top-level category is currently visible.
-     */
-    const subcategories = computed(() => {
-      return (
-        categories.value.find((cat) => cat.id === visibleCategoryId.value)
-          ?.subcategories || []
-      );
-    });
-
-    onMounted(() => {
-      fetchCategories();
-    });
-
-    return {
-      categories,
-      visibleCategoryId,
-      subcategories,
-      toggleCategory,
-      selectSubcategory,
-    };
-  },
+// When component mounts, fetch all categories
+onMounted(() => {
+  fetchCategories();
 });
+
+// A computed list of subcategories for the expanded category
+const subcategories = computed(() => {
+  if (visibleCategoryId.value !== null) {
+    const selectedCategory = categories.value.find(
+      (cat) => cat.id === visibleCategoryId.value
+    );
+    return selectedCategory?.subcategories || [];
+  }
+  return [];
+});
+
+// Toggle top-level category expansion
+function toggleCategory(categoryId: number) {
+  visibleCategoryId.value =
+    visibleCategoryId.value === categoryId ? null : categoryId;
+}
+
+// Router instance for navigation
+const router = useRouter();
+
+function selectCategory(categoryId: number) {
+  toggleCategory(categoryId);
+
+  router.push({
+    name: "shop",
+    query: { categoryId },
+  });
+}
+
+function selectSubcategory(subcategoryId: number) {
+  router.push({
+    name: "shop",
+    query: { categoryId: subcategoryId },
+  });
+}
 </script>
 
 <style scoped>

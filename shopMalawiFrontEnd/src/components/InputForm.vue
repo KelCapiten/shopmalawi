@@ -128,7 +128,6 @@ export default defineComponent({
   props: {
     subcategories: {
       type: Array as () => Category[],
-      required: true,
     },
   },
   emits: ["inquiry-sent"],

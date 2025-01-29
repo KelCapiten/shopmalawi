@@ -17,9 +17,9 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, PropType } from "vue";
+import { defineProps, PropType } from "vue";
 
-const props = defineProps({
+defineProps({
   images: {
     type: Array as PropType<{ image_path: string; alt_text?: string }[]>,
     default: () => [],

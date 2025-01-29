@@ -9,12 +9,7 @@
     </IonHeader>
 
     <IonContent>
-      <ProductCardGrid
-        v-if="product"
-        :products="[product]"
-        infoPosition="side"
-        @navigateToProductPage="handleProductNavigation"
-      />
+      <productDisplay />
 
       <PaymentMethod />
 
@@ -74,12 +69,12 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import PaymentMethod from "@/components/PaymentMethod.vue";
-import ProductCardGrid from "@/components/ProductCardGrid.vue";
+import productDisplay from "@/components/productDisplay.vue";
 import BuySegment from "@/components/BuySegment.vue";
 
 export default {
   name: "HomePage",
-  components: { PaymentMethod, ProductCardGrid, BuySegment },
+  components: { PaymentMethod, productDisplay, BuySegment },
   setup() {
     const router = useRouter();
     const product = ref(null);

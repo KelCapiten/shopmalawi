@@ -1,0 +1,87 @@
+import { ref } from "vue";
+import inquiriesService from "@/services/inquiriesService";
+import { Product } from "@/types";
+
+export function useInquiries() {
+  const inquiries = ref<any[]>([]);
+  const products = ref<Product[]>([]);
+  const loading = ref(false);
+  const error = ref<string | null>(null);
+
+  const fetchInquiries = async () => {
+    loading.value = true;
+    try {
+      inquiries.value = await inquiriesService.getInquiries();
+    } catch (err) {
+      error.value = "Failed to fetch inquiries";
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const addInquiry = async (payload: any) => {
+    loading.value = true;
+    try {
+      await inquiriesService.addInquiry(payload);
+      await fetchInquiries();
+    } catch (err) {
+      error.value = "Failed to add inquiry";
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const associateProduct = async (inquiries_id: number, product_id: number) => {
+    loading.value = true;
+    try {
+      await inquiriesService.associateInquiryToProduct({
+        inquiries_id,
+        product_id,
+      });
+    } catch (err) {
+      error.value = "Failed to associate product";
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const disassociateProduct = async (
+    inquiries_id: number,
+    product_id: number
+  ) => {
+    loading.value = true;
+    try {
+      await inquiriesService.disassociateInquiry(inquiries_id, product_id);
+    } catch (err) {
+      error.value = "Failed to disassociate product";
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const fetchProducts = async (inquiries_id: number, user_id: number) => {
+    loading.value = true;
+    try {
+      products.value = await inquiriesService.getProductsByInquiryAndUser(
+        inquiries_id,
+        user_id
+      );
+    } catch (err) {
+      error.value = "Failed to fetch products";
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  return {
+    inquiries,
+    products,
+    loading,
+    error,
+    fetchInquiries,
+    addInquiry,
+    associateProduct,
+    disassociateProduct,
+    fetchProducts,
+  };
+}

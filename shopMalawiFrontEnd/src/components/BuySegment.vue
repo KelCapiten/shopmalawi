@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from "vue";
+import { defineProps } from "vue";
 import { useRouter } from "vue-router";
 import { storefrontOutline, cartOutline } from "ionicons/icons";
 

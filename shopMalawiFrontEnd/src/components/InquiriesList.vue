@@ -12,7 +12,7 @@
               :key="index"
             >
               <img
-                :src="`http://localhost:1994${image.image_path}`"
+                :src="getImageUrl(image.image_path)"
                 :alt="`Image ${index + 1}`"
                 class="inquiry-image"
               />
@@ -32,7 +32,7 @@
           </div>
           <button
             class="sell-button"
-            @click="toggleProductCardGrid(inquiry.id)"
+            @click="$emit('toggleProductCard', inquiry.id)"
           >
             {{
               visibleProductCardGridId === inquiry.id
@@ -41,132 +41,64 @@
             }}
           </button>
         </div>
-        <ProductCardGrid
-          v-if="visibleProductCardGridId === inquiry.id"
-          :heading="`Search and offer your products to this buyer`"
-          infoPosition="side"
-          imageSize="small"
-          :enableCounter="false"
-          :enableSearch="true"
-          :inquiries_id="inquiry.id"
-          @productClicked="handleClick"
-        />
       </div>
     </div>
     <p v-else>No inquiries found.</p>
+
+    <div v-if="enableSearch && isSearchSection" class="search-container">
+      <input
+        v-model="searchQuery"
+        type="text"
+        :placeholder="searchPlaceholder"
+        class="search-input"
+      />
+    </div>
   </div>
 </template>
 
 <script lang="ts">
-import axios from "axios";
-import { defineComponent, PropType, ref } from "vue";
-import { useRouter } from "vue-router"; // Import useRouter
-import { useAuthStore } from "@/stores/authStore";
-import ProductCardGrid from "@/components/ProductCardGrid.vue";
-
-interface Inquiry {
-  id: number;
-  name: string;
-  description: string;
-  category_name: string;
-  stock_quantity: number;
-  status: string;
-  images: {
-    image_path: string;
-    is_primary: boolean;
-  }[];
-  location_name?: string;
-  created_at?: string;
-}
+import { defineComponent, PropType } from "vue";
 
 export default defineComponent({
   name: "InquiriesList",
-  components: {
-    ProductCardGrid,
-  },
   props: {
     inquiries: {
-      type: Array as PropType<Inquiry[]>,
+      type: Array as PropType<Array<any>>,
       required: true,
     },
+    enableSearch: {
+      type: Boolean,
+      default: false,
+    },
+    isSearchSection: {
+      type: Boolean,
+      default: false,
+    },
+    searchPlaceholder: {
+      type: String,
+      default: "Search inquiries...",
+    },
   },
-  setup() {
-    const visibleProductCardGridId = ref<number | null>(null);
-    const router = useRouter(); // Initialize the router instance
-
-    const toggleProductCardGrid = (inquiryId: number) => {
-      visibleProductCardGridId.value =
-        visibleProductCardGridId.value === inquiryId ? null : inquiryId;
-    };
-
-    const navigateToProductPage = (product: any) => {
-      sessionStorage.setItem("selectedProduct", JSON.stringify(product));
-      router.push({ name: "ProductPage", params: { id: product.id } });
-    };
-
+  emits: ["toggleProductCard"],
+  data() {
     return {
-      visibleProductCardGridId,
-      toggleProductCardGrid,
-      navigateToProductPage,
+      searchQuery: "",
+      visibleProductCardGridId: null as number | null,
     };
   },
   methods: {
-    formatDate(date: string): string {
+    getImageUrl(path: string): string {
+      return `http://localhost:1994${path}`;
+    },
+    formatDate(dateString: string): string {
       const options: Intl.DateTimeFormatOptions = {
-        day: "2-digit",
-        month: "short",
         year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       };
-      return new Date(date).toLocaleDateString("en-GB", options);
-    },
-
-    async associateInquiryToProduct(product: any) {
-      const { inquiries_id, id: product_id } = product;
-
-      if (!inquiries_id) {
-        console.error("No inquiries_id associated with the product");
-        return;
-      }
-
-      try {
-        const authStore = useAuthStore();
-        const token = authStore.token;
-
-        const headers = {
-          Authorization: `Bearer ${token}`,
-        };
-
-        const API_BASE_URL =
-          import.meta.env.VITE_API_BASE_URL || "http://localhost:1994";
-
-        const response = await axios.post(
-          `${API_BASE_URL}/api/inquiries/associateInquiryToProduct`,
-          { inquiries_id, product_id },
-          { headers }
-        );
-
-        console.log(
-          "Successfully associated inquiry with product:",
-          response.data
-        );
-      } catch (err: unknown) {
-        if (axios.isAxiosError(err)) {
-          console.error(
-            "Error associating inquiry:",
-            err.response?.data || err.message
-          );
-        } else {
-          console.error("Unexpected error:", err);
-        }
-      }
-    },
-
-    handleClick(product: any) {
-      if (product.inquiries_id) {
-        this.associateInquiryToProduct(product);
-      } else {
-        this.navigateToProductPage(product);
-      }
+      return new Date(dateString).toLocaleDateString(undefined, options);
     },
   },
 });

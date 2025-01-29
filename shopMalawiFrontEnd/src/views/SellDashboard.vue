@@ -113,8 +113,8 @@
 import { ref, defineComponent, onMounted } from "vue";
 import axios from "axios";
 import { useAuthStore } from "@/stores/authStore";
-import AppFooter from "../components/footer.vue";
-import AppHeader from "../components/header.vue";
+import AppFooter from "../components/appFooter.vue";
+import AppHeader from "../components/appHeader.vue";
 import SavingOverlay from "../components/SavingOverlay.vue";
 import ImageUploader from "@/components/ImageUploader.vue";
 

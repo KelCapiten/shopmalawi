@@ -1,96 +1,98 @@
 <template>
   <ion-page>
     <appHeader />
+
     <ion-content>
-      <!-- Products for Subcategories -->
-      <ProductCardGrid
-        v-for="subcategory in subcategories"
-        :key="subcategory.id"
-        :heading="subcategory.name"
-        :products="subcategory.products"
+      <ProductDisplay
+        class="product-display-body"
+        :products="products"
+        :isLoading="loading"
+        :error="error"
+        :infoPosition="'bottom'"
+        :enableCounter="false"
+        :showCategoryName="true"
         @productClicked="navigateToProductPage"
       />
 
-      <!-- No Products Found -->
-      <div v-if="!hasProducts && !isLoading" class="no-products">
+      <div v-if="!hasProducts && !loading" class="no-products">
         <p>No products found for the selected category.</p>
       </div>
 
-      <!-- Loading Spinner -->
-      <ion-spinner v-if="isLoading" name="crescent"></ion-spinner>
+      <ion-spinner v-if="loading" name="crescent"></ion-spinner>
     </ion-content>
+
     <appFooter />
   </ion-page>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import axios from "axios";
-import appHeader from "@/components/header.vue";
-import appFooter from "@/components/footer.vue";
-import ProductCardGrid from "@/components/ProductCardGrid.vue";
+import { defineComponent, ref, watch, computed } from "vue";
+import { useRoute } from "vue-router";
+import { IonPage, IonContent, IonSpinner } from "@ionic/vue";
+import { useProducts } from "@/composables/useProducts";
+import appHeader from "@/components/appHeader.vue";
+import appFooter from "@/components/appFooter.vue";
+import ProductDisplay from "@/components/productDisplay.vue";
+import { navigateToProductPage } from "@/utils/utilities";
 
 export default defineComponent({
   name: "ShopPage",
-  components: { appHeader, appFooter, ProductCardGrid },
+  components: {
+    IonPage,
+    IonContent,
+    IonSpinner,
+    appHeader,
+    appFooter,
+    ProductDisplay,
+  },
   setup() {
+    // Route for reading query parameters (categoryId).
     const route = useRoute();
-    const router = useRouter();
-    const subcategories = ref<any[]>([]); // Grouped response by subcategories
-    const isLoading = ref(false);
+
+    // Our product composable
+    const { products, loading, error, fetchProducts } = useProducts();
     const hasProducts = ref(false);
-    const selectedCategoryId = ref<number | null>(null);
 
-    // Fetch products grouped by subcategories or as a single category
-    const fetchProducts = async () => {
-      try {
-        isLoading.value = true;
-        const apiUrl = selectedCategoryId.value
-          ? `http://localhost:1994/api/products/getAllProducts?groupBy=subcategory&category_id=${selectedCategoryId.value}`
-          : "http://localhost:1994/api/products/getAllProducts?groupBy=subcategory";
+    // Convert the route query param to a number or null, e.g. /shop?categoryId=3
+    const categoryId = computed(() => {
+      const queryVal = route.query.categoryId;
+      return queryVal ? parseInt(queryVal as string, 10) : null;
+    });
 
-        const response = await axios.get(apiUrl);
-        subcategories.value = response.data;
-
-        // Check if there are any products
-        hasProducts.value = subcategories.value.some(
-          (subcategory) => subcategory.products.length > 0
-        );
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        hasProducts.value = false;
-      } finally {
-        isLoading.value = false;
-      }
-    };
-
-    // Navigate to a product page
-    const navigateToProductPage = (product: any) => {
-      sessionStorage.setItem("selectedProduct", JSON.stringify(product));
-      router.push({ name: "ProductPage", params: { id: product.id } });
-    };
-
-    // Watch for route changes
     watch(
-      () => route.query.categoryId,
-      (newVal) => {
-        selectedCategoryId.value = newVal ? Number(newVal) : null;
-        fetchProducts();
-      }
+      categoryId,
+      async (newCatId) => {
+        // Start loading
+        loading.value = true;
+        error.value = null;
+
+        try {
+          if (newCatId) {
+            // Fetch products specific to this category
+            await fetchProducts("subcategory", newCatId);
+          } else {
+            // No category param -> fetch all subcategory-grouped products
+            await fetchProducts("subcategory");
+          }
+        } catch (err) {
+          error.value = err as Error;
+        } finally {
+          hasProducts.value = products.value.length > 0;
+          loading.value = false;
+        }
+      },
+      { immediate: true }
     );
 
-    // Fetch products on component mount
-    onMounted(() => {
-      selectedCategoryId.value = route.query.categoryId
-        ? Number(route.query.categoryId)
-        : null;
-      fetchProducts();
+    // Also watch the products array to keep hasProducts in sync if needed
+    watch(products, (newProducts) => {
+      hasProducts.value = newProducts.length > 0;
     });
 
     return {
-      subcategories,
-      isLoading,
+      products,
+      loading,
+      error,
       hasProducts,
       navigateToProductPage,
     };
@@ -99,9 +101,14 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.product-display-body {
+  padding: 16px;
+}
+
 ion-content {
   padding: 16px;
 }
+
 .no-products {
   text-align: center;
   margin-top: 20px;

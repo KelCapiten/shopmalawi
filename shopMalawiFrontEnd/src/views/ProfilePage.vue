@@ -99,7 +99,7 @@
 <script>
 import { computed, ref } from "vue";
 import { useAuthStore } from "@/stores/authStore";
-import appFooter from "@/components/footer.vue";
+import appFooter from "@/components/appFooter.vue";
 import CategoriesManager from "@/components/CategoriesManager.vue"; // Import the CategoriesManager component
 import {
   settingsOutline,

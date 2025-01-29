@@ -27,7 +27,7 @@
             :value="minPriceDisplay"
             @ionInput="handleMinPriceInput"
             class="filter-item"
-          ></ion-input>
+          />
           <ion-input
             placeholder="Max Price"
             type="text"
@@ -35,147 +35,81 @@
             :value="maxPriceDisplay"
             @ionInput="handleMaxPriceInput"
             class="filter-item"
-          ></ion-input>
+          />
         </div>
       </ion-toolbar>
     </ion-header>
 
     <ion-content>
       <div v-if="loading" class="loading">Loading...</div>
-      <div v-else-if="subcategories.length === 0" class="no-results">
+      <div v-else-if="products.length === 0" class="no-results">
         No results found.
       </div>
-      <template v-else>
-        <div v-for="subcategory in subcategories" :key="subcategory.id">
-          <ProductCardGrid
-            :heading="subcategory.name"
-            :products="subcategory.products"
-            @productClicked="navigateToProductPage"
-          />
-        </div>
-      </template>
+      <div v-else class="Results">
+        <productDisplay
+          heading="Is this what you are looking for?"
+          :products="products"
+          @productClicked="navigateToProductPage"
+        />
+      </div>
     </ion-content>
 
     <appFooter />
   </ion-page>
 </template>
 
-<script>
-import { defineComponent, ref, computed, watch } from "vue";
-import axios from "axios";
-import appHeader from "@/components/header.vue";
-import appFooter from "@/components/footer.vue";
-import ProductCardGrid from "@/components/ProductCardGrid.vue";
-import { useRoute, useRouter } from "vue-router";
+<script setup lang="ts">
+import { ref, onMounted, computed, watch } from "vue";
+import { useRoute } from "vue-router";
+import { useSearch } from "@/composables/useSearch";
+import { navigateToProductPage, debounce } from "@/utils/utilities";
+import appHeader from "@/components/appHeader.vue";
+import appFooter from "@/components/appFooter.vue";
+import productDisplay from "@/components/productDisplay.vue";
 
-export default defineComponent({
-  name: "SearchResultsPage",
-  components: {
-    appHeader,
-    appFooter,
-    ProductCardGrid,
-  },
-  setup() {
-    const route = useRoute();
-    const router = useRouter();
-    const query = ref(route.query.q?.toString() || "");
-    const subcategories = ref([]);
-    const loading = ref(false);
-    const sortBy = ref("priceAsc");
-    const minPrice = ref(undefined);
-    const maxPrice = ref(undefined);
-    let debounceTimer = null;
+const { results, loading, error, performSearch } = useSearch();
+const route = useRoute();
+const sortBy = ref("");
+const minPrice = ref<number | null>(null);
+const maxPrice = ref<number | null>(null);
 
-    const minPriceDisplay = computed({
-      get: () =>
-        minPrice.value === undefined ? "" : minPrice.value.toString(),
-      set: (value) => {
-        minPrice.value = value === "" ? undefined : Number(value);
-      },
-    });
+function buildPriceRange() {
+  if (minPrice.value !== null && maxPrice.value !== null)
+    return `${minPrice.value},${maxPrice.value}`;
+  if (minPrice.value !== null) return `${minPrice.value},`;
+  if (maxPrice.value !== null) return `,${maxPrice.value}`;
+}
 
-    const maxPriceDisplay = computed({
-      get: () =>
-        maxPrice.value === undefined ? "" : maxPrice.value.toString(),
-      set: (value) => {
-        maxPrice.value = value === "" ? undefined : Number(value);
-      },
-    });
+const products = computed(() => results.value);
+const minPriceDisplay = computed(() =>
+  minPrice.value !== null ? minPrice.value : ""
+);
+const maxPriceDisplay = computed(() =>
+  maxPrice.value !== null ? maxPrice.value : ""
+);
 
-    const debounce = (func, delay) => {
-      return (...args) => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => func(...args), delay);
-      };
-    };
+async function fetchProducts() {
+  await performSearch({
+    query: route.query.query as string,
+    priceRange: buildPriceRange(),
+    sortBy: sortBy.value,
+  });
+}
 
-    const fetchProducts = async () => {
-      loading.value = true;
-      try {
-        const params = {
-          query: query.value,
-          sortBy: sortBy.value,
-          priceRange:
-            minPrice.value !== undefined || maxPrice.value !== undefined
-              ? `${minPrice.value || ""},${maxPrice.value || ""}`
-              : undefined,
-        };
+const debouncedFetch = debounce(fetchProducts, 1000);
 
-        const response = await axios.get(
-          "http://localhost:1994/api/search/searchProducts",
-          { params }
-        );
+function handleMinPriceInput(e: CustomEvent) {
+  minPrice.value = parseInt(e.detail.value, 10) || null;
+  debouncedFetch();
+}
+function handleMaxPriceInput(e: CustomEvent) {
+  maxPrice.value = parseInt(e.detail.value, 10) || null;
+  debouncedFetch();
+}
 
-        subcategories.value = response.data;
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      } finally {
-        loading.value = false;
-      }
-    };
+onMounted(fetchProducts);
 
-    const handleMinPriceInput = (event) => {
-      const value = event.target.value;
-      minPriceDisplay.value = value;
-      debounce(fetchProducts, 500)();
-    };
-
-    const handleMaxPriceInput = (event) => {
-      const value = event.target.value;
-      maxPriceDisplay.value = value;
-      debounce(fetchProducts, 500)();
-    };
-
-    watch(
-      () => route.query.q,
-      (newQuery) => {
-        query.value = newQuery?.toString() || "";
-        minPrice.value = undefined;
-        maxPrice.value = undefined;
-        fetchProducts();
-      },
-      { immediate: true }
-    );
-
-    const navigateToProductPage = (product) => {
-      sessionStorage.setItem("selectedProduct", JSON.stringify(product));
-      router.push({ name: "ProductPage", params: { id: product.id } });
-    };
-
-    return {
-      query,
-      subcategories,
-      loading,
-      sortBy,
-      minPriceDisplay,
-      maxPriceDisplay,
-      fetchProducts,
-      handleMinPriceInput,
-      handleMaxPriceInput,
-      navigateToProductPage,
-    };
-  },
-});
+watch(() => route.query, fetchProducts);
 </script>
 
 <style scoped>
@@ -183,17 +117,17 @@ export default defineComponent({
   --background: var(--ion-background-color);
   padding: 10px 20px;
 }
-
 .filter-container {
   display: flex;
   gap: 10px;
   align-items: center;
 }
-
 .filter-item {
   flex: 1;
 }
-
+.Results {
+  margin-top: 15px;
+}
 .loading,
 .no-results {
   text-align: center;
