@@ -1,9 +1,11 @@
 <template>
   <div class="inquiries-container">
     <h5>Do you have any of these for sale?</h5>
+
     <div v-if="inquiries.length > 0" class="inquiries-list">
       <div class="inquiry-card" v-for="inquiry in inquiries" :key="inquiry.id">
         <h3>{{ inquiry.name }} ({{ inquiry.stock_quantity }} needed)</h3>
+
         <div class="inquiry-images">
           <div class="image-grid">
             <div
@@ -19,20 +21,24 @@
             </div>
           </div>
         </div>
+
         <p>
           <strong>I'm looking for,</strong> {{ inquiry.name }}.
           {{ inquiry.description }}
         </p>
+
         <div class="inquiry-date" v-if="inquiry.created_at">
           {{ formatDate(inquiry.created_at) }}
         </div>
+
         <div class="location-and-button">
           <div class="location-badge" v-if="inquiry.location_name">
             {{ inquiry.location_name }}
           </div>
           <button
             class="sell-button"
-            @click="$emit('toggleProductCard', inquiry.id)"
+            :class="{ cancel: visibleProductCardGridId === inquiry.id }"
+            @click="makeAnOffer(inquiry.id)"
           >
             {{
               visibleProductCardGridId === inquiry.id
@@ -41,45 +47,89 @@
             }}
           </button>
         </div>
+
+        <div
+          v-if="visibleProductCardGridId === inquiry.id"
+          class="search-container"
+        >
+          <input
+            v-model="searchQuery"
+            type="text"
+            :placeholder="searchPlaceholder"
+            class="search-input"
+            @focus="triggerInitialSearch"
+          />
+        </div>
+
+        <productDisplay
+          class="searchResultsDisplay"
+          v-if="visibleProductCardGridId === inquiry.id"
+          :products="searchedProducts"
+          @productClicked="searchedProductClicked"
+          heading="Offer your products"
+          :showCategoryName="false"
+          infoPosition="side"
+          imageSize="small"
+        />
+
+        <productDisplay
+          v-if="visibleProductCardGridId === inquiry.id"
+          :products="offeredProducts"
+          @productClicked="offeredProductClicked"
+          @removeOfferedProduct="removeOfferedProduct"
+          heading="Active Offers"
+          :showCategoryName="false"
+          infoPosition="side"
+          imageSize="small"
+          :userId="userId"
+          :showDeleteButton="true"
+        />
       </div>
     </div>
-    <p v-else>No inquiries found.</p>
 
-    <div v-if="enableSearch && isSearchSection" class="search-container">
-      <input
-        v-model="searchQuery"
-        type="text"
-        :placeholder="searchPlaceholder"
-        class="search-input"
-      />
-    </div>
+    <p v-else>No inquiries found.</p>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
+import productDisplay from "@/components/productDisplay.vue";
+import { getImageUrl, formatDate } from "@/utils/utilities";
 
 export default defineComponent({
   name: "InquiriesList",
+  components: {
+    productDisplay,
+  },
   props: {
     inquiries: {
       type: Array as PropType<Array<any>>,
       required: true,
     },
-    enableSearch: {
-      type: Boolean,
-      default: false,
+    searchedProducts: {
+      type: Array as PropType<Array<any>>,
+      default: () => [],
     },
-    isSearchSection: {
-      type: Boolean,
-      default: false,
+    offeredProducts: {
+      type: Array as PropType<Array<any>>,
+      default: () => [],
     },
     searchPlaceholder: {
       type: String,
-      default: "Search inquiries...",
+      default: "Search for your products here...",
+    },
+    userId: {
+      type: Number,
+      default: 0,
     },
   },
-  emits: ["toggleProductCard"],
+  emits: [
+    "makeAnOffer",
+    "searchQueryUpdated",
+    "searchedProductClicked",
+    "offeredProductClicked",
+    "removeOfferedProduct",
+  ],
   data() {
     return {
       searchQuery: "",
@@ -87,18 +137,50 @@ export default defineComponent({
     };
   },
   methods: {
-    getImageUrl(path: string): string {
-      return `http://localhost:1994${path}`;
+    getImageUrl,
+    formatDate,
+    makeAnOffer(inquiryId: number) {
+      this.visibleProductCardGridId =
+        this.visibleProductCardGridId === inquiryId ? null : inquiryId;
+      this.$emit("makeAnOffer", {
+        inquiryId: this.visibleProductCardGridId,
+      });
     },
-    formatDate(dateString: string): string {
-      const options: Intl.DateTimeFormatOptions = {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      };
-      return new Date(dateString).toLocaleDateString(undefined, options);
+    searchedProductClicked(product: any) {
+      this.$emit("searchedProductClicked", {
+        product,
+        inquiryId: this.visibleProductCardGridId,
+      });
+    },
+    offeredProductClicked(product: any) {
+      this.$emit("offeredProductClicked", {
+        product,
+        inquiryId: this.visibleProductCardGridId,
+      });
+    },
+    triggerInitialSearch() {
+      if (this.visibleProductCardGridId) {
+        this.$emit("searchQueryUpdated", {
+          query: this.searchQuery,
+          inquiries_id: this.visibleProductCardGridId,
+        });
+      }
+    },
+    removeOfferedProduct(productId: number) {
+      this.$emit("removeOfferedProduct", {
+        productId,
+        inquiryId: this.visibleProductCardGridId,
+      });
+    },
+  },
+  watch: {
+    searchQuery(newVal: string) {
+      if (this.visibleProductCardGridId) {
+        this.$emit("searchQueryUpdated", {
+          query: newVal,
+          inquiries_id: this.visibleProductCardGridId,
+        });
+      }
     },
   },
 });
@@ -113,6 +195,52 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.search-container {
+  margin: 10px 0;
+  position: relative;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 1rem;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  box-sizing: border-box;
+}
+
+.search-input:focus {
+  border-color: #2196f3;
+  box-shadow: 0 0 8px rgba(33, 150, 243, 0.4);
+}
+
+.search-input::placeholder {
+  color: #999;
+  font-style: italic;
+}
+
+/* Optional: Add a search icon inside the input */
+.search-container::before {
+  content: "\f002";
+  font-family: "Font Awesome 5 Free"; /* Ensure Font Awesome is loaded */
+  font-weight: 900;
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+}
+
+.search-input {
+  padding-left: 40px; /* Adjust padding to make space for the icon */
+}
+
+.searchResultsDisplay {
+  margin-bottom: 20px;
 }
 
 .inquiry-card {

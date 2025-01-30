@@ -1,8 +1,13 @@
 // src/utils/utilities.ts
 import router from "@/router";
 import { Product } from "@/types";
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:1994";
+
+export function getImageUrl(path: string): string {
+  return `${API_BASE_URL}${path}`;
+}
 
 export function getPrimaryImage(
   images: { image_path: string; is_primary: number }[]
@@ -21,13 +26,15 @@ export function debounce(func: (...args: any[]) => void, wait: number) {
   };
 }
 
-export function formatDate(date: string): string {
+export function formatDate(dateString: string): string {
   const options: Intl.DateTimeFormatOptions = {
-    day: "2-digit",
-    month: "short",
     year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   };
-  return new Date(date).toLocaleDateString("en-GB", options);
+  return new Date(dateString).toLocaleDateString(undefined, options);
 }
 
 export function navigateToProductPage(product: Product): void {

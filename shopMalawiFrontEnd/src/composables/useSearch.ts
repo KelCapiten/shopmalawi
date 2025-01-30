@@ -1,17 +1,37 @@
+//\src\composables\useSearch.ts
 import { ref } from "vue";
 import {
   searchProducts,
   searchProductsExcludingOffered,
-  type SearchProductsParams,
-  type ProductGroup,
 } from "@/services/searchService";
+import type { Product } from "@/types";
 
 export function useSearch() {
   const results = ref<ProductGroup[]>([]);
   const loading = ref(false);
   const error = ref<unknown>(null);
 
-  const performSearch = async (params: SearchProductsParams) => {
+  // Define the parameter types
+  interface SearchParams {
+    query?: string;
+    subcategory_id?: number;
+    maincategory_id?: number;
+    priceRange?: string;
+    sortBy?: string;
+    uploaded_by?: number;
+  }
+
+  interface SearchExcludingOfferedParams extends SearchParams {
+    inquiries_id: number;
+  }
+
+  interface ProductGroup {
+    id: number;
+    name: string;
+    products: Product[];
+  }
+
+  const searchForProducts = async (params: SearchParams) => {
     loading.value = true;
     error.value = null;
     try {
@@ -23,8 +43,8 @@ export function useSearch() {
     }
   };
 
-  const performSearchExcludingOffered = async (
-    params: SearchProductsParams & { inquiries_id: number }
+  const searchForProductsExcludingOffered = async (
+    params: SearchExcludingOfferedParams
   ) => {
     loading.value = true;
     error.value = null;
@@ -41,7 +61,7 @@ export function useSearch() {
     results,
     loading,
     error,
-    performSearch,
-    performSearchExcludingOffered,
+    searchForProducts,
+    searchForProductsExcludingOffered,
   };
 }

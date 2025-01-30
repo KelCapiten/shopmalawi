@@ -1,6 +1,6 @@
 <template>
   <div>
-    <label class="section-heading">{{ heading }}</label>
+    <label v-if="hasProducts" class="section-heading">{{ heading }}</label>
 
     <div v-if="isLoading" class="loading-indicator">Loading...</div>
     <div v-if="error" class="error-message">{{ formattedError }}</div>
@@ -35,7 +35,17 @@
               />
             </div>
             <div class="item-details">
-              <p class="price">MWK {{ product.price }}</p>
+              <div class="price-container">
+                <p class="price">MWK {{ product.price }}</p>
+                <ion-icon
+                  v-if="
+                    product.uploaded_by_userID === userId && showDeleteButton
+                  "
+                  name="trash"
+                  class="delete-icon"
+                  @click.stop="$emit('removeOfferedProduct', product.id)"
+                ></ion-icon>
+              </div>
               <label class="product-name">{{ product.name }}</label>
               <label class="stock-info">
                 {{ product.stock_quantity }} in stock
@@ -66,9 +76,13 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from "vue";
+import { defineComponent, PropType, computed } from "vue";
 import { Product } from "@/types";
 import { getPrimaryImage } from "@/utils/utilities";
+import { addIcons } from "ionicons";
+import { trash } from "ionicons/icons";
+
+addIcons({ trash });
 
 export default defineComponent({
   name: "ProductDisplay",
@@ -104,10 +118,33 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    showDeleteButton: {
+      type: Boolean,
+      default: false,
+    },
+    userId: {
+      type: Number,
+      default: 0,
+    },
   },
+  emits: ["productClicked", "decrement", "increment", "removeOfferedProduct"],
   data() {
     return {
       searchQuery: "",
+    };
+  },
+  setup(props) {
+    // Computed property to check if there are any products in all subcategories
+    const hasProducts = computed(() =>
+      props.products.some(
+        (subcategory: any) =>
+          subcategory.products && subcategory.products.length > 0
+      )
+    );
+
+    return {
+      trash,
+      hasProducts,
     };
   },
   computed: {
@@ -141,8 +178,9 @@ p {
 .product-list {
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  gap: 10px;
   width: 100%;
+  margin-top: 3px;
 }
 
 .single-column {
@@ -163,7 +201,7 @@ p {
 
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 10px;
 }
 
@@ -191,12 +229,6 @@ p {
   transition: width 0.3s, height 0.3s;
 }
 
-.small-image .image-container {
-  width: 50px;
-  height: 50px;
-  aspect-ratio: unset;
-}
-
 .item-image {
   width: 100%;
   height: 100%;
@@ -213,11 +245,23 @@ p {
   margin-right: 10px;
 }
 
+.price-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .price {
   font-size: 1rem;
   font-weight: bold;
   color: #000;
   margin: 0;
+}
+
+.delete-icon {
+  cursor: pointer;
+  color: #8b1111;
+  font-size: 1.3rem;
 }
 
 .stock-info {

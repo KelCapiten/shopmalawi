@@ -1,3 +1,4 @@
+//\src\composables\useInquiry.ts
 import { ref } from "vue";
 import inquiriesService from "@/services/inquiriesService";
 import { Product } from "@/types";
@@ -31,7 +32,10 @@ export function useInquiries() {
     }
   };
 
-  const associateProduct = async (inquiries_id: number, product_id: number) => {
+  const linkProductToInquiry = async (
+    inquiries_id: number,
+    product_id: number
+  ) => {
     loading.value = true;
     try {
       await inquiriesService.associateInquiryToProduct({
@@ -45,7 +49,7 @@ export function useInquiries() {
     }
   };
 
-  const disassociateProduct = async (
+  const unlinkProductFromInquiry = async (
     inquiries_id: number,
     product_id: number
   ) => {
@@ -59,7 +63,10 @@ export function useInquiries() {
     }
   };
 
-  const fetchProducts = async (inquiries_id: number, user_id: number) => {
+  const getProductsLinkedToInquiryAndUser = async (
+    inquiries_id: number,
+    user_id: number
+  ) => {
     loading.value = true;
     try {
       products.value = await inquiriesService.getProductsByInquiryAndUser(
@@ -80,8 +87,8 @@ export function useInquiries() {
     error,
     fetchInquiries,
     addInquiry,
-    associateProduct,
-    disassociateProduct,
-    fetchProducts,
+    linkProductToInquiry,
+    unlinkProductFromInquiry,
+    getProductsLinkedToInquiryAndUser,
   };
 }

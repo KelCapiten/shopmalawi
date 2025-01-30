@@ -67,7 +67,7 @@ import appHeader from "@/components/appHeader.vue";
 import appFooter from "@/components/appFooter.vue";
 import productDisplay from "@/components/productDisplay.vue";
 
-const { results, loading, error, performSearch } = useSearch();
+const { results, loading, error, searchForProducts } = useSearch();
 const route = useRoute();
 const sortBy = ref("");
 const minPrice = ref<number | null>(null);
@@ -89,7 +89,7 @@ const maxPriceDisplay = computed(() =>
 );
 
 async function fetchProducts() {
-  await performSearch({
+  await searchForProducts({
     query: route.query.query as string,
     priceRange: buildPriceRange(),
     sortBy: sortBy.value,

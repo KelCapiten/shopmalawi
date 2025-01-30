@@ -1,3 +1,4 @@
+//src\services\searchService.ts
 import apiClient from "./apiClient";
 import type { Product } from "@/types";
 

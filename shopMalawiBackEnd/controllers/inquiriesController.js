@@ -313,6 +313,7 @@ export const getProductsByInquiryAndUser = async (req, res) => {
       parseInt(uploaded_by, 10),
     ]);
 
+    // Aggregate images for each product
     const productsWithImages = products.reduce((acc, product) => {
       const existingProduct = acc.find((p) => p.id === product.id);
       if (existingProduct) {
@@ -330,10 +331,10 @@ export const getProductsByInquiryAndUser = async (req, res) => {
           description: product.description,
           price: product.price,
           mark_up_amount: product.mark_up_amount,
-          subcategory_id: product.subcategory_id,
-          subcategory_name: product.subcategory_name,
-          maincategory_id: product.maincategory_id,
-          maincategory_name: product.maincategory_name,
+          subcategory_id: product.subcategory_id, // Optional: Remove if not needed
+          subcategory_name: product.subcategory_name, // Optional: Remove if not needed
+          maincategory_id: product.maincategory_id, // Optional: Remove if not needed
+          maincategory_name: product.maincategory_name, // Optional: Remove if not needed
           stock_quantity: product.stock_quantity,
           uploaded_by_userID: product.uploaded_by_userID,
           uploaded_by: product.uploaded_by,
@@ -352,7 +353,13 @@ export const getProductsByInquiryAndUser = async (req, res) => {
       return acc;
     }, []);
 
-    res.status(200).json(productsWithImages);
+    // Group all products under a single subcategory named "Offers"
+    const groupedByOffers = {
+      subcategory_name: "Offers",
+      products: productsWithImages,
+    };
+
+    res.status(200).json([groupedByOffers]);
   } catch (error) {
     console.error("Error fetching products by inquiry and user:", error);
     res.status(500).json({ message: "Failed to fetch products." });

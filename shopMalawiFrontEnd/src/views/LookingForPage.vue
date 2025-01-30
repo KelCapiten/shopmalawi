@@ -6,7 +6,14 @@
       <InquiriesList
         v-if="!showForm"
         :inquiries="inquiries"
-        @toggleProductCard="handleToggleProductCard"
+        :searchedProducts="results"
+        :offeredProducts="products"
+        :userId="userId"
+        @makeAnOffer="fetchProducOffers"
+        @searchQueryUpdated="handleSearchUpdated"
+        @searchedProductClicked="handleSearchedProductClicked"
+        @offeredProductClicked="handleOfferedProductClicked"
+        @removeOfferedProduct="handleRemoveOfferedProduct"
       />
 
       <transition name="slideForm">
@@ -44,7 +51,10 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch, nextTick } from "vue";
+import { debounce } from "@/utils/utilities";
+import { useAuthStore } from "@/stores/authStore";
 import { useInquiries } from "@/composables/useInquiry";
+import { useSearch } from "@/composables/useSearch";
 import { close, search } from "ionicons/icons";
 import appHeader from "@/components/appHeader.vue";
 import appFooter from "@/components/appFooter.vue";
@@ -62,27 +72,39 @@ export default defineComponent({
     SavingOverlay,
   },
   setup() {
-    const { inquiries, fetchInquiries, addInquiry, loading, error } =
-      useInquiries();
-    const showForm = ref(false);
-    const showToast = ref(false);
-    const toastMessage = ref("");
-    const toastColor = ref("success");
-    const isSending = ref(false);
+    const authStore = useAuthStore();
+    const userId = ref<number>(authStore.user?.id || 0);
+
+    const {
+      inquiries,
+      fetchInquiries,
+      addInquiry,
+      loading,
+      error,
+      products,
+      linkProductToInquiry,
+      unlinkProductFromInquiry,
+      getProductsLinkedToInquiryAndUser,
+    } = useInquiries();
+
+    const { results, searchForProductsExcludingOffered } = useSearch();
+
+    const showForm = ref<boolean>(false);
+    const showToast = ref<boolean>(false);
+    const toastMessage = ref<string>("");
+    const toastColor = ref<string>("success");
+    const isSending = ref<boolean>(false);
     const formRef = ref<HTMLElement | null>(null);
 
-    const toggleForm = () => {
+    // Reactive references to store the last search query and inquiry ID
+    const lastSearchQuery = ref<string>("");
+    const lastSearchInquiryId = ref<number | null>(null);
+
+    const toggleForm = (): void => {
       showForm.value = !showForm.value;
     };
 
-    watch(showForm, async (value) => {
-      if (value) {
-        await nextTick();
-        formRef.value?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    });
-
-    const handleAddInquiry = async (payload: any) => {
+    const handleAddInquiry = async (payload: any): Promise<void> => {
       isSending.value = true;
       try {
         await addInquiry(payload);
@@ -90,7 +112,7 @@ export default defineComponent({
         toastColor.value = "success";
         showToast.value = true;
         showForm.value = false;
-      } catch {
+      } catch (err) {
         toastMessage.value = "Failed to add inquiry";
         toastColor.value = "danger";
         showToast.value = true;
@@ -99,11 +121,109 @@ export default defineComponent({
       }
     };
 
-    const handleToggleProductCard = (id: number) => {
-      console.log("Toggle product card for inquiry ID:", id);
+    const fetchProducOffers = async ({
+      inquiryId,
+    }: {
+      inquiryId: number | null;
+    }): Promise<void> => {
+      if (inquiryId !== null) {
+        await getProductsLinkedToInquiryAndUser(inquiryId, userId.value);
+        // Store the current inquiry ID for search refresh
+        lastSearchInquiryId.value = inquiryId;
+      }
     };
 
-    watch(error, (err) => {
+    const handleSearch = async (payload: {
+      inquiries_id: number;
+      query: string;
+    }): Promise<void> => {
+      const { inquiries_id, query } = payload;
+      lastSearchInquiryId.value = inquiries_id;
+      lastSearchQuery.value = query;
+      await searchForProductsExcludingOffered({
+        inquiries_id,
+        query,
+        uploaded_by: userId.value,
+      });
+    };
+
+    const debouncedSearch = debounce(handleSearch, 1000);
+
+    const handleSearchUpdated = async (payload: {
+      inquiries_id: number;
+      query: string;
+    }) => {
+      await debouncedSearch(payload);
+    };
+
+    const handleSearchedProductClicked = async ({
+      product,
+      inquiryId,
+    }: {
+      product: any;
+      inquiryId: number | null;
+    }) => {
+      if (inquiryId) {
+        await linkProductToInquiry(inquiryId, product.id);
+        toastMessage.value = "Offer added successfully";
+        toastColor.value = "success";
+        showToast.value = true;
+
+        // After linking, refresh the search results
+        if (lastSearchInquiryId.value === inquiryId) {
+          await handleSearch({
+            inquiries_id: lastSearchInquiryId.value,
+            query: lastSearchQuery.value,
+          });
+        }
+
+        // Refresh the offered products for the specific inquiry
+        await getProductsLinkedToInquiryAndUser(inquiryId, userId.value);
+      }
+    };
+
+    const handleRemoveOfferedProduct = async ({
+      inquiryId,
+      productId,
+    }: {
+      inquiryId: number;
+      productId: number;
+    }) => {
+      try {
+        await unlinkProductFromInquiry(inquiryId, productId);
+        toastMessage.value = "Offer removed successfully";
+        toastColor.value = "success";
+        showToast.value = true;
+
+        // Refresh the offered products for the specific inquiry
+        await getProductsLinkedToInquiryAndUser(inquiryId, userId.value);
+
+        // After linking, refresh the search results
+        if (lastSearchInquiryId.value === inquiryId) {
+          await handleSearch({
+            inquiries_id: lastSearchInquiryId.value,
+            query: lastSearchQuery.value,
+          });
+        }
+      } catch (err) {
+        toastMessage.value = "Failed to remove offer";
+        toastColor.value = "danger";
+        showToast.value = true;
+      }
+    };
+
+    const handleOfferedProductClicked = (product: any) => {
+      // Handle offered product click if needed
+    };
+
+    watch(showForm, async (value: boolean) => {
+      if (value) {
+        await nextTick();
+        formRef.value?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+
+    watch(error, (err: string | null) => {
       if (err) {
         toastMessage.value = err;
         toastColor.value = "danger";
@@ -116,7 +236,10 @@ export default defineComponent({
     });
 
     return {
+      userId,
       inquiries,
+      results,
+      products,
       showForm,
       toggleForm,
       showToast,
@@ -124,12 +247,17 @@ export default defineComponent({
       toastColor,
       isSending,
       handleAddInquiry,
-      handleToggleProductCard,
+      fetchProducOffers,
+      debouncedSearch,
+      handleSearchedProductClicked,
+      handleOfferedProductClicked,
+      handleRemoveOfferedProduct,
       formRef,
       close,
       search,
       loading,
       error,
+      handleSearchUpdated, // Expose the handler for search updates
     };
   },
 });

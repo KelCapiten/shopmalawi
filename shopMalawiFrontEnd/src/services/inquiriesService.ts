@@ -1,3 +1,4 @@
+//\src\services\inquiriesService.ts
 import apiClient from "./apiClient";
 import { Product } from "@/types";
 

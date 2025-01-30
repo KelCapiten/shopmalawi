@@ -1,10 +1,10 @@
 // src/composables/useProducts.ts
 import { ref } from "vue";
 import { getAllProducts } from "@/services/productService";
-import { Subcategory } from "@/types";
+import { Product } from "@/types";
 
 export function useProducts() {
-  const products = ref<Subcategory[]>([]);
+  const products = ref<Product[]>([]);
   const loading = ref<boolean>(false);
   const error = ref<Error | null>(null);
 
