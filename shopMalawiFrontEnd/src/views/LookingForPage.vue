@@ -12,7 +12,7 @@
         @makeAnOffer="fetchProducOffers"
         @searchQueryUpdated="handleSearchUpdated"
         @searchedProductClicked="handleSearchedProductClicked"
-        @offeredProductClicked="handleOfferedProductClicked"
+        @offeredProductClicked="navigateToProductPage"
         @removeOfferedProduct="handleRemoveOfferedProduct"
       />
 
@@ -51,7 +51,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch, nextTick } from "vue";
-import { debounce } from "@/utils/utilities";
+import { debounce, navigateToProductPage } from "@/utils/utilities";
 import { useAuthStore } from "@/stores/authStore";
 import { useInquiries } from "@/composables/useInquiry";
 import { useSearch } from "@/composables/useSearch";
@@ -128,6 +128,10 @@ export default defineComponent({
     }): Promise<void> => {
       if (inquiryId !== null) {
         await getProductsLinkedToInquiryAndUser(inquiryId, userId.value);
+        await searchForProductsExcludingOffered({
+          inquiries_id: inquiryId,
+          uploaded_by: userId.value,
+        });
         // Store the current inquiry ID for search refresh
         lastSearchInquiryId.value = inquiryId;
       }
@@ -212,10 +216,6 @@ export default defineComponent({
       }
     };
 
-    const handleOfferedProductClicked = (product: any) => {
-      // Handle offered product click if needed
-    };
-
     watch(showForm, async (value: boolean) => {
       if (value) {
         await nextTick();
@@ -241,23 +241,23 @@ export default defineComponent({
       results,
       products,
       showForm,
-      toggleForm,
-      showToast,
-      toastMessage,
-      toastColor,
-      isSending,
-      handleAddInquiry,
-      fetchProducOffers,
-      debouncedSearch,
-      handleSearchedProductClicked,
-      handleOfferedProductClicked,
-      handleRemoveOfferedProduct,
       formRef,
       close,
       search,
       loading,
       error,
-      handleSearchUpdated, // Expose the handler for search updates
+      showToast,
+      toastMessage,
+      toastColor,
+      isSending,
+      toggleForm,
+      handleAddInquiry,
+      fetchProducOffers,
+      debouncedSearch,
+      handleSearchedProductClicked,
+      handleRemoveOfferedProduct,
+      handleSearchUpdated,
+      navigateToProductPage,
     };
   },
 });

@@ -1,3 +1,4 @@
+//\src\components\InquiriesList.vue
 <template>
   <div class="inquiries-container">
     <h5>Do you have any of these for sale?</h5>
@@ -57,7 +58,6 @@
             type="text"
             :placeholder="searchPlaceholder"
             class="search-input"
-            @focus="triggerInitialSearch"
           />
         </div>
 
@@ -77,7 +77,7 @@
           :products="offeredProducts"
           @productClicked="offeredProductClicked"
           @removeOfferedProduct="removeOfferedProduct"
-          heading="Active Offers"
+          heading="(Click to view) Offers made to this request"
           :showCategoryName="false"
           infoPosition="side"
           imageSize="small"
@@ -153,18 +153,7 @@ export default defineComponent({
       });
     },
     offeredProductClicked(product: any) {
-      this.$emit("offeredProductClicked", {
-        product,
-        inquiryId: this.visibleProductCardGridId,
-      });
-    },
-    triggerInitialSearch() {
-      if (this.visibleProductCardGridId) {
-        this.$emit("searchQueryUpdated", {
-          query: this.searchQuery,
-          inquiries_id: this.visibleProductCardGridId,
-        });
-      }
+      this.$emit("offeredProductClicked", product);
     },
     removeOfferedProduct(productId: number) {
       this.$emit("removeOfferedProduct", {
