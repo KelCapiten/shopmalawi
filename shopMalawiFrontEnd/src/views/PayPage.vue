@@ -1,3 +1,4 @@
+<!-- src/views/PayPage.vue -->
 <template>
   <IonPage>
     <IonHeader>
@@ -9,7 +10,13 @@
     </IonHeader>
 
     <IonContent>
-      <productDisplay />
+      <productDisplay
+        :products="productDisplayData"
+        infoPosition="side"
+        :enableCounter="true"
+        @increment="handleIncrement"
+        @decrement="handleDecrement"
+      />
 
       <PaymentMethod />
 
@@ -65,29 +72,40 @@
   </IonPage>
 </template>
 
-<script>
-import { ref, onMounted, computed } from "vue";
-import { useRouter } from "vue-router";
+<script lang="ts">
+import { defineComponent, ref, onMounted, computed } from "vue";
+import router from "@/router";
+import { loadProductFromSessionStorage } from "@/utils/utilities";
 import PaymentMethod from "@/components/PaymentMethod.vue";
 import productDisplay from "@/components/productDisplay.vue";
 import BuySegment from "@/components/BuySegment.vue";
 
-export default {
-  name: "HomePage",
-  components: { PaymentMethod, productDisplay, BuySegment },
+export default defineComponent({
+  name: "PayPage",
+  components: {
+    PaymentMethod,
+    productDisplay,
+    BuySegment,
+  },
   setup() {
-    const router = useRouter();
-    const product = ref(null);
-    const loadProduct = () => {
-      const stored = sessionStorage.getItem("selectedProduct");
-      if (stored) {
-        product.value = JSON.parse(stored);
-        product.value.orderCount = Math.max(product.value.orderCount || 1, 1);
+    const product = ref<any>(null);
+
+    onMounted(() => {
+      const loadedProduct = loadProductFromSessionStorage<any>();
+      if (loadedProduct) {
+        product.value = loadedProduct;
       } else {
         router.replace({ name: "shop" });
       }
-    };
-    const handleProductNavigation = () => {};
+    });
+
+    // Wrap the product in a subcategory array for productDisplay
+    const productDisplayData = computed(() => {
+      return product.value
+        ? [{ subcategory_name: "Selected Product", products: [product.value] }]
+        : [];
+    });
+
     const costPerItem = computed(() =>
       product.value ? parseFloat(product.value.price) : 0
     );
@@ -95,20 +113,41 @@ export default {
       () => costPerItem.value * (product.value?.orderCount || 1)
     );
     const total = computed(() => subtotal.value);
+
     const onCancelOrder = () => router.back();
     const onPlaceOrder = () => router.push({ name: "pay" });
-    onMounted(loadProduct);
+
+    function handleIncrement(item: any) {
+      if (product.value && product.value.id === item.id) {
+        const currentCount = product.value.orderCount || 1;
+        if (currentCount < product.value.stock_quantity) {
+          product.value.orderCount = currentCount + 1;
+        }
+      }
+    }
+
+    function handleDecrement(item: any) {
+      if (product.value && product.value.id === item.id) {
+        product.value.orderCount = Math.max(
+          (product.value.orderCount || 1) - 1,
+          1
+        );
+      }
+    }
+
     return {
       product,
+      productDisplayData,
       costPerItem,
       subtotal,
       total,
-      handleProductNavigation,
       onCancelOrder,
       onPlaceOrder,
+      handleIncrement,
+      handleDecrement,
     };
   },
-};
+});
 </script>
 
 <style scoped>

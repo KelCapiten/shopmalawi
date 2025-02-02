@@ -1,3 +1,4 @@
+//\src\components\CategoriesManager.vue
 <template>
   <div class="categories-container">
     <!-- Toggle Header for entire settings -->
@@ -234,7 +235,6 @@ export default {
   font-family: Arial, sans-serif;
 }
 
-/* Header to toggle entire settings */
 .settings-header {
   display: flex;
   align-items: center;
@@ -252,7 +252,6 @@ export default {
   font-size: 1rem;
 }
 
-/* Content container */
 .settings-content {
   margin-top: 0.5rem;
   background: #fff;
@@ -261,7 +260,6 @@ export default {
   padding: 1rem;
 }
 
-/* Category List */
 .category-list {
   margin-bottom: 1rem;
 }
@@ -272,14 +270,12 @@ export default {
   padding-bottom: 0.25rem;
 }
 
-/* Outer category list */
 .cat-ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-/* Category row */
 .category-row {
   display: flex;
   justify-content: space-between;
@@ -306,7 +302,6 @@ export default {
   color: #666;
 }
 
-/* Subcategory list */
 .sub-ul {
   list-style: none;
   padding-left: 1.25rem;
@@ -327,7 +322,6 @@ export default {
   flex-direction: column;
 }
 
-/* Buttons shown on click */
 .btn-group {
   display: flex;
   gap: 0.5rem;
@@ -355,7 +349,6 @@ export default {
   color: #fff;
 }
 
-/* Original Form for Add/Edit */
 .category-form {
   margin-top: 1rem;
 }
@@ -388,7 +381,6 @@ export default {
   font-size: 0.9rem;
 }
 
-/* Expand transition */
 .expand-enter-active,
 .expand-leave-active {
   transition: all 0.3s ease;

@@ -29,3 +29,20 @@ export interface Category {
   parent_id?: number | null;
   subcategories?: Category[];
 }
+
+export interface BankDetails {
+  id: number;
+  user_id: number;
+  payment_method_name: string;
+  account_number: string;
+  account_holder_name: string;
+  branch_code?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentMethod {
+  id: number;
+  name: string;
+  description: string;
+}

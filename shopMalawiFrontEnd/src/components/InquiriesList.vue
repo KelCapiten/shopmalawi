@@ -62,11 +62,14 @@
         </div>
 
         <productDisplay
-          class="searchResultsDisplay"
           v-if="visibleProductCardGridId === inquiry.id"
-          :products="searchedProducts"
-          @productClicked="searchedProductClicked"
+          class="searchResultsDisplay"
           heading="Offer your products"
+          :products="searchedProducts"
+          :emptyMessageEnabled="true"
+          emptyMessageButtonText="ADD NEW PRODUCT"
+          emptyMessageSubText="You dont have this product in your account, would you like to add it?"
+          @productClicked="searchedProductClicked"
           :showCategoryName="false"
           infoPosition="side"
           imageSize="small"
@@ -75,6 +78,9 @@
         <productDisplay
           v-if="visibleProductCardGridId === inquiry.id"
           :products="offeredProducts"
+          :emptyMessageEnabled="true"
+          emptyMessageText="No offers made to this request yet."
+          emptyMessageSubText="BE THE FIRST TO MAKE AN OFFER TO THIS BUYER!"
           @productClicked="offeredProductClicked"
           @removeOfferedProduct="removeOfferedProduct"
           heading="(Click to view) Offers made to this request"

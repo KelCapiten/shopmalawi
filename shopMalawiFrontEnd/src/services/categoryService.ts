@@ -1,5 +1,4 @@
 // src/services/categoryService.ts
-
 import apiClient from "./apiClient";
 import type { Category } from "@/types";
 

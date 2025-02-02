@@ -47,3 +47,17 @@ export function getOneWeekAgoDate() {
   date.setDate(date.getDate() - 7);
   return date.toISOString().split("T")[0];
 }
+
+export function loadProductFromSessionStorage<T>(): T | null {
+  const stored = sessionStorage.getItem("selectedProduct");
+  if (stored) {
+    return JSON.parse(stored) as T;
+  } else {
+    router.replace({ name: "shop" });
+    return null;
+  }
+}
+
+export function formatImagePath(path: string): string {
+  return `${API_BASE_URL}${path}`;
+}

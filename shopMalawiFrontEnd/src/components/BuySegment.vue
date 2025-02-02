@@ -71,10 +71,6 @@ const props = defineProps({
   },
   disclaimerText: {
     type: String,
-    /**
-     * HTML string that includes a link to '/terms'.
-     * If you override this prop, you can include your own link or plain text.
-     */
     default:
       "Upon clicking 'Buy Now', I confirm I have read and acknowledged all <a href='/terms' class='terms-link'>terms and policies</a>.",
   },

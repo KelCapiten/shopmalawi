@@ -1,3 +1,4 @@
+//src/components/productDisplay.vue
 <template>
   <div>
     <label v-if="hasProducts" class="section-heading">{{ heading }}</label>
@@ -6,19 +7,45 @@
     <div v-if="error" class="error-message">{{ formattedError }}</div>
 
     <div
+      v-if="emptyMessageEnabled && !hasProducts && !isLoading && !error"
+      class="products-grid"
+    >
+      <div class="item" :class="itemClasses">
+        <div class="item-details empty-message-container">
+          <div>
+            <label class="product-name">{{ emptyMessageText }}</label>
+            <p class="description">{{ emptyMessageSubText }}</p>
+          </div>
+          <button
+            v-if="emptyMessageButtonText"
+            class="empty-message-button"
+            @click="$emit('emptyMessageButtonClicked')"
+          >
+            {{ emptyMessageButtonText }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="hasProducts"
       :class="[
         'product-list',
-        { 'single-column': infoPosition === 'side' && !enableCounter },
+        {
+          'single-column': infoPosition === 'side' && !enableCounter,
+          'default-mode': infoPosition !== 'side',
+          'fixed-height': infoPosition === 'side' && imageSize === 'small',
+        },
       ]"
     >
       <div
         v-for="subcategory in products"
-        :key="subcategory.subcategory"
+        :key="subcategory.subcategory || subcategory.subcategory_name"
         class="subcategory"
       >
-        <label v-if="showCategoryName" class="section-heading">{{
-          subcategory.name
-        }}</label>
+        <label v-if="showCategoryName" class="section-heading">
+          {{ subcategory.name || subcategory.subcategory_name }}
+        </label>
         <div class="products-grid">
           <div
             v-for="product in subcategory.products"
@@ -126,22 +153,42 @@ export default defineComponent({
       type: Number,
       default: 0,
     },
+    emptyMessageEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    emptyMessageText: {
+      type: String,
+      default: "No products found unfortunately",
+    },
+    emptyMessageSubText: {
+      type: String,
+      default: "There are currently no products available.",
+    },
+    emptyMessageButtonText: {
+      type: String,
+      default: "",
+    },
   },
-  emits: ["productClicked", "decrement", "increment", "removeOfferedProduct"],
+  emits: [
+    "productClicked",
+    "decrement",
+    "increment",
+    "removeOfferedProduct",
+    "emptyMessageButtonClicked",
+  ],
   data() {
     return {
       searchQuery: "",
     };
   },
   setup(props) {
-    // Computed property to check if there are any products in all subcategories
     const hasProducts = computed(() =>
       props.products.some(
         (subcategory: any) =>
           subcategory.products && subcategory.products.length > 0
       )
     );
-
     return {
       trash,
       hasProducts,
@@ -156,6 +203,7 @@ export default defineComponent({
             this.infoPosition === "side" && this.imageSize === "small",
         },
         { "full-row": this.infoPosition === "side" && !this.enableCounter },
+        { "item-default-mode": this.infoPosition !== "side" },
       ];
     },
     formattedError(): string {
@@ -201,8 +249,14 @@ p {
 
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 10px;
+  gap: 5px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  justify-content: start;
+}
+
+.default-mode .products-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, auto));
+  justify-content: start;
 }
 
 .item {
@@ -215,6 +269,9 @@ p {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.3s;
+}
+
+.item-default-mode {
 }
 
 .item:hover {
@@ -285,6 +342,8 @@ p {
   font-size: 0.8rem;
   color: #181818;
   margin-top: 4px;
+  height: 32px;
+  overflow: hidden;
 }
 
 .side-counter {
@@ -387,5 +446,37 @@ p {
 
 .search-input:focus {
   border-color: #2196f3;
+}
+
+.empty-message-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 5px;
+}
+
+.empty-message-button {
+  background-color: #2196f3;
+  color: #fff;
+  border: none;
+  padding: 10px;
+  margin: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.empty-message-button:hover {
+  background-color: #1976d2;
+}
+
+.fixed-height {
+  max-height: 150px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.fixed-height::-webkit-scrollbar {
+  display: none;
 }
 </style>

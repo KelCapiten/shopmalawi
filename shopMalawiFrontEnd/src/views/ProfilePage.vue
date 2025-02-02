@@ -25,7 +25,6 @@
       @didDismiss="closeSettings"
     >
       <IonList>
-        <!-- Only Sign Out option -->
         <IonItem button color="danger" @click="signOut">Sign Out</IonItem>
       </IonList>
     </IonPopover>
@@ -36,7 +35,7 @@
         <IonList lines="none">
           <IonItem>
             <IonLabel>Username</IonLabel>
-            <IonText>{{ user.email }}</IonText>
+            <IonText>{{ user.username }}</IonText>
           </IonItem>
           <IonItem>
             <IonLabel>Phone Number</IonLabel>
@@ -79,17 +78,32 @@
           </IonCol>
         </IonRow>
         <IonRow>
-          <IonCol size="6">
-            <div class="tile" @click="toggleCategoryManager">
+          <IonCol size="6" @click="toggleCategoryManager">
+            <div class="tile">
               <IonIcon :icon="settingsIcon" class="tile-icon" />
               <p class="tile-label">Settings</p>
+            </div>
+          </IonCol>
+          <IonCol size="6" @click="toggleAccountDetailsManager">
+            <div class="tile">
+              <IonIcon :icon="accountIcon" class="tile-icon" />
+              <p class="tile-label">Payment Methods</p>
             </div>
           </IonCol>
         </IonRow>
       </IonGrid>
 
-      <!-- CategoriesManager Component -->
+      <!-- Settings Sections -->
       <CategoriesManager v-if="showCategoryManager" />
+
+      <div v-if="showAccountDetailsManager" class="settings-header">
+        <h3>Manage Your Payment Methods</h3>
+      </div>
+      <AccountDetailsManager
+        v-if="showAccountDetailsManager"
+        :userId="userId"
+        :enableForm="true"
+      />
     </IonContent>
 
     <appFooter />
@@ -100,20 +114,23 @@
 import { computed, ref } from "vue";
 import { useAuthStore } from "@/stores/authStore";
 import appFooter from "@/components/appFooter.vue";
-import CategoriesManager from "@/components/CategoriesManager.vue"; // Import the CategoriesManager component
+import CategoriesManager from "@/components/CategoriesManager.vue";
+import AccountDetailsManager from "@/components/AccountDetailsManager.vue";
 import {
   settingsOutline,
   bagHandleOutline,
   heartOutline,
   ticketOutline,
   timeOutline,
+  personCircleOutline,
 } from "ionicons/icons";
 
 export default {
   name: "ProfilePage",
   components: {
     appFooter,
-    CategoriesManager, // Register the CategoriesManager component
+    CategoriesManager,
+    AccountDetailsManager,
   },
   setup() {
     const authStore = useAuthStore();
@@ -123,7 +140,7 @@ export default {
         (authStore.user?.firstName || "") +
         " " +
         (authStore.user?.lastName || ""),
-      email: authStore.user?.username || "N/A",
+      username: authStore.user?.username || "N/A",
       phone: authStore.user?.phone || "N/A",
     }));
 
@@ -133,17 +150,21 @@ export default {
         .map((n) => n[0])
         .join("")
         .toUpperCase();
-      return initials.charAt(0); // Take only the first initial
+      return initials.charAt(0);
     });
+
+    const userId = computed(() => authStore.user?.id);
 
     const settingsIcon = settingsOutline;
     const ordersIcon = bagHandleOutline;
     const wishlistIcon = heartOutline;
     const couponsIcon = ticketOutline;
     const historyIcon = timeOutline;
+    const accountIcon = personCircleOutline;
 
     const showSettings = ref(false);
-    const showCategoryManager = ref(false); // Toggles the CategoriesManager visibility
+    const showCategoryManager = ref(false);
+    const showAccountDetailsManager = ref(false);
     const popoverEvent = ref(null);
 
     const openSettings = (event) => {
@@ -156,7 +177,21 @@ export default {
     };
 
     const toggleCategoryManager = () => {
-      showCategoryManager.value = !showCategoryManager.value;
+      if (!showCategoryManager.value) {
+        showCategoryManager.value = true;
+        showAccountDetailsManager.value = false;
+      } else {
+        showCategoryManager.value = false;
+      }
+    };
+
+    const toggleAccountDetailsManager = () => {
+      if (!showAccountDetailsManager.value) {
+        showAccountDetailsManager.value = true;
+        showCategoryManager.value = false;
+      } else {
+        showAccountDetailsManager.value = false;
+      }
     };
 
     const signOut = () => {
@@ -171,18 +206,22 @@ export default {
     return {
       user,
       userInitial,
+      userId,
       showSettings,
       showCategoryManager,
+      showAccountDetailsManager,
       popoverEvent,
       openSettings,
       closeSettings,
       toggleCategoryManager,
+      toggleAccountDetailsManager,
       signOut,
       settingsIcon,
       ordersIcon,
       wishlistIcon,
       couponsIcon,
       historyIcon,
+      accountIcon,
       goToOrders,
       goToWishlist,
       goToCoupons,
@@ -241,5 +280,21 @@ export default {
 }
 .tile-label {
   font-size: 0.9rem;
+}
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f2f2f2;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  user-select: none;
+}
+
+.settings-header h3 {
+  margin: 0;
+  font-size: 1rem;
 }
 </style>

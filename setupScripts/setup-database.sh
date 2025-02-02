@@ -57,14 +57,15 @@ CREATE TABLE IF NOT EXISTS locations (
 -- User Bank Details Table
 CREATE TABLE IF NOT EXISTS user_bank_details (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL UNIQUE, -- One-to-one relationship
-    bank_name VARCHAR(100) NOT NULL,
+    user_id INT NOT NULL,
+    payment_method_id INT NOT NULL,
     account_number VARCHAR(50) NOT NULL UNIQUE,
     account_holder_name VARCHAR(100) NOT NULL,
     branch_code VARCHAR(20),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id) ON DELETE CASCADE  -- New foreign key constraint
 ) ENGINE=InnoDB;
 
 -- Payment Methods Table

@@ -1,3 +1,4 @@
+// src/views/productPage.vue
 <template>
   <ion-page>
     <ShareToolbar class="fixed-toolbar" />
@@ -59,13 +60,16 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch } from "vue";
-import { useRouter } from "vue-router";
 import { Swiper, SwiperSlide } from "swiper/vue";
 import "swiper/swiper-bundle.css";
 import PriceDisplay from "@/components/PriceDisplay.vue";
 import BuySegment from "@/components/BuySegment.vue";
 import ShareToolbar from "@/components/ShareToolbar.vue";
 import ProductImagesRow from "@/components/ProductImagesRow.vue";
+import {
+  loadProductFromSessionStorage,
+  formatImagePath,
+} from "@/utils/utilities";
 
 export default defineComponent({
   name: "ProductPage",
@@ -78,7 +82,6 @@ export default defineComponent({
     ProductImagesRow,
   },
   setup() {
-    const router = useRouter();
     const product = ref<any>(null);
     const zoomFactor = ref(1);
     const selectedImageIndex = ref(0);
@@ -100,25 +103,17 @@ export default defineComponent({
       }
     });
 
-    function loadProduct() {
-      const stored = sessionStorage.getItem("selectedProduct");
-      if (stored) {
-        product.value = JSON.parse(stored);
-      } else {
-        router.replace({ name: "shop" });
+    onMounted(() => {
+      const loadedProduct = loadProductFromSessionStorage<any>();
+      if (loadedProduct) {
+        product.value = loadedProduct;
       }
-    }
-
-    function formatImagePath(path: string) {
-      return `http://localhost:1994${path}`;
-    }
+    });
 
     function handleScroll(event: CustomEvent) {
       const factor = 0.0005;
       zoomFactor.value = 1 + event.detail.scrollTop * factor;
     }
-
-    onMounted(loadProduct);
 
     return {
       product,

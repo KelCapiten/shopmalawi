@@ -1,3 +1,4 @@
+//\controllers\categoriesController.js
 import db from "../config/db.js";
 
 // endpoint to add a category
