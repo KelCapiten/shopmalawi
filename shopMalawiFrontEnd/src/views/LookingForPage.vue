@@ -14,11 +14,16 @@
         @searchedProductClicked="handleSearchedProductClicked"
         @offeredProductClicked="navigateToProductPage"
         @removeOfferedProduct="handleRemoveOfferedProduct"
+        @editInquiry="handleEditInquiry"
+        @deleteInquiry="handleDeleteInquiry"
       />
 
       <transition name="slideForm">
         <div v-if="showForm" ref="formRef" class="form-container">
-          <InputForm @submit="handleAddInquiry" />
+          <InputForm
+            :inquiryToEdit="inquiryToEdit"
+            @submit="handleFormSubmit"
+          />
         </div>
       </transition>
 
@@ -78,7 +83,7 @@ export default defineComponent({
     const {
       inquiries,
       fetchInquiries,
-      addInquiry,
+      deleteInquiry,
       loading,
       error,
       products,
@@ -95,30 +100,22 @@ export default defineComponent({
     const toastColor = ref<string>("success");
     const isSending = ref<boolean>(false);
     const formRef = ref<HTMLElement | null>(null);
-
-    // Reactive references to store the last search query and inquiry ID
-    const lastSearchQuery = ref<string>("");
-    const lastSearchInquiryId = ref<number | null>(null);
+    const inquiryToEdit = ref<any>(null);
 
     const toggleForm = (): void => {
+      if (showForm.value) {
+        inquiryToEdit.value = null;
+      }
       showForm.value = !showForm.value;
     };
 
-    const handleAddInquiry = async (payload: any): Promise<void> => {
-      isSending.value = true;
-      try {
-        await addInquiry(payload);
-        toastMessage.value = "Inquiry added successfully";
-        toastColor.value = "success";
-        showToast.value = true;
-        showForm.value = false;
-      } catch (err) {
-        toastMessage.value = "Failed to add inquiry";
-        toastColor.value = "danger";
-        showToast.value = true;
-      } finally {
-        isSending.value = false;
-      }
+    const handleFormSubmit = async (): Promise<void> => {
+      inquiryToEdit.value = null;
+      showForm.value = false;
+      toastMessage.value = "Inquiry saved successfully";
+      toastColor.value = "success";
+      showToast.value = true;
+      await fetchInquiries();
     };
 
     const fetchProducOffers = async ({
@@ -132,7 +129,6 @@ export default defineComponent({
           inquiries_id: inquiryId,
           uploaded_by: userId.value,
         });
-        // Store the current inquiry ID for search refresh
         lastSearchInquiryId.value = inquiryId;
       }
     };
@@ -172,37 +168,27 @@ export default defineComponent({
         toastMessage.value = "Offer added successfully";
         toastColor.value = "success";
         showToast.value = true;
-
-        // After linking, refresh the search results
         if (lastSearchInquiryId.value === inquiryId) {
           await handleSearch({
             inquiries_id: lastSearchInquiryId.value,
             query: lastSearchQuery.value,
           });
         }
-
-        // Refresh the offered products for the specific inquiry
         await getProductsLinkedToInquiryAndUser(inquiryId, userId.value);
       }
     };
 
-    const handleRemoveOfferedProduct = async ({
-      inquiryId,
-      productId,
-    }: {
+    const handleRemoveOfferedProduct = async (payload: {
       inquiryId: number;
       productId: number;
     }) => {
+      const { inquiryId, productId } = payload;
       try {
         await unlinkProductFromInquiry(inquiryId, productId);
         toastMessage.value = "Offer removed successfully";
         toastColor.value = "success";
         showToast.value = true;
-
-        // Refresh the offered products for the specific inquiry
         await getProductsLinkedToInquiryAndUser(inquiryId, userId.value);
-
-        // After linking, refresh the search results
         if (lastSearchInquiryId.value === inquiryId) {
           await handleSearch({
             inquiries_id: lastSearchInquiryId.value,
@@ -215,6 +201,33 @@ export default defineComponent({
         showToast.value = true;
       }
     };
+
+    const handleEditInquiry = (inquiryId: number) => {
+      const inquiryItem = inquiries.value.find(
+        (inquiry: any) => inquiry.id === inquiryId
+      );
+      if (inquiryItem) {
+        inquiryToEdit.value = { ...inquiryItem };
+        showForm.value = true;
+      }
+    };
+
+    const handleDeleteInquiry = async (inquiryId: number) => {
+      try {
+        await deleteInquiry(inquiryId);
+        toastMessage.value = "Inquiry deleted successfully";
+        toastColor.value = "success";
+        showToast.value = true;
+        await fetchInquiries();
+      } catch (err) {
+        toastMessage.value = "Failed to delete inquiry";
+        toastColor.value = "danger";
+        showToast.value = true;
+      }
+    };
+
+    const lastSearchQuery = ref<string>("");
+    const lastSearchInquiryId = ref<number | null>(null);
 
     watch(showForm, async (value: boolean) => {
       if (value) {
@@ -251,13 +264,16 @@ export default defineComponent({
       toastColor,
       isSending,
       toggleForm,
-      handleAddInquiry,
       fetchProducOffers,
       debouncedSearch,
       handleSearchedProductClicked,
       handleRemoveOfferedProduct,
       handleSearchUpdated,
       navigateToProductPage,
+      handleEditInquiry,
+      handleDeleteInquiry,
+      inquiryToEdit,
+      handleFormSubmit,
     };
   },
 });

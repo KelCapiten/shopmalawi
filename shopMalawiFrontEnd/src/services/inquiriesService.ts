@@ -1,67 +1,52 @@
 //\src\services\inquiriesService.ts
-import apiClient from "./apiClient";
-import { Product } from "@/types";
-
-interface AssociateInquiryPayload {
-  inquiries_id: number;
-  product_id: number;
-}
-
-interface AddInquiryPayload {
-  name: string;
-  description: string;
-  category_id: number;
-  stock_quantity: number;
-  location_id: number;
-  images: File[];
-}
+import apiClient from "@/services/apiClient";
 
 const inquiriesService = {
-  addInquiry(payload: AddInquiryPayload): Promise<{ inquiryId: number }> {
-    const formData = new FormData();
-    formData.append("name", payload.name);
-    formData.append("description", payload.description);
-    formData.append("category_id", payload.category_id.toString());
-    formData.append("stock_quantity", payload.stock_quantity.toString());
-    formData.append("location_id", payload.location_id.toString());
-    payload.images.forEach((image) => formData.append("files", image));
-    return apiClient
-      .post("/api/inquiries/addInquiry", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      })
-      .then((response) => response.data);
+  async getInquiries() {
+    const res = await apiClient.get("/api/inquiries/getInquiries");
+    return res.data;
   },
-
-  getInquiries(): Promise<any[]> {
-    return apiClient
-      .get("/api/inquiries/getInquiries")
-      .then((response) => response.data);
+  async addInquiry(payload: FormData) {
+    const res = await apiClient.post("/api/inquiries/addInquiry", payload, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data;
   },
-
-  associateInquiryToProduct(payload: AssociateInquiryPayload): Promise<void> {
-    return apiClient
-      .post("/api/inquiries/associateInquiryToProduct", payload)
-      .then(() => {});
+  async updateInquiry(id: number, payload: any) {
+    const res = await apiClient.put(
+      `/api/inquiries/updateInquiry/${id}`,
+      payload
+    );
+    return res.data;
   },
-
-  disassociateInquiry(inquiries_id: number, product_id: number): Promise<void> {
-    return apiClient
-      .post("/api/inquiries/disassociateInquiryFromProduct", {
-        inquiries_id,
-        product_id,
-      })
-      .then(() => {});
+  async deleteInquiry(id: number) {
+    const res = await apiClient.delete(`/api/inquiries/deleteInquiry/${id}`);
+    return res.data;
   },
-
-  getProductsByInquiryAndUser(
-    inquiries_id: number,
-    user_id: number
-  ): Promise<Product[]> {
-    return apiClient
-      .get("/api/inquiries/getProductsByInquiryAndUser", {
-        params: { inquiries_id, uploaded_by: user_id },
-      })
-      .then((response) => response.data);
+  async associateInquiryToProduct(data: {
+    inquiries_id: number;
+    product_id: number;
+  }) {
+    const res = await apiClient.post(
+      "/api/inquiries/associateInquiryToProduct",
+      data
+    );
+    return res.data;
+  },
+  async disassociateInquiry(inquiries_id: number, product_id: number) {
+    const res = await apiClient.delete(
+      `/api/inquiries/disassociateInquiry/${inquiries_id}/${product_id}`
+    );
+    return res.data;
+  },
+  async getProductsByInquiryAndUser(inquiries_id: number, uploaded_by: number) {
+    const res = await apiClient.get(
+      "/api/inquiries/getProductsByInquiryAndUser",
+      {
+        params: { inquiries_id, uploaded_by },
+      }
+    );
+    return res.data;
   },
 };
 

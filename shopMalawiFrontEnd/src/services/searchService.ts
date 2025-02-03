@@ -17,18 +17,22 @@ export interface ProductGroup {
   products: Product[];
 }
 
-export function searchProducts(params: SearchProductsParams) {
-  return apiClient
-    .get<ProductGroup[]>("/api/search/searchProducts", { params })
-    .then((res) => res.data);
+export async function searchProducts(params: SearchProductsParams) {
+  const res = await apiClient.get<ProductGroup[]>(
+    "/api/search/searchProducts",
+    { params }
+  );
+  return res.data;
 }
 
-export function searchProductsExcludingOffered(
+export async function searchProductsExcludingOffered(
   params: SearchProductsParams & { inquiries_id: number }
 ) {
-  return apiClient
-    .get<ProductGroup[]>("/api/search/searchProductsExcludingOffered", {
+  const res = await apiClient.get<ProductGroup[]>(
+    "/api/search/searchProductsExcludingOffered",
+    {
       params,
-    })
-    .then((res) => res.data);
+    }
+  );
+  return res.data;
 }

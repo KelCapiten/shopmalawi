@@ -1,5 +1,4 @@
 // src/composables/useCategories.ts
-
 import { ref, computed } from "vue";
 import {
   getCategories,

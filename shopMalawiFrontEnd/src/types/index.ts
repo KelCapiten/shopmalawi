@@ -1,5 +1,3 @@
-// src/types/index.ts
-
 export interface Image {
   image_path: string;
   alt_text: string;
@@ -45,4 +43,9 @@ export interface PaymentMethod {
   id: number;
   name: string;
   description: string;
+}
+
+export interface Location {
+  id: number;
+  name: string;
 }

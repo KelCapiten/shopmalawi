@@ -1,7 +1,7 @@
 //\src\composables\useInquiry.ts
 import { ref } from "vue";
 import inquiriesService from "@/services/inquiriesService";
-import { Product } from "@/types";
+import type { Product } from "@/types";
 
 export function useInquiries() {
   const inquiries = ref<any[]>([]);
@@ -27,6 +27,30 @@ export function useInquiries() {
       await fetchInquiries();
     } catch (err) {
       error.value = "Failed to add inquiry";
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const updateInquiry = async (id: number, payload: any) => {
+    loading.value = true;
+    try {
+      await inquiriesService.updateInquiry(id, payload);
+      await fetchInquiries();
+    } catch (err) {
+      error.value = "Failed to update inquiry";
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const deleteInquiry = async (id: number) => {
+    loading.value = true;
+    try {
+      await inquiriesService.deleteInquiry(id);
+      await fetchInquiries();
+    } catch (err) {
+      error.value = "Failed to delete inquiry";
     } finally {
       loading.value = false;
     }
@@ -65,13 +89,13 @@ export function useInquiries() {
 
   const getProductsLinkedToInquiryAndUser = async (
     inquiries_id: number,
-    user_id: number
+    uploaded_by: number
   ) => {
     loading.value = true;
     try {
       products.value = await inquiriesService.getProductsByInquiryAndUser(
         inquiries_id,
-        user_id
+        uploaded_by
       );
     } catch (err) {
       error.value = "Failed to fetch products";
@@ -87,6 +111,8 @@ export function useInquiries() {
     error,
     fetchInquiries,
     addInquiry,
+    updateInquiry,
+    deleteInquiry,
     linkProductToInquiry,
     unlinkProductFromInquiry,
     getProductsLinkedToInquiryAndUser,

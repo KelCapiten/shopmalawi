@@ -5,7 +5,26 @@
 
     <div v-if="inquiries.length > 0" class="inquiries-list">
       <div class="inquiry-card" v-for="inquiry in inquiries" :key="inquiry.id">
-        <h3>{{ inquiry.name }} ({{ inquiry.stock_quantity }} needed)</h3>
+        <div class="inquiry-header">
+          <!-- Edit icon on the far left (visible only if the logged in user uploaded the inquiry) -->
+          <ion-icon
+            v-if="inquiry.uploaded_by_user_id === userId"
+            :icon="createOutline"
+            class="edit-icon"
+            @click.stop="$emit('editInquiry', inquiry.id)"
+          ></ion-icon>
+
+          <!-- Inquiry title left-aligned -->
+          <h3>{{ inquiry.name }} ({{ inquiry.stock_quantity }} needed)</h3>
+
+          <!-- Trash icon on the far right (visible only if the logged in user uploaded the inquiry) -->
+          <ion-icon
+            v-if="inquiry.uploaded_by_user_id === userId"
+            :icon="trash"
+            class="delete-icon"
+            @click.stop="$emit('deleteInquiry', inquiry.id)"
+          ></ion-icon>
+        </div>
 
         <div class="inquiry-images">
           <div class="image-grid">
@@ -68,7 +87,7 @@
           :products="searchedProducts"
           :emptyMessageEnabled="true"
           emptyMessageButtonText="ADD NEW PRODUCT"
-          emptyMessageSubText="You dont have this product in your account, would you like to add it?"
+          emptyMessageSubText="You don't have this product in your account, would you like to add it?"
           @productClicked="searchedProductClicked"
           :showCategoryName="false"
           infoPosition="side"
@@ -101,6 +120,7 @@
 import { defineComponent, PropType } from "vue";
 import productDisplay from "@/components/productDisplay.vue";
 import { getImageUrl, formatDate } from "@/utils/utilities";
+import { createOutline, trash } from "ionicons/icons";
 
 export default defineComponent({
   name: "InquiriesList",
@@ -135,11 +155,15 @@ export default defineComponent({
     "searchedProductClicked",
     "offeredProductClicked",
     "removeOfferedProduct",
+    "editInquiry",
+    "deleteInquiry",
   ],
   data() {
     return {
       searchQuery: "",
       visibleProductCardGridId: null as number | null,
+      createOutline, // imported icon from ionicons/icons
+      trash, // imported icon from ionicons/icons
     };
   },
   methods: {
@@ -148,9 +172,7 @@ export default defineComponent({
     makeAnOffer(inquiryId: number) {
       this.visibleProductCardGridId =
         this.visibleProductCardGridId === inquiryId ? null : inquiryId;
-      this.$emit("makeAnOffer", {
-        inquiryId: this.visibleProductCardGridId,
-      });
+      this.$emit("makeAnOffer", { inquiryId: this.visibleProductCardGridId });
     },
     searchedProductClicked(product: any) {
       this.$emit("searchedProductClicked", {
@@ -218,10 +240,9 @@ export default defineComponent({
   font-style: italic;
 }
 
-/* Optional: Add a search icon inside the input */
 .search-container::before {
   content: "\f002";
-  font-family: "Font Awesome 5 Free"; /* Ensure Font Awesome is loaded */
+  font-family: "Font Awesome 5 Free";
   font-weight: 900;
   position: absolute;
   left: 16px;
@@ -231,7 +252,7 @@ export default defineComponent({
 }
 
 .search-input {
-  padding-left: 40px; /* Adjust padding to make space for the icon */
+  padding-left: 40px;
 }
 
 .searchResultsDisplay {
@@ -245,9 +266,36 @@ export default defineComponent({
   background-color: #f9f9f9;
 }
 
-.inquiry-card h3 {
-  margin: 0 0 10px 0;
+.inquiry-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.inquiry-header h3 {
+  margin: 0;
+  flex-grow: 1;
+  text-align: left;
   font-size: 1.2rem;
+}
+
+.header-icons {
+  display: flex;
+  align-items: center;
+}
+
+.edit-icon {
+  cursor: pointer;
+  font-size: 1.2rem;
+  margin-right: 10px;
+  color: #007bff;
+}
+
+.delete-icon {
+  cursor: pointer;
+  font-size: 1.2rem;
+  margin-left: 10px;
+  color: #e74c3c;
 }
 
 .inquiry-images .image-grid {
@@ -284,12 +332,12 @@ export default defineComponent({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 0px;
+  margin: 0;
 }
 
 .location-badge {
   display: inline-block;
-  margin: 0px;
+  margin: 0;
   padding: 4px 8px;
   border-radius: 4px;
   background-color: green;

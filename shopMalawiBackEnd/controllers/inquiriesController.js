@@ -1,3 +1,4 @@
+//\controllers\inquiriesController.js
 import db from "../config/db.js";
 
 // endpoint to add product inquiry
@@ -51,10 +52,9 @@ export const addInquiry = async (req, res) => {
 
     const inquiryId = inquiryResult.insertId;
 
-    // 2) Insert images into the new 'images' table (polymorphic)
+    // 2) Insert images into the images table (polymorphic)
     const imageQueries = req.files.map((file, index) => {
       const modifiedFilePath = `/${file.path.replace(/\\/g, "/")}`;
-
       return connection.query(
         `INSERT INTO images 
            (imageable_id, imageable_type, image_path, is_primary)
@@ -62,7 +62,6 @@ export const addInquiry = async (req, res) => {
         [inquiryId, modifiedFilePath, index === 0]
       );
     });
-
     await Promise.all(imageQueries);
 
     // Commit transaction
@@ -83,7 +82,6 @@ export const addInquiry = async (req, res) => {
 export const getInquiries = async (req, res) => {
   const connection = await db.getConnection();
   try {
-    // Updated query to include location details
     const query = `
         SELECT 
           i.id, 
@@ -102,30 +100,19 @@ export const getInquiries = async (req, res) => {
           img.image_path,
           img.is_primary
         FROM product_inquiries i
-        LEFT JOIN categories c 
-          ON i.category_id = c.id
-        LEFT JOIN users u 
-          ON i.uploaded_by = u.id
-        LEFT JOIN locations l
-          ON i.location_id = l.id
-        LEFT JOIN images img
-          ON img.imageable_id = i.id
-          AND img.imageable_type = 'product_inquiries'
+        LEFT JOIN categories c ON i.category_id = c.id
+        LEFT JOIN users u ON i.uploaded_by = u.id
+        LEFT JOIN locations l ON i.location_id = l.id
+        LEFT JOIN images img ON img.imageable_id = i.id AND img.imageable_type = 'product_inquiries'
         ORDER BY i.created_at DESC
       `;
 
     const [results] = await connection.query(query);
 
-    // Group images by inquiry
     const inquiries = results.reduce((acc, row) => {
       const inquiry = acc.find((item) => item.id === row.id);
-
-      // Build an image object if there's an image_path
       const image = row.image_path
-        ? {
-            image_path: row.image_path,
-            is_primary: !!row.is_primary,
-          }
+        ? { image_path: row.image_path, is_primary: !!row.is_primary }
         : null;
 
       if (!inquiry) {
@@ -148,7 +135,6 @@ export const getInquiries = async (req, res) => {
       } else if (image) {
         inquiry.images.push(image);
       }
-
       return acc;
     }, []);
 
@@ -161,48 +147,161 @@ export const getInquiries = async (req, res) => {
   }
 };
 
-// endpoint to associate an inquiry with product(s)
-export const associateInquiryToProduct = async (req, res) => {
-  const { inquiries_id, product_id } = req.body;
+// endpoint to update product inquiry (with image update)
+export const updateInquiry = async (req, res) => {
+  const { id } = req.params;
+  const {
+    name,
+    description,
+    category_id,
+    stock_quantity,
+    location_id,
+    status,
+  } = req.body;
 
   // Validate required fields
-  if (!inquiries_id || !product_id) {
+  if (
+    !name ||
+    !description ||
+    !category_id ||
+    stock_quantity === undefined ||
+    !location_id
+  ) {
     return res.status(400).json({
-      message: "inquiries_id and product_id are required.",
+      message:
+        "All required fields (name, description, category_id, stock_quantity, location_id) are necessary.",
     });
   }
 
   const connection = await db.getConnection();
-
   try {
-    // Start transaction
     await connection.beginTransaction();
 
-    // Insert entry into the product_offers table
+    // 1) Update the inquiry in product_inquiries table
+    const [result] = await connection.query(
+      `UPDATE product_inquiries 
+       SET name = ?, description = ?, category_id = ?, stock_quantity = ?, location_id = ?, status = ?
+       WHERE id = ?`,
+      [
+        name,
+        description,
+        category_id,
+        stock_quantity,
+        location_id,
+        status || "pending",
+        id,
+      ]
+    );
+
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Inquiry not found" });
+    }
+
+    // 2) If new images are provided, update images.
+    if (req.files && req.files.length > 0) {
+      // Delete existing images for this inquiry
+      await connection.query(
+        `DELETE FROM images WHERE imageable_id = ? AND imageable_type = 'product_inquiries'`,
+        [id]
+      );
+
+      // Insert new images
+      const imageQueries = req.files.map((file, index) => {
+        const modifiedFilePath = `/${file.path.replace(/\\/g, "/")}`;
+        return connection.query(
+          `INSERT INTO images 
+             (imageable_id, imageable_type, image_path, is_primary)
+             VALUES (?, 'product_inquiries', ?, ?)`,
+          [id, modifiedFilePath, index === 0]
+        );
+      });
+      await Promise.all(imageQueries);
+    }
+
+    await connection.commit();
+    res.status(200).json({ message: "Inquiry updated successfully" });
+  } catch (error) {
+    console.error("Error updating inquiry:", error);
+    await connection.rollback();
+    res.status(500).json({ message: "Failed to update inquiry" });
+  } finally {
+    connection.release();
+  }
+};
+
+// endpoint to delete product inquiry
+export const deleteInquiry = async (req, res) => {
+  const { id } = req.params;
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // Delete associated images
+    await connection.query(
+      `DELETE FROM images WHERE imageable_id = ? AND imageable_type = 'product_inquiries'`,
+      [id]
+    );
+
+    // Delete associated product offers (if any)
+    await connection.query(
+      `DELETE FROM product_offers WHERE inquiries_id = ?`,
+      [id]
+    );
+
+    // Delete the inquiry itself
+    const [result] = await connection.query(
+      `DELETE FROM product_inquiries WHERE id = ?`,
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Inquiry not found" });
+    }
+
+    await connection.commit();
+
+    res.status(200).json({ message: "Inquiry deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting inquiry:", error);
+    await connection.rollback();
+    res.status(500).json({ message: "Failed to delete inquiry" });
+  } finally {
+    connection.release();
+  }
+};
+
+// endpoint to associate an inquiry with product(s)
+export const associateInquiryToProduct = async (req, res) => {
+  const { inquiries_id, product_id } = req.body;
+
+  if (!inquiries_id || !product_id) {
+    return res
+      .status(400)
+      .json({ message: "inquiries_id and product_id are required." });
+  }
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
     await connection.query(
       `INSERT INTO product_offers (product_id, inquiries_id) VALUES (?, ?)`,
       [product_id, inquiries_id]
     );
-
-    // Commit transaction
     await connection.commit();
-
-    res.status(201).json({
-      message: "Inquiry successfully associated with the product.",
-    });
+    res
+      .status(201)
+      .json({ message: "Inquiry successfully associated with the product." });
   } catch (error) {
     console.error("Error associating inquiry with product:", error);
-
-    // Rollback transaction on error
     await connection.rollback();
-
-    // Handle duplicate entry error
     if (error.code === "ER_DUP_ENTRY") {
       return res.status(409).json({
         message: "This product is already associated with the inquiry.",
       });
     }
-
     res
       .status(500)
       .json({ message: "Failed to associate inquiry with the product." });
@@ -213,56 +312,44 @@ export const associateInquiryToProduct = async (req, res) => {
 
 // endpoint to disassociate an inquiry from product(s)
 export const disassociateInquiryFromProduct = async (req, res) => {
-  const { inquiries_id, product_id } = req.body;
+  // Changed from req.body to req.params
+  const { inquiries_id, product_id } = req.params;
 
-  // Validate required fields
   if (!inquiries_id || !product_id) {
-    return res.status(400).json({
-      message: "inquiries_id and product_id are required.",
-    });
+    return res
+      .status(400)
+      .json({ message: "inquiries_id and product_id are required." });
   }
 
   const connection = await db.getConnection();
-
   try {
-    // Start transaction
     await connection.beginTransaction();
-
-    // Delete the entry from the product_offers table
     const result = await connection.query(
       `DELETE FROM product_offers WHERE inquiries_id = ? AND product_id = ?`,
       [inquiries_id, product_id]
     );
-
-    // Check if any rows were affected
     if (result[0].affectedRows === 0) {
       await connection.rollback();
       return res.status(404).json({
         message: "No association found between the inquiry and the product.",
       });
     }
-
-    // Commit transaction
     await connection.commit();
-
     res.status(200).json({
       message: "Inquiry successfully disassociated from the product.",
     });
   } catch (error) {
     console.error("Error disassociating inquiry from product:", error);
-
-    // Rollback transaction on error
     await connection.rollback();
-
-    res.status(500).json({
-      message: "Failed to disassociate inquiry from the product.",
-    });
+    res
+      .status(500)
+      .json({ message: "Failed to disassociate inquiry from the product." });
   } finally {
     connection.release();
   }
 };
 
-//endpoint to get Products Associated with an Inquiry and User
+// endpoint to get Products Associated with an Inquiry and User
 export const getProductsByInquiryAndUser = async (req, res) => {
   const { inquiries_id, uploaded_by } = req.query;
 
@@ -273,7 +360,6 @@ export const getProductsByInquiryAndUser = async (req, res) => {
   }
 
   const connection = await db.getConnection();
-
   try {
     const query = `
       SELECT 
@@ -293,19 +379,12 @@ export const getProductsByInquiryAndUser = async (req, res) => {
         i.alt_text, 
         i.is_primary,
         po.created_at AS association_date
-      FROM 
-        product_offers po
-      JOIN 
-        products p ON po.product_id = p.id
-      LEFT JOIN 
-        images i ON p.id = i.imageable_id AND i.imageable_type = 'products'
-      LEFT JOIN 
-        users u ON p.uploaded_by = u.id
-      WHERE 
-        po.inquiries_id = ? 
-        AND p.uploaded_by = ?
-      ORDER BY 
-        po.created_at ASC
+      FROM product_offers po
+      JOIN products p ON po.product_id = p.id
+      LEFT JOIN images i ON p.id = i.imageable_id AND i.imageable_type = 'products'
+      LEFT JOIN users u ON p.uploaded_by = u.id
+      WHERE po.inquiries_id = ? AND p.uploaded_by = ?
+      ORDER BY po.created_at ASC
     `;
 
     const [products] = await connection.query(query, [
@@ -313,7 +392,6 @@ export const getProductsByInquiryAndUser = async (req, res) => {
       parseInt(uploaded_by, 10),
     ]);
 
-    // Aggregate images for each product
     const productsWithImages = products.reduce((acc, product) => {
       const existingProduct = acc.find((p) => p.id === product.id);
       if (existingProduct) {
@@ -331,10 +409,10 @@ export const getProductsByInquiryAndUser = async (req, res) => {
           description: product.description,
           price: product.price,
           mark_up_amount: product.mark_up_amount,
-          subcategory_id: product.subcategory_id, // Optional: Remove if not needed
-          subcategory_name: product.subcategory_name, // Optional: Remove if not needed
-          maincategory_id: product.maincategory_id, // Optional: Remove if not needed
-          maincategory_name: product.maincategory_name, // Optional: Remove if not needed
+          subcategory_id: product.subcategory_id,
+          subcategory_name: product.subcategory_name,
+          maincategory_id: product.maincategory_id,
+          maincategory_name: product.maincategory_name,
           stock_quantity: product.stock_quantity,
           uploaded_by_userID: product.uploaded_by_userID,
           uploaded_by: product.uploaded_by,
@@ -353,7 +431,6 @@ export const getProductsByInquiryAndUser = async (req, res) => {
       return acc;
     }, []);
 
-    // Group all products under a single subcategory named "Offers"
     const groupedByOffers = {
       subcategory_name: "Offers",
       products: productsWithImages,
