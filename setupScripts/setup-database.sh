@@ -164,6 +164,16 @@ CREATE TABLE system_images (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+-- Payment Screenshots Table 
+CREATE TABLE payment_screenshots (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    image_path VARCHAR(255) NOT NULL COMMENT 'File path to the stored image',
+    alt_text VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 -- Product Attributes Table (for variations like brand, size, color)
 CREATE TABLE IF NOT EXISTS product_attributes (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -208,11 +218,13 @@ CREATE TABLE IF NOT EXISTS payments (
     order_id INT NOT NULL,
     amount DECIMAL(10, 2) NOT NULL COMMENT 'Amount in Malawian Kwacha (MWK)',
     payment_method_id INT NOT NULL, -- References payment_methods table
+    payment_screenshots_id INT NOT NULL,
     status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
     transaction_id VARCHAR(255) UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
     FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id),
+    FOREIGN KEY (payment_screenshots_id) REFERENCES payment_screenshots(id) ON DELETE CASCADE,
     INDEX (order_id),
     INDEX (payment_method_id)
 ) ENGINE=InnoDB;

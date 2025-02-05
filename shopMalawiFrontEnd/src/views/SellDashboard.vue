@@ -9,7 +9,7 @@
         <!-- Reference to ImageUploader so we can call clearImages() -->
         <ImageUploader
           ref="imageUploaderRef"
-          @files-selected="handleFilesSelected"
+          @uploaded-images="handleFilesSelected"
         />
 
         <!-- Item Name -->

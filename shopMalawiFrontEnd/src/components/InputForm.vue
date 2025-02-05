@@ -8,7 +8,7 @@
     <ImageUploader
       ref="imageUploaderRef"
       label="What are you looking for?"
-      @files-selected="handleFilesSelected"
+      @uploaded-images="handleFilesSelected"
     />
 
     <div class="form-group">

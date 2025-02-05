@@ -1,5 +1,5 @@
+//\src\components\BuySegment.vue
 <template>
-  <!-- Disclaimer rendered as HTML -->
   <div
     v-if="props.disclaimerText"
     class="disclaimer-text"

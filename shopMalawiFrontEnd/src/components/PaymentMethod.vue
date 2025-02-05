@@ -1,30 +1,50 @@
+//\src\components\PaymentMethod.vue
 <template>
   <IonCard class="payment-card">
-    <IonCardHeader>
-      <IonCardSubtitle>Payment Method</IonCardSubtitle>
-    </IonCardHeader>
-    <div v-if="loading" class="loading-message">Loading payment methods...</div>
-    <div v-if="error" class="error-message">
-      {{ error }}
+    <IonCardSubtitle>Where are you located</IonCardSubtitle>
+    <div v-if="loadingLocations" class="loading-message">
+      Loading locations...
     </div>
-    <div v-if="!loading && !error" class="payment-method">
-      <IonSelect
-        v-model="selectedPaymentMethod"
-        placeholder="Select a payment method"
-        interface="action-sheet"
-        class="custom-select"
-      >
-        <IonSelectOption
+    <div v-if="errorLocations" class="error-message">
+      {{ errorLocations }}
+    </div>
+    <div v-if="!loadingLocations && !errorLocations" class="location-selector">
+      <select v-model="selectedLocation" class="custom-select">
+        <option value="" disabled>Select a location</option>
+        <option
+          v-for="location in locations"
+          :key="location.id"
+          :value="location.id"
+        >
+          {{ location.name }}
+        </option>
+      </select>
+    </div>
+  </IonCard>
+  <IonCard class="payment-card">
+    <IonCardSubtitle>Select Your Payment Method</IonCardSubtitle>
+    <div v-if="loadingPaymentMethods" class="loading-message">
+      Loading payment methods...
+    </div>
+    <div v-if="errorPaymentMethods" class="error-message">
+      {{ errorPaymentMethods }}
+    </div>
+    <div
+      v-if="!loadingPaymentMethods && !errorPaymentMethods"
+      class="payment-method"
+    >
+      <select v-model="selectedPaymentMethod" class="custom-select">
+        <option value="" disabled>Select a payment method</option>
+        <option
           v-for="method in paymentMethods"
           :key="method.id"
           :value="method.id"
         >
           {{ method.name }}
-        </IonSelectOption>
-      </IonSelect>
+        </option>
+      </select>
     </div>
   </IonCard>
-  <!-- Send selected payment_method_id to AccountDetailsManager -->
   <AccountDetailsManager
     v-if="selectedPaymentMethod"
     :userId="userId"
@@ -38,16 +58,18 @@
       v-if="selectedPaymentMethod"
       label="Proof of Payment"
       placeholderMessage="Upload the transaction screenshots here"
-      @files-selected="handleFilesSelected"
+      @uploaded-images="handleUploadedImages"
     />
   </IonCard>
 </template>
 
 <script>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import ImageUploader from "@/components/ImageUploader.vue";
 import AccountDetailsManager from "@/components/AccountDetailsManager.vue";
 import usePaymentMethods from "@/composables/usePaymentMethods";
+import useLocations from "@/composables/useLocations";
+import { useOrdersStore } from "@/stores/ordersStore";
 
 export default {
   name: "PaymentMethod",
@@ -56,19 +78,34 @@ export default {
     AccountDetailsManager,
   },
   setup() {
-    const { paymentMethods, loading, error, fetchPaymentMethods } =
-      usePaymentMethods();
-    const selectedPaymentMethod = ref("");
+    const ordersStore = useOrdersStore();
 
-    const handleFilesSelected = (files) => {
-      console.log("Files selected:", files);
+    const {
+      paymentMethods,
+      loading: loadingPaymentMethods,
+      error: errorPaymentMethods,
+      fetchPaymentMethods,
+    } = usePaymentMethods();
+    const {
+      locations,
+      loading: loadingLocations,
+      error: errorLocations,
+      fetchLocations,
+    } = useLocations();
+    const selectedPaymentMethod = ref("");
+    const selectedLocation = ref("");
+
+    const handleUploadedImages = (files) => {
+      if (files && files.length > 0) {
+        ordersStore.setPaymentScreenshot(files[0]);
+      }
     };
 
     onMounted(() => {
+      fetchLocations();
       fetchPaymentMethods();
     });
 
-    // Assume we have a userId. Replace with actual logic as needed.
     const userId = 1;
 
     const selectedBankName = computed(() => {
@@ -78,12 +115,30 @@ export default {
       return method ? method.name : "";
     });
 
+    watch(selectedLocation, (newLocationId) => {
+      const locationObj = locations.value.find(
+        (loc) => loc.id === newLocationId
+      );
+      if (locationObj) {
+        ordersStore.setShippingTown(locationObj.name);
+        ordersStore.setShippingAddress(locationObj.name);
+      }
+    });
+
+    watch(selectedPaymentMethod, (newMethod) => {
+      ordersStore.setPaymentMethodId(Number(newMethod));
+    });
+
     return {
       paymentMethods,
+      loadingPaymentMethods,
+      errorPaymentMethods,
+      locations,
+      loadingLocations,
+      errorLocations,
       selectedPaymentMethod,
-      loading,
-      error,
-      handleFilesSelected,
+      selectedLocation,
+      handleUploadedImages,
       userId,
       selectedBankName,
     };
@@ -96,19 +151,21 @@ export default {
   margin: 1rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
+  background-color: #fff;
 }
 
 .payment-card ion-card-subtitle {
   font-weight: bold;
-  color: #222;
+  color: #333;
 }
 
-.payment-method {
+.payment-method,
+.location-selector {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
   padding: 1rem;
-  background-color: #f9f9f9;
+  background-color: #fafafa;
   border-radius: 8px;
 }
 
@@ -120,11 +177,11 @@ export default {
 }
 
 .loading-message {
-  color: var(--ion-color-medium);
+  color: #888;
 }
 
 .error-message {
-  color: var(--ion-color-danger);
+  color: #e74c3c;
 }
 
 .uploader {
@@ -132,12 +189,27 @@ export default {
 }
 
 .custom-select {
-  --padding-end: 32px;
-  position: relative;
+  width: 100%;
+  padding: 0.6rem 1rem;
   font-size: 1rem;
+  color: #333;
   background-color: #fff;
   border: 1px solid #ccc;
   border-radius: 4px;
+  appearance: none;
+  outline: none;
   transition: border-color 0.2s ease-in-out;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D'10'%20height%3D'7'%20viewBox%3D'0%200%2010%207'%20fill%3D'none'%20xmlns%3D'http://www.w3.org/2000/svg'%3E%3Cpath%20d%3D'M1%201L5%205L9%201'%20stroke%3D'%23333'%20stroke-width%3D'1.5'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 10px 7px;
+}
+
+.custom-select:focus {
+  border-color: #3498db;
+}
+
+select::-ms-expand {
+  display: none;
 }
 </style>

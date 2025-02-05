@@ -1,4 +1,4 @@
-<!-- src/views/PayPage.vue -->
+//\src\views\PayPage.vue
 <template>
   <IonPage>
     <IonHeader>
@@ -12,8 +12,8 @@
     <IonContent>
       <productDisplay
         :products="productDisplayData"
-        infoPosition="side"
         :enableCounter="true"
+        :showDescription="false"
         @increment="handleIncrement"
         @decrement="handleDecrement"
       />
@@ -79,6 +79,8 @@ import { loadProductFromSessionStorage } from "@/utils/utilities";
 import PaymentMethod from "@/components/PaymentMethod.vue";
 import productDisplay from "@/components/productDisplay.vue";
 import BuySegment from "@/components/BuySegment.vue";
+import { useOrdersStore } from "@/stores/ordersStore";
+import useOrderPayment from "@/composables/useOrderPayment";
 
 export default defineComponent({
   name: "PayPage",
@@ -88,6 +90,9 @@ export default defineComponent({
     BuySegment,
   },
   setup() {
+    const ordersStore = useOrdersStore();
+    const { submitOrderAndPayment, loading, error, orderResponse } =
+      useOrderPayment();
     const product = ref<any>(null);
 
     onMounted(() => {
@@ -99,7 +104,6 @@ export default defineComponent({
       }
     });
 
-    // Wrap the product in a subcategory array for productDisplay
     const productDisplayData = computed(() => {
       return product.value
         ? [{ subcategory_name: "Selected Product", products: [product.value] }]
@@ -115,7 +119,48 @@ export default defineComponent({
     const total = computed(() => subtotal.value);
 
     const onCancelOrder = () => router.back();
-    const onPlaceOrder = () => router.push({ name: "pay" });
+
+    const onPlaceOrder = async () => {
+      // Update the orders store with total values
+      ordersStore.setTotalAmount(total.value);
+      ordersStore.setPaymentAmount(total.value);
+      ordersStore.setOrderItems([
+        {
+          product_id: product.value.id,
+          quantity: product.value.orderCount || 1,
+          price: costPerItem.value,
+        },
+      ]);
+      ordersStore.initUserId();
+
+      // Build the orderData object from the orders store
+      const orderData = {
+        user_id: ordersStore.payload.user_id,
+        shipping_address: ordersStore.payload.shipping_address,
+        shipping_town: ordersStore.payload.shipping_town,
+        total_amount: ordersStore.payload.total_amount,
+        payment_method_id: ordersStore.payload.payment_method_id,
+        payment_amount: ordersStore.payload.payment_amount,
+        order_items: ordersStore.payload.order_items,
+      };
+
+      // Ensure the payment screenshot exists
+      if (!ordersStore.payload.paymentScreenshot) {
+        alert("Please upload a payment screenshot.");
+        return;
+      }
+
+      // Submit order and payment to the backend
+      await submitOrderAndPayment(
+        orderData,
+        ordersStore.payload.paymentScreenshot
+      );
+
+      // After submission you might want to navigate to a confirmation page or show a message
+      if (orderResponse.value) {
+        console.log("Done");
+      }
+    };
 
     function handleIncrement(item: any) {
       if (product.value && product.value.id === item.id) {
@@ -145,6 +190,9 @@ export default defineComponent({
       onPlaceOrder,
       handleIncrement,
       handleDecrement,
+      loading,
+      error,
+      orderResponse,
     };
   },
 });

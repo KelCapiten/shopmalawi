@@ -1,4 +1,3 @@
-//src/components/productDisplay.vue
 <template>
   <div>
     <label v-if="hasProducts" class="section-heading">{{ heading }}</label>
@@ -77,14 +76,19 @@
               <label class="stock-info">
                 {{ product.stock_quantity }} in stock
               </label>
-              <p v-if="imageSize !== 'small'" class="description">
+              <p
+                v-if="imageSize !== 'small' && showDescription"
+                class="description"
+              >
                 {{ product.description }}
               </p>
             </div>
 
             <div
-              v-if="infoPosition === 'side' && enableCounter"
-              class="side-counter"
+              v-if="enableCounter"
+              :class="
+                infoPosition === 'side' ? 'side-counter' : 'default-counter'
+              "
             >
               <label class="counter-label">
                 <span class="buy-text">I'd like to buy</span>
@@ -169,6 +173,10 @@ export default defineComponent({
       type: String,
       default: "",
     },
+    showDescription: {
+      type: Boolean,
+      default: true,
+    },
   },
   emits: [
     "productClicked",
@@ -223,6 +231,7 @@ p {
   margin: 0;
   padding: 0;
 }
+
 .product-list {
   display: flex;
   flex-direction: column;
@@ -346,13 +355,24 @@ p {
   overflow: hidden;
 }
 
+/* Styling for side counter */
 .side-counter {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   margin-top: 12px;
-  grid-column: 1 / -1;
+}
+
+/* Styling for default counter (centered) */
+.default-counter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 8px;
 }
 
 .counter-label {
