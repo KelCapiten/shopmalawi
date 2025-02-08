@@ -1,11 +1,19 @@
-//src/composables/useOrderPayment.ts
+// src/composables/useOrderPayment.ts
 import { ref } from "vue";
-import { createOrderAndPayment } from "@/services/orderPaymentService";
+import {
+  createOrderAndPayment,
+  getBuyOrders,
+  getSellOrders,
+  updatePaymentStatus,
+  recordRefund,
+} from "@/services/orderPaymentService";
 
 export default function useOrderPayment() {
   const loading = ref(false);
   const error = ref<Error | null>(null);
   const orderResponse = ref<any>(null);
+  const orders = ref<any[]>([]);
+  const sellOrders = ref<any[]>([]);
 
   const submitOrderAndPayment = async (
     orderData: {
@@ -34,10 +42,74 @@ export default function useOrderPayment() {
     }
   };
 
+  const fetchBuyOrders = async (userId?: number) => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const response = await getBuyOrders(userId);
+      orders.value = response.data;
+    } catch (err: any) {
+      error.value = err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const fetchSellOrders = async (userId?: number) => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const response = await getSellOrders(userId);
+      sellOrders.value = response.data;
+    } catch (err: any) {
+      error.value = err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const updatePaymentStatusHandler = async (
+    paymentId: number,
+    status: string
+  ) => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const response = await updatePaymentStatus(paymentId, status);
+      return response.data;
+    } catch (err: any) {
+      error.value = err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const recordRefundHandler = async (
+    refundData: { order_id: number; reason?: string },
+    refundScreenshot: File
+  ) => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const response = await recordRefund(refundData, refundScreenshot);
+      return response.data;
+    } catch (err: any) {
+      error.value = err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     loading,
     error,
     orderResponse,
     submitOrderAndPayment,
+    orders,
+    fetchBuyOrders,
+    sellOrders,
+    fetchSellOrders,
+    updatePaymentStatusHandler,
+    recordRefundHandler,
   };
 }

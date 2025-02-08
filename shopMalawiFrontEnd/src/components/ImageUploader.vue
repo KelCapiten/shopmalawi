@@ -1,3 +1,4 @@
+//\src\components\ImageUploader.vue
 <template>
   <div class="form-group">
     <label class="form-label">{{ label }}</label>

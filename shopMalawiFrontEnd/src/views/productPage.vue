@@ -18,7 +18,7 @@
           >
             <swiper-slide v-for="(image, index) in product.images" :key="index">
               <img
-                :src="formatImagePath(image.image_path)"
+                :src="getImageUrl(image.image_path)"
                 :alt="image.alt_text || 'Product Image'"
               />
             </swiper-slide>
@@ -66,10 +66,7 @@ import PriceDisplay from "@/components/PriceDisplay.vue";
 import BuySegment from "@/components/BuySegment.vue";
 import ShareToolbar from "@/components/ShareToolbar.vue";
 import ProductImagesRow from "@/components/ProductImagesRow.vue";
-import {
-  loadProductFromSessionStorage,
-  formatImagePath,
-} from "@/utils/utilities";
+import { loadProductFromSessionStorage, getImageUrl } from "@/utils/utilities";
 
 export default defineComponent({
   name: "ProductPage",
@@ -122,7 +119,7 @@ export default defineComponent({
       swiperRef,
       onSwiperInit,
       onSlideChange,
-      formatImagePath,
+      getImageUrl,
       handleScroll,
     };
   },

@@ -57,7 +57,3 @@ export function loadProductFromSessionStorage<T>(): T | null {
     return null;
   }
 }
-
-export function formatImagePath(path: string): string {
-  return `${API_BASE_URL}${path}`;
-}

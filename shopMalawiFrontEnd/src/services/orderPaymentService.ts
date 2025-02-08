@@ -1,4 +1,4 @@
-//src/services/orderPaymentService.ts
+// src/services/orderPaymentService.ts
 import apiClient from "./apiClient";
 
 export async function createOrderAndPayment(
@@ -32,4 +32,49 @@ export async function createOrderAndPayment(
       },
     }
   );
+}
+
+export async function getBuyOrders(userId?: number) {
+  let url = "/api/order-pay/getBuyOrders";
+  if (userId) {
+    url += `?user_id=${userId}`;
+  }
+  return await apiClient.get(url);
+}
+
+export async function getSellOrders(userId?: number) {
+  let url = "/api/order-pay/getSellOrders";
+  if (userId) {
+    url += `?user_id=${userId}`;
+  }
+  return await apiClient.get(url);
+}
+
+export async function updatePaymentStatus(paymentId: number, status: string) {
+  return await apiClient.put(
+    `/api/order-pay/updatePaymentStatus/${paymentId}`,
+    { status }
+  );
+}
+
+export async function updateExpiredPaymentStatuses() {
+  return await apiClient.put(`/api/order-pay/updateExpiredPayments`);
+}
+
+export async function recordRefund(
+  refundData: { order_id: number; reason?: string },
+  refundScreenshot: File
+) {
+  const formData = new FormData();
+  formData.append("order_id", refundData.order_id.toString());
+  if (refundData.reason) {
+    formData.append("reason", refundData.reason);
+  }
+  formData.append("paymentScreenshot", refundScreenshot);
+
+  return await apiClient.post("/api/order-pay/recordRefund", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 }

@@ -1,3 +1,4 @@
+//\src\components\AccountDetailsManager.vue
 <template>
   <div class="account-details-container">
     <div class="settings-content">
@@ -368,8 +369,8 @@ export default defineComponent({
   background: #f9f9f9;
   border: 1px solid #ddd;
   border-radius: 6px;
-  padding: 1rem;
-  min-height: 9rem;
+  padding: 0.5rem;
+  min-height: 8rem;
   margin-bottom: 1rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   text-align: right;

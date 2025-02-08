@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS payments (
     amount DECIMAL(10, 2) NOT NULL COMMENT 'Amount in Malawian Kwacha (MWK)',
     payment_method_id INT NOT NULL, -- References payment_methods table
     payment_screenshots_id INT NOT NULL,
-    status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
+    status ENUM('pending', 'completed', 'failed', 'refund', 'refunding', 'refunded', 'canceled') DEFAULT 'pending',
     transaction_id VARCHAR(255) UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
@@ -227,6 +227,21 @@ CREATE TABLE IF NOT EXISTS payments (
     FOREIGN KEY (payment_screenshots_id) REFERENCES payment_screenshots(id) ON DELETE CASCADE,
     INDEX (order_id),
     INDEX (payment_method_id)
+) ENGINE=InnoDB;
+
+-- Refunds Table
+CREATE TABLE IF NOT EXISTS refunds (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    reason TEXT,
+    payment_screenshots_id INT NOT NULL,
+    status ENUM('pending', 'approved', 'rejected', 'refunded') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (payment_screenshots_id) REFERENCES payment_screenshots(id) ON DELETE CASCADE,
+    INDEX (order_id),
+    INDEX (status)
 ) ENGINE=InnoDB;
 
 -- Shipping Table
@@ -296,11 +311,11 @@ CREATE TABLE IF NOT EXISTS discount_usages (
     INDEX (user_id)
 ) ENGINE=InnoDB;
 
--- Returns and Refunds Table
+-- Returns Table
 CREATE TABLE IF NOT EXISTS returns (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
-    reason TEXT NOT NULL,
+    reason TEXT,
     status ENUM('pending', 'approved', 'rejected', 'refunded') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

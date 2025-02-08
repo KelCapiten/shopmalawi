@@ -1,3 +1,4 @@
+//\src\views\ProfilePage.vue
 <template>
   <IonPage>
     <!-- Header -->
@@ -32,16 +33,16 @@
     <!-- Profile Card -->
     <IonCard class="profile-card">
       <IonCardContent>
-        <IonList lines="none">
-          <IonItem>
-            <IonLabel>Username</IonLabel>
+        <div class="profile-card-content">
+          <div class="profile-item">
+            <label>Username</label>
             <IonText>{{ user.username }}</IonText>
-          </IonItem>
-          <IonItem>
-            <IonLabel>Phone Number</IonLabel>
+          </div>
+          <div class="profile-item">
+            <label>Phone Number</label>
             <IonText>{{ user.phone }}</IonText>
-          </IonItem>
-        </IonList>
+          </div>
+        </div>
       </IonCardContent>
     </IonCard>
 
@@ -50,7 +51,7 @@
       <!-- Square Tiles -->
       <IonGrid class="action-tiles">
         <IonRow>
-          <IonCol size="6" @click="goToOrders">
+          <IonCol size="6" @click="toggleOrdersList">
             <div class="tile">
               <IonIcon :icon="ordersIcon" class="tile-icon" />
               <p class="tile-label">Orders</p>
@@ -93,10 +94,19 @@
         </IonRow>
       </IonGrid>
 
-      <!-- Settings Sections -->
-      <CategoriesManager v-if="showCategoryManager" />
+      <ordersList :userId="userId" ref="ordersListRef" v-if="showOrdersList" />
 
-      <div v-if="showAccountDetailsManager" class="settings-header">
+      <!-- Settings Sections -->
+      <CategoriesManager
+        ref="categoriesManagerRef"
+        v-if="showCategoryManager"
+      />
+
+      <div
+        v-if="showAccountDetailsManager"
+        class="settings-header"
+        ref="accountDetailsManagerRef"
+      >
         <h3>Manage Your Payment Methods</h3>
       </div>
       <AccountDetailsManager
@@ -111,11 +121,12 @@
 </template>
 
 <script>
-import { computed, ref } from "vue";
+import { computed, ref, nextTick } from "vue";
 import { useAuthStore } from "@/stores/authStore";
 import appFooter from "@/components/appFooter.vue";
 import CategoriesManager from "@/components/CategoriesManager.vue";
 import AccountDetailsManager from "@/components/AccountDetailsManager.vue";
+import ordersList from "@/components/OrdersList.vue";
 import {
   settingsOutline,
   bagHandleOutline,
@@ -131,6 +142,7 @@ export default {
     appFooter,
     CategoriesManager,
     AccountDetailsManager,
+    ordersList,
   },
   setup() {
     const authStore = useAuthStore();
@@ -147,10 +159,10 @@ export default {
     const userInitial = computed(() => {
       const names = user.value.name.split(" ");
       const initials = names
-        .map((n) => n[0])
+        .map((n) => n.charAt(0))
         .join("")
         .toUpperCase();
-      return initials.charAt(0);
+      return initials || "U";
     });
 
     const userId = computed(() => authStore.user?.id);
@@ -163,10 +175,7 @@ export default {
     const accountIcon = personCircleOutline;
 
     const showSettings = ref(false);
-    const showCategoryManager = ref(false);
-    const showAccountDetailsManager = ref(false);
     const popoverEvent = ref(null);
-
     const openSettings = (event) => {
       popoverEvent.value = event;
       showSettings.value = true;
@@ -176,21 +185,40 @@ export default {
       popoverEvent.value = null;
     };
 
-    const toggleCategoryManager = () => {
-      if (!showCategoryManager.value) {
-        showCategoryManager.value = true;
+    const showCategoryManager = ref(false);
+    const showAccountDetailsManager = ref(false);
+    const showOrdersList = ref(false);
+
+    const ordersListRef = ref(null);
+    const categoriesManagerRef = ref(null);
+    const accountDetailsManagerRef = ref(null);
+
+    const scrollToSection = async (refEl) => {
+      await nextTick();
+      refEl.value?.$el
+        ? refEl.value.$el.scrollIntoView({ behavior: "smooth" })
+        : refEl.value.scrollIntoView({ behavior: "smooth" });
+    };
+
+    const toggleOrdersList = async () => {
+      showOrdersList.value = !showOrdersList.value;
+    };
+
+    const toggleCategoryManager = async () => {
+      showCategoryManager.value = !showCategoryManager.value;
+      if (showCategoryManager.value) {
         showAccountDetailsManager.value = false;
-      } else {
-        showCategoryManager.value = false;
+        showOrdersList.value = false;
+        scrollToSection(categoriesManagerRef);
       }
     };
 
-    const toggleAccountDetailsManager = () => {
-      if (!showAccountDetailsManager.value) {
-        showAccountDetailsManager.value = true;
+    const toggleAccountDetailsManager = async () => {
+      showAccountDetailsManager.value = !showAccountDetailsManager.value;
+      if (showAccountDetailsManager.value) {
         showCategoryManager.value = false;
-      } else {
-        showAccountDetailsManager.value = false;
+        showOrdersList.value = false;
+        scrollToSection(accountDetailsManagerRef);
       }
     };
 
@@ -198,7 +226,7 @@ export default {
       authStore.clearAuth();
       closeSettings();
     };
-    const goToOrders = () => {};
+
     const goToWishlist = () => {};
     const goToCoupons = () => {};
     const goToHistory = () => {};
@@ -208,13 +236,15 @@ export default {
       userInitial,
       userId,
       showSettings,
-      showCategoryManager,
-      showAccountDetailsManager,
       popoverEvent,
       openSettings,
       closeSettings,
+      showCategoryManager,
+      showAccountDetailsManager,
+      showOrdersList,
       toggleCategoryManager,
       toggleAccountDetailsManager,
+      toggleOrdersList,
       signOut,
       settingsIcon,
       ordersIcon,
@@ -222,10 +252,12 @@ export default {
       couponsIcon,
       historyIcon,
       accountIcon,
-      goToOrders,
       goToWishlist,
       goToCoupons,
       goToHistory,
+      ordersListRef,
+      categoriesManagerRef,
+      accountDetailsManagerRef,
     };
   },
 };
@@ -257,10 +289,33 @@ export default {
   font-size: 1rem;
   font-weight: 600;
 }
+
+/* Profile Card */
 .profile-card {
   margin: 0.5rem;
   border-radius: 8px;
 }
+.profile-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.profile-item {
+  display: flex;
+  justify-content: space-between;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  align-items: center;
+  font-size: 0.9rem;
+  background: #fff;
+}
+.profile-item label {
+  font-weight: bold;
+  margin-right: 1rem;
+}
+
+/* Action Tiles */
 .action-tiles {
   margin: 0.5rem;
 }
@@ -281,6 +336,8 @@ export default {
 .tile-label {
   font-size: 0.9rem;
 }
+
+/* Settings header */
 .settings-header {
   display: flex;
   align-items: center;
@@ -292,7 +349,6 @@ export default {
   border-radius: 6px;
   user-select: none;
 }
-
 .settings-header h3 {
   margin: 0;
   font-size: 1rem;
