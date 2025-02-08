@@ -33,10 +33,10 @@
               v-for="(image, index) in inquiry.images"
               :key="index"
             >
-              <img
-                :src="getImageUrl(image.image_path)"
+              <!-- Replace plain <img> with FullScreenImage -->
+              <FullScreenImage
+                :imageUrl="getImageUrl(image.image_path)"
                 :alt="`Image ${index + 1}`"
-                class="inquiry-image"
               />
             </div>
           </div>
@@ -119,6 +119,7 @@
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
 import productDisplay from "@/components/productDisplay.vue";
+import FullScreenImage from "@/components/imageDisplay.vue";
 import { getImageUrl, formatDate } from "@/utils/utilities";
 import { createOutline, trash } from "ionicons/icons";
 
@@ -126,6 +127,7 @@ export default defineComponent({
   name: "InquiriesList",
   components: {
     productDisplay,
+    FullScreenImage,
   },
   props: {
     inquiries: {
@@ -306,20 +308,13 @@ export default defineComponent({
 
 .image-item {
   background-color: #fff;
-  padding: 5px;
+  padding: 2px;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   width: 90px;
   height: 90px;
   overflow: hidden;
   flex: 0 0 auto;
-}
-
-.inquiry-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
 }
 
 .inquiry-date {

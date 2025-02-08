@@ -1,7 +1,7 @@
 //\src\views\ProfilePage.vue
 <template>
   <IonPage>
-    <!-- Header -->
+    <!-- Fixed Header -->
     <IonHeader>
       <IonToolbar>
         <div class="header-left">
@@ -30,25 +30,24 @@
       </IonList>
     </IonPopover>
 
-    <!-- Profile Card -->
-    <IonCard class="profile-card">
-      <IonCardContent>
-        <div class="profile-card-content">
-          <div class="profile-item">
-            <label>Username</label>
-            <IonText>{{ user.username }}</IonText>
-          </div>
-          <div class="profile-item">
-            <label>Phone Number</label>
-            <IonText>{{ user.phone }}</IonText>
-          </div>
-        </div>
-      </IonCardContent>
-    </IonCard>
-
-    <!-- Page Content -->
     <IonContent>
-      <!-- Square Tiles -->
+      <!-- Profile Card -->
+      <IonCard class="profile-card">
+        <IonCardContent>
+          <div class="profile-card-content">
+            <div class="profile-item">
+              <label>Username</label>
+              <IonText>{{ user.username }}</IonText>
+            </div>
+            <div class="profile-item">
+              <label>Phone Number</label>
+              <IonText>{{ user.phone }}</IonText>
+            </div>
+          </div>
+        </IonCardContent>
+      </IonCard>
+
+      <!-- Action Tiles -->
       <IonGrid class="action-tiles">
         <IonRow>
           <IonCol size="6" @click="toggleOrdersList">
@@ -94,6 +93,7 @@
         </IonRow>
       </IonGrid>
 
+      <!-- Orders List (scrolls into view when visible) -->
       <ordersList :userId="userId" ref="ordersListRef" v-if="showOrdersList" />
 
       <!-- Settings Sections -->
@@ -158,11 +158,12 @@ export default {
 
     const userInitial = computed(() => {
       const names = user.value.name.split(" ");
-      const initials = names
-        .map((n) => n.charAt(0))
-        .join("")
-        .toUpperCase();
-      return initials || "U";
+      return (
+        names
+          .map((n) => n.charAt(0))
+          .join("")
+          .toUpperCase() || "U"
+      );
     });
 
     const userId = computed(() => authStore.user?.id);
@@ -193,15 +194,22 @@ export default {
     const categoriesManagerRef = ref(null);
     const accountDetailsManagerRef = ref(null);
 
+    // Helper function to scroll to a section smoothly.
     const scrollToSection = async (refEl) => {
       await nextTick();
-      refEl.value?.$el
-        ? refEl.value.$el.scrollIntoView({ behavior: "smooth" })
-        : refEl.value.scrollIntoView({ behavior: "smooth" });
+      if (refEl.value?.$el) {
+        refEl.value.$el.scrollIntoView({ behavior: "smooth" });
+      } else if (refEl.value) {
+        refEl.value.scrollIntoView({ behavior: "smooth" });
+      }
     };
 
+    // Toggle Orders List and scroll to it when shown.
     const toggleOrdersList = async () => {
       showOrdersList.value = !showOrdersList.value;
+      if (showOrdersList.value) {
+        await scrollToSection(ordersListRef);
+      }
     };
 
     const toggleCategoryManager = async () => {
@@ -209,7 +217,7 @@ export default {
       if (showCategoryManager.value) {
         showAccountDetailsManager.value = false;
         showOrdersList.value = false;
-        scrollToSection(categoriesManagerRef);
+        await scrollToSection(categoriesManagerRef);
       }
     };
 
@@ -218,7 +226,7 @@ export default {
       if (showAccountDetailsManager.value) {
         showCategoryManager.value = false;
         showOrdersList.value = false;
-        scrollToSection(accountDetailsManagerRef);
+        await scrollToSection(accountDetailsManagerRef);
       }
     };
 
@@ -264,6 +272,7 @@ export default {
 </script>
 
 <style scoped>
+/* Header styles remain unchanged */
 .header-left {
   display: flex;
   align-items: center;
@@ -290,7 +299,6 @@ export default {
   font-weight: 600;
 }
 
-/* Profile Card */
 .profile-card {
   margin: 0.5rem;
   border-radius: 8px;
@@ -315,7 +323,6 @@ export default {
   margin-right: 1rem;
 }
 
-/* Action Tiles */
 .action-tiles {
   margin: 0.5rem;
 }
@@ -337,7 +344,6 @@ export default {
   font-size: 0.9rem;
 }
 
-/* Settings header */
 .settings-header {
   display: flex;
   align-items: center;

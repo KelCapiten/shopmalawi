@@ -12,7 +12,7 @@ export default function useOrderPayment() {
   const loading = ref(false);
   const error = ref<Error | null>(null);
   const orderResponse = ref<any>(null);
-  const orders = ref<any[]>([]);
+  const buyOrders = ref<any[]>([]);
   const sellOrders = ref<any[]>([]);
 
   const submitOrderAndPayment = async (
@@ -47,7 +47,7 @@ export default function useOrderPayment() {
     error.value = null;
     try {
       const response = await getBuyOrders(userId);
-      orders.value = response.data;
+      buyOrders.value = response.data;
     } catch (err: any) {
       error.value = err;
     } finally {
@@ -105,7 +105,7 @@ export default function useOrderPayment() {
     error,
     orderResponse,
     submitOrderAndPayment,
-    orders,
+    buyOrders,
     fetchBuyOrders,
     sellOrders,
     fetchSellOrders,

@@ -1,9 +1,11 @@
 //\src\components\OrdersList.vue
 <template>
   <div>
-    <div v-if="orders.length || sellOrders.length" class="settings-header">
+    <div v-if="buyOrders.length || sellOrders.length" class="settings-header">
       <h3>Manage Your Orders</h3>
     </div>
+
+    <!-- Tab Selector -->
     <div class="tab-selector">
       <button
         :class="{ 'tab-button': true, active: selectedTab === 'buy' }"
@@ -18,10 +20,28 @@
         Your Sell Orders
       </button>
     </div>
+
+    <!-- Filters Bar -->
+    <div class="filter-bar">
+      <button
+        v-for="filter in filters"
+        :key="filter.value"
+        :class="{
+          'filter-button': true,
+          active: selectedFilter === filter.value,
+        }"
+        @click="setFilter(filter.value)"
+      >
+        <ion-icon :icon="filter.icon" class="filter-icon"></ion-icon>
+        <span>{{ filter.label }}</span>
+      </button>
+    </div>
+
+    <!-- Orders Display -->
     <div class="orders-content">
       <OrdersDisplay
         v-if="selectedTab === 'buy'"
-        :orders="orders"
+        :orders="filteredBuyOrders"
         :isLoading="loading"
         :error="error"
         emptyMessageText="No buy orders found"
@@ -35,7 +55,7 @@
       />
       <OrdersDisplay
         v-if="selectedTab === 'sell'"
-        :orders="sellOrders"
+        :orders="filteredSellOrders"
         :isLoading="loading"
         :error="error"
         emptyMessageText="No sell orders found"
@@ -52,9 +72,17 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, onMounted, ref } from "vue";
+import { defineComponent, onMounted, ref, computed } from "vue";
 import OrdersDisplay from "@/components/ordersDisplay.vue";
 import useOrderPayment from "@/composables/useOrderPayment";
+// Import icons from Ionicons
+import {
+  appsOutline,
+  timeOutline,
+  checkmarkCircleOutline,
+  closeCircleOutline,
+  returnDownBackOutline,
+} from "ionicons/icons";
 
 export default defineComponent({
   name: "OrdersList",
@@ -69,14 +97,25 @@ export default defineComponent({
     const {
       loading,
       error,
-      orders,
+      buyOrders,
       sellOrders,
       fetchBuyOrders,
       fetchSellOrders,
       updatePaymentStatusHandler,
       recordRefundHandler,
     } = useOrderPayment();
+
     const selectedTab = ref("buy");
+    const selectedFilter = ref("all");
+
+    // Define filter options with icons
+    const filters = [
+      { label: "All", value: "all", icon: appsOutline },
+      { label: "Pending", value: "pending", icon: timeOutline },
+      { label: "Completed", value: "completed", icon: checkmarkCircleOutline },
+      { label: "Failed", value: "failed", icon: closeCircleOutline },
+      { label: "Refund", value: "refund", icon: returnDownBackOutline },
+    ];
 
     onMounted(() => {
       fetchBuyOrders(props.userId);
@@ -91,6 +130,40 @@ export default defineComponent({
         fetchBuyOrders(props.userId);
       }
     };
+
+    const setFilter = (filter: string) => {
+      selectedFilter.value = filter;
+    };
+
+    const filteredBuyOrders = computed(() => {
+      if (selectedFilter.value === "all") return buyOrders.value;
+      return buyOrders.value.filter((order: any) => {
+        const status = order.payment?.status;
+        if (!status) return false;
+        if (selectedFilter.value === "pending") return status === "pending";
+        if (selectedFilter.value === "completed") return status === "completed";
+        if (selectedFilter.value === "failed")
+          return status === "failed" || status === "canceled";
+        if (selectedFilter.value === "refund")
+          return ["refund", "refunding", "refunded"].includes(status);
+        return true;
+      });
+    });
+
+    const filteredSellOrders = computed(() => {
+      if (selectedFilter.value === "all") return sellOrders.value;
+      return sellOrders.value.filter((order: any) => {
+        const status = order.payment?.status;
+        if (!status) return false;
+        if (selectedFilter.value === "pending") return status === "pending";
+        if (selectedFilter.value === "completed") return status === "completed";
+        if (selectedFilter.value === "failed")
+          return status === "failed" || status === "canceled";
+        if (selectedFilter.value === "refund")
+          return ["refund", "refunding", "refunded"].includes(status);
+        return true;
+      });
+    });
 
     const handleOrderItemClick = (payload: any) => {
       console.log("Order item clicked:", payload);
@@ -117,7 +190,6 @@ export default defineComponent({
 
     const handleRefundNotReceivedButtonClicked = async (paymentId: number) => {
       try {
-        console.log("click click");
         await updatePaymentStatusHandler(paymentId, "refund");
         await fetchBuyOrders(props.userId);
       } catch (err) {
@@ -171,18 +243,23 @@ export default defineComponent({
     return {
       loading,
       error,
-      orders,
+      buyOrders,
       sellOrders,
       selectedTab,
-      handleConfirmRefundClicked,
-      handleRefundNotReceivedButtonClicked,
-      handleRefundUpload,
-      handleCancelOrderClicked,
-      handleReactivateOrderClicked,
+      selectedFilter,
+      filters,
+      filteredBuyOrders,
+      filteredSellOrders,
       setTab,
+      setFilter,
       handleOrderItemClick,
       handleConfirmButtonClicked,
       handleRefundButtonClicked,
+      handleRefundNotReceivedButtonClicked,
+      handleReactivateOrderClicked,
+      handleCancelOrderClicked,
+      handleConfirmRefundClicked,
+      handleRefundUpload,
     };
   },
 });
@@ -207,7 +284,6 @@ export default defineComponent({
 .tab-selector {
   display: flex;
   width: 100%;
-  margin-bottom: 1rem;
 }
 
 .tab-button {
@@ -228,5 +304,51 @@ export default defineComponent({
 .tab-button.active {
   background: #007aff;
   color: #fff;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-evenly;
+  background: #f7f7f7;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin: 1rem 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-button {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  transition: background 0.3s, color 0.3s;
+  outline: none;
+}
+
+.filter-button.active {
+  background: #007aff;
+  color: #fff;
+  border-radius: 4px;
+}
+
+.filter-icon {
+  font-size: 1.1rem;
+}
+
+.orders-content {
+  margin-top: 1rem;
 }
 </style>

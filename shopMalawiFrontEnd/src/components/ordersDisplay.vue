@@ -1,483 +1,456 @@
 //\src\components\ordersDisplay.vue
 <template>
-  <div>
-    <div class="container">
-      <div v-if="isLoading" class="status-message">Loading...</div>
-      <div v-else-if="error" class="status-message error">
-        {{ formattedError }}
-      </div>
-      <div v-else-if="orders.length === 0" class="status-message empty">
-        <h3>{{ emptyMessageText }}</h3>
-        <p>{{ emptyMessageSubText }}</p>
-      </div>
-      <IonList v-else lines="none" class="orders-list">
-        <IonCard
-          v-for="(order, index) in orders"
-          :key="order.order_id || index"
-          class="order-card"
-        >
-          <IonCardHeader class="order-header">
-            <div class="order-header-content">
-              <div class="order-header-top">
-                <div class="order-title">Order #{{ order.order_id }}</div>
-                <div class="order-date">
-                  {{ formatDateOnly(order.created_at) }}
-                </div>
-              </div>
-              <div
-                class="order-header-bottom"
-                :class="{
-                  refund:
-                    order.payment &&
-                    (order.payment.status === 'refund' ||
-                      order.payment.status === 'refunding' ||
-                      order.payment.status === 'refunded'),
-                }"
-              >
-                <div class="order-amount">MWK {{ order.total_amount }}</div>
-                <template v-if="orderType === 'buy' && order.payment">
-                  <button
-                    class="confirm-payment-button"
-                    :class="{
-                      'pending-buy': order.payment.status === 'pending',
-                      confirmed: order.payment.status === 'completed',
-                      failed:
-                        order.payment.status === 'failed' ||
-                        order.payment.status === 'canceled',
-                      refund:
-                        order.payment.status === 'refund' ||
-                        order.payment.status === 'refunding' ||
-                        order.payment.status === 'refunded',
-                    }"
-                    disabled
-                  >
-                    <template v-if="order.payment.status === 'pending'">
-                      <span>Pending Confirmation</span>
-                    </template>
-                    <template v-else-if="order.payment.status === 'completed'">
-                      <span>Payment Confirmed</span>
-                      <span class="gold-tick">✔</span>
-                    </template>
-                    <template v-else-if="order.payment.status === 'failed'">
-                      <span>Payment Not Received</span>
-                      <span class="red-x">✖</span>
-                    </template>
-                    <template v-else-if="order.payment.status === 'canceled'">
-                      <span>Order Canceled</span>
-                    </template>
-                    <template v-else-if="order.payment.status === 'refunding'">
-                      <span>Refund Sent</span>
-                    </template>
-                    <template v-else-if="order.payment.status === 'refunded'">
-                      <span>Refunded</span>
-                    </template>
-                    <template v-else-if="order.payment.status === 'refund'">
-                      <span>Refund Requested</span>
-                    </template>
-                    <template v-else>
-                      <span>Confirm Payment</span>
-                    </template>
-                  </button>
-                </template>
-                <template v-else>
-                  <button
-                    class="confirm-payment-button"
-                    :class="{
-                      pending: order.payment.status === 'pending',
-                      confirmed: order.payment.status === 'completed',
-                      failed:
-                        order.payment.status === 'failed' ||
-                        order.payment.status === 'canceled',
-                      refund:
-                        order.payment.status === 'refund' ||
-                        order.payment.status === 'refunding' ||
-                        order.payment.status === 'refunded',
-                      active: order.payment.status === 'pending',
-                    }"
-                    @click="confirmPayment(order.payment.payment_id)"
-                    :disabled="order.payment.status !== 'pending'"
-                  >
-                    <template v-if="order.payment.status === 'pending'">
-                      <span>Confirm Payment</span>
-                    </template>
-                    <template v-else-if="order.payment.status === 'completed'">
-                      <span>Payment Confirmed</span>
-                      <span class="gold-tick">✔</span>
-                    </template>
-                    <template v-else-if="order.payment.status === 'failed'">
-                      <span>Payment Not Received</span>
-                      <span class="red-x">✖</span>
-                    </template>
-                    <template v-else-if="order.payment.status === 'canceled'">
-                      <span>Order Canceled</span>
-                    </template>
-                    <template v-else-if="order.payment.status === 'refunding'">
-                      <span>Refund Sent</span>
-                    </template>
-                    <template v-else-if="order.payment.status === 'refunded'">
-                      <span>Refunded</span>
-                    </template>
-                    <template v-else-if="order.payment.status === 'refund'">
-                      <span>Refund Requested</span>
-                    </template>
-                  </button>
-                </template>
+  <div class="container">
+    <div v-if="isLoading" class="status-message">Loading...</div>
+    <div v-else-if="error" class="status-message error">
+      {{ formattedError }}
+    </div>
+    <div v-else-if="orders.length === 0" class="status-message empty">
+      <h3>{{ emptyMessageText }}</h3>
+      <p>{{ emptyMessageSubText }}</p>
+    </div>
+    <IonList v-else lines="none" class="orders-list">
+      <IonCard
+        v-for="(order, index) in orders"
+        :key="order.order_id || index"
+        class="order-card"
+      >
+        <IonCardHeader class="order-header">
+          <div class="order-header-content">
+            <div class="order-header-top">
+              <div class="order-title">Order #{{ order.order_id }}</div>
+              <div class="order-date">
+                {{ formatDateOnly(order.created_at) }}
               </div>
             </div>
-          </IonCardHeader>
-
-          <IonCardContent>
             <div
-              v-for="(item, iIndex) in order.order_items"
-              :key="iIndex"
-              class="item-row"
-              @click="$emit('orderItemClicked', { order, item })"
+              class="order-header-bottom"
+              :class="{
+                refund: order.payment && isRefundStatus(order.payment.status),
+              }"
             >
-              <p v-if="item.name" class="item-name">{{ item.name }}</p>
-              <div class="item-info">
-                <div
-                  v-if="item.images && item.images.length"
-                  class="image-wrapper"
+              <div class="order-amount">MWK {{ order.total_amount }}</div>
+              <!-- Payment button markup (unchanged) -->
+              <template v-if="orderType === 'buy' && order.payment">
+                <button
+                  class="confirm-payment-button"
+                  :class="{
+                    'pending-buy': order.payment.status === 'pending',
+                    confirmed: order.payment.status === 'completed',
+                    failed:
+                      order.payment.status === 'failed' ||
+                      order.payment.status === 'canceled',
+                    refund: ['refund', 'refunding', 'refunded'].includes(
+                      order.payment.status
+                    ),
+                  }"
+                  disabled
                 >
-                  <img
-                    :src="getImageUrl(item.images[0].image_path)"
-                    :alt="item.images[0].alt_text || 'Product Image'"
-                    class="product-image"
-                  />
-                </div>
-                <div class="amount-qty">
-                  <p class="item-price">MWK {{ item.purchase_price }} each</p>
-                  <p class="item-qty">Quantity: {{ item.quantity }}</p>
-                  <p v-if="item.description" class="item-desc">
-                    {{ item.description }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </IonCardContent>
-
-          <IonList class="payment-list">
-            <IonItem
-              button
-              :detail="false"
-              @click="togglePaymentDetails(order.order_id)"
-              class="payment-toggle"
-            >
-              <IonLabel>Payments</IonLabel>
-              <IonIcon
-                :icon="
-                  isPaymentExpanded(order.order_id)
-                    ? chevronUpOutline
-                    : chevronDownOutline
-                "
-                slot="end"
-              />
-            </IonItem>
-            <div
-              v-if="isPaymentExpanded(order.order_id) && order.payment"
-              class="payment-details"
-            >
-              <div class="payment-left">
-                <div class="payment-info">
-                  <p><strong>Expected Amount</strong></p>
-                  <div>MWK {{ order.payment.amount }}</div>
-                </div>
-                <div
-                  v-if="order.payment.payment_screenshot"
-                  class="payment-screenshot"
-                >
-                  <img
-                    :src="
-                      getImageUrl(order.payment.payment_screenshot.image_path)
-                    "
-                    :alt="order.payment.payment_screenshot.alt_text"
-                    class="payment-image"
-                  />
-                </div>
-              </div>
-              <div class="payment-divider"></div>
-              <div class="payment-refund">
-                <!-- BUY ORDERS -->
-                <template v-if="orderType === 'buy'">
-                  <!-- Payment Confirmed -->
-                  <template v-if="order.payment.status === 'completed'">
-                    <p class="refund-message">
-                      Payment has been confirmed by seller, kindly follow up on
-                      your order
-                    </p>
-                    <button
-                      class="chat-button"
-                      @click="chatWithSeller(order.payment.payment_id)"
-                    >
-                      <ion-icon :icon="chatIcon" />
-                      <span>Message Seller</span>
-                    </button>
-                  </template>
-
-                  <!-- Payment Failed -->
-                  <template v-else-if="order.payment.status === 'failed'">
-                    <p><strong>Payment</strong></p>
-                    <p class="refund-message">
-                      The user did not confirm the payment
-                    </p>
-                    <button
-                      class="confirm-payment-button"
-                      @click="confirmPayment(order.payment.payment_id)"
-                    >
-                      Resend Screenshot
-                    </button>
-                    <button
-                      class="refund-button"
-                      @click="cancelOrder(order.payment.payment_id)"
-                    >
-                      Cancel Order
-                    </button>
-                    <p>or</p>
-                    <button
-                      class="chat-button"
-                      @click="chatWithSeller(order.payment.payment_id)"
-                    >
-                      <ion-icon :icon="chatIcon" />
-                      <span>Message Seller</span>
-                    </button>
-                  </template>
-
-                  <!-- Payment Canceled -->
-                  <template v-else-if="order.payment.status === 'canceled'">
-                    <p class="refund-message">
-                      The seller has been notified of the refund
-                    </p>
-                    <button
-                      class="reactivate-order-button"
-                      @click="reactivateOrder(order.payment.payment_id)"
-                    >
-                      Reactivate Order
-                    </button>
-                    <button
-                      class="chat-button"
-                      @click="chatWithSeller(order.payment.payment_id)"
-                    >
-                      <ion-icon :icon="chatIcon" />
-                      <span>Message Seller</span>
-                    </button>
-                  </template>
-
-                  <!-- Refunding -->
-                  <template v-else-if="order.payment.status === 'refunding'">
-                    <p><strong>Refunded</strong></p>
-                    <div v-if="order.refund && order.refund.refund_screenshot">
-                      <img
-                        :src="
-                          getImageUrl(order.refund.refund_screenshot.image_path)
-                        "
-                        :alt="
-                          order.refund.refund_screenshot.alt_text ||
-                          'Refund Screenshot'
-                        "
-                        class="refund-image"
-                      />
-                    </div>
-                    <button
-                      class="not-received-button"
-                      @click="
-                        refundPaymentNotReceived(order.payment.payment_id)
-                      "
-                    >
-                      Not Received
-                    </button>
-                    <button
-                      class="confirm-refund-button"
-                      @click="confirmRefund(order.payment.payment_id)"
-                    >
-                      Confirm Refund
-                    </button>
-                  </template>
-
-                  <!-- Refunded -->
-                  <template v-else-if="order.payment.status === 'refunded'">
-                    <p><strong>Refund</strong></p>
-                    <div v-if="order.refund && order.refund.refund_screenshot">
-                      <img
-                        :src="
-                          getImageUrl(order.refund.refund_screenshot.image_path)
-                        "
-                        :alt="
-                          order.refund.refund_screenshot.alt_text ||
-                          'Refund Screenshot'
-                        "
-                        class="refund-image"
-                      />
-                    </div>
-                  </template>
-
-                  <!-- Refund Requested (UPDATED SECTION) -->
-                  <template v-else-if="order.payment.status === 'refund'">
-                    <p><strong>Refund</strong></p>
-                    <p class="refund-message">
-                      Seller is refunding this payment. Waiting for screenshot.
-                    </p>
-                    <button
-                      class="chat-button"
-                      @click="chatWithSeller(order.payment.payment_id)"
-                    >
-                      <ion-icon :icon="chatIcon" />
-                      <span>Message Seller</span>
-                    </button>
-                  </template>
-
-                  <!-- Default (no specific matching status) -->
-                  <template v-else>
-                    <p><strong>Refund</strong></p>
-                    <p class="refund-message">
-                      Would you like to cancel the order and request a refund?
-                    </p>
-                    <button
-                      class="refund-button"
-                      @click="cancelOrder(order.payment.payment_id)"
-                    >
-                      Cancel Order
-                    </button>
-                    <button
-                      class="chat-button"
-                      @click="chatWithSeller(order.payment.payment_id)"
-                    >
-                      <ion-icon :icon="chatIcon" />
-                      <span>Message Seller</span>
-                    </button>
-                  </template>
-                </template>
-
-                <!-- SELL ORDERS -->
-                <template v-else>
                   <template v-if="order.payment.status === 'pending'">
-                    <p><strong>Confirm Payment</strong></p>
-                    <p class="refund-message">
-                      Please confirm. Didn't receive this payment? Contact the
-                      buyer.
-                    </p>
-                    <button
-                      class="chat-button"
-                      @click="chatWithBuyer(order.payment.payment_id)"
-                    >
-                      <ion-icon :icon="chatIcon" />
-                      <span>Message Buyer</span>
-                    </button>
-                  </template>
-                  <template v-else-if="order.payment.status === 'failed'">
-                    <p><strong>Confirm Payment</strong></p>
-                    <p class="refund-message">
-                      You took too long to confirm. Did you receive this
-                      payment?
-                    </p>
-                    <button
-                      class="confirm-payment-button"
-                      @click="confirmPayment(order.payment.payment_id)"
-                    >
-                      Confirm Payment
-                    </button>
-                    <p>or</p>
-                    <button
-                      class="chat-button"
-                      @click="chatWithBuyer(order.payment.payment_id)"
-                    >
-                      <ion-icon :icon="chatIcon" />
-                      <span>Message Buyer</span>
-                    </button>
-                  </template>
-                  <template v-else-if="order.payment.status === 'canceled'">
-                    <p><strong>Order Canceled</strong></p>
-                    <p class="refund-message">Kindly refund the seller</p>
-                    <button
-                      class="refund-button"
-                      @click="refundPayment(order.payment.payment_id)"
-                    >
-                      Refund Payment
-                    </button>
-                  </template>
-                  <template v-else-if="order.payment.status === 'refunding'">
-                    <p><strong>Refunded</strong></p>
-                    <div v-if="order.refund && order.refund.refund_screenshot">
-                      <img
-                        :src="
-                          getImageUrl(order.refund.refund_screenshot.image_path)
-                        "
-                        :alt="
-                          order.refund.refund_screenshot.alt_text ||
-                          'Refund Screenshot'
-                        "
-                        class="refund-image"
-                      />
-                    </div>
-                  </template>
-                  <template v-else-if="order.payment.status === 'refunded'">
-                    <p><strong>Refund</strong></p>
-                    <div v-if="order.refund && order.refund.refund_screenshot">
-                      <img
-                        :src="
-                          getImageUrl(order.refund.refund_screenshot.image_path)
-                        "
-                        :alt="
-                          order.refund.refund_screenshot.alt_text ||
-                          'Refund Screenshot'
-                        "
-                        class="refund-image"
-                      />
-                    </div>
-                  </template>
-                  <template v-else-if="order.payment.status === 'refund'">
-                    <ImageUploader
-                      class="ImageUploader"
-                      label="Refund Screenshot"
-                      placeholderMessage="Click to upload"
-                      @uploaded-images="
-                        (files) =>
-                          screenshotUploaded(
-                            files,
-                            order.order_id,
-                            order.payment.payment_id
-                          )
-                      "
-                    />
-                    <button
-                      class="chat-button"
-                      @click="chatWithBuyer(order.payment.payment_id)"
-                    >
-                      <ion-icon :icon="chatIcon" />
-                      <span>Message Buyer</span>
-                    </button>
+                    <span>Pending Confirmation</span>
                   </template>
                   <template v-else-if="order.payment.status === 'completed'">
-                    <p><strong>Refund</strong></p>
-                    <p class="refund-message">
-                      Would you like to refund this payment?
-                    </p>
-                    <button
-                      class="refund-button"
-                      @click="refundPayment(order.payment.payment_id)"
-                    >
-                      Refund Payment
-                    </button>
-                    <button
-                      class="cancel-confirmation-button"
-                      @click="reactivateOrder(order.payment.payment_id)"
-                    >
-                      undo confirmation
-                    </button>
-                    <button
-                      class="chat-button"
-                      @click="chatWithBuyer(order.payment.payment_id)"
-                    >
-                      <ion-icon :icon="chatIcon" />
-                      <span>Message Buyer</span>
-                    </button>
+                    <span>Payment Confirmed</span>
+                    <span class="gold-tick">✔</span>
                   </template>
-                </template>
+                  <template v-else-if="order.payment.status === 'failed'">
+                    <span>Payment Not Received</span>
+                    <span class="red-x">✖</span>
+                  </template>
+                  <template v-else-if="order.payment.status === 'canceled'">
+                    <span>Order Canceled</span>
+                  </template>
+                  <template v-else-if="order.payment.status === 'refunding'">
+                    <span>Refund Sent</span>
+                  </template>
+                  <template v-else-if="order.payment.status === 'refunded'">
+                    <span>Refunded</span>
+                  </template>
+                  <template v-else-if="order.payment.status === 'refund'">
+                    <span>Refund Requested</span>
+                  </template>
+                  <template v-else>
+                    <span>Confirm Payment</span>
+                  </template>
+                </button>
+              </template>
+              <template v-else>
+                <button
+                  class="confirm-payment-button"
+                  :class="{
+                    pending: order.payment.status === 'pending',
+                    confirmed: order.payment.status === 'completed',
+                    failed:
+                      order.payment.status === 'failed' ||
+                      order.payment.status === 'canceled',
+                    refund: ['refund', 'refunding', 'refunded'].includes(
+                      order.payment.status
+                    ),
+                    active: order.payment.status === 'pending',
+                  }"
+                  @click="confirmPayment(order.payment.payment_id)"
+                  :disabled="order.payment.status !== 'pending'"
+                >
+                  <template v-if="order.payment.status === 'pending'">
+                    <span>Confirm Payment</span>
+                  </template>
+                  <template v-else-if="order.payment.status === 'completed'">
+                    <span>Payment Confirmed</span>
+                    <span class="gold-tick">✔</span>
+                  </template>
+                  <template v-else-if="order.payment.status === 'failed'">
+                    <span>Payment Not Received</span>
+                    <span class="red-x">✖</span>
+                  </template>
+                  <template v-else-if="order.payment.status === 'canceled'">
+                    <span>Order Canceled</span>
+                  </template>
+                  <template v-else-if="order.payment.status === 'refunding'">
+                    <span>Refund Sent</span>
+                  </template>
+                  <template v-else-if="order.payment.status === 'refunded'">
+                    <span>Refunded</span>
+                  </template>
+                  <template v-else-if="order.payment.status === 'refund'">
+                    <span>Refund Requested</span>
+                  </template>
+                </button>
+              </template>
+            </div>
+          </div>
+        </IonCardHeader>
+
+        <IonCardContent>
+          <div
+            v-for="(item, iIndex) in order.order_items"
+            :key="iIndex"
+            class="item-row"
+            @click="$emit('orderItemClicked', { order, item })"
+          >
+            <p v-if="item.name" class="item-name">{{ item.name }}</p>
+            <div class="item-info">
+              <div
+                v-if="item.images && item.images.length"
+                class="image-wrapper"
+              >
+                <img
+                  :src="getImageUrl(item.images[0].image_path)"
+                  :alt="item.images[0].alt_text || 'Product Image'"
+                  class="product-image"
+                />
+              </div>
+              <div class="amount-qty">
+                <p class="item-price">MWK {{ item.purchase_price }} each</p>
+                <p class="item-qty">Quantity: {{ item.quantity }}</p>
+                <p v-if="item.description" class="item-desc">
+                  {{ item.description }}
+                </p>
               </div>
             </div>
-          </IonList>
-        </IonCard>
-      </IonList>
-    </div>
+          </div>
+        </IonCardContent>
+
+        <IonList class="payment-list">
+          <IonItem
+            button
+            :detail="false"
+            @click="togglePaymentDetails(order.order_id)"
+            class="payment-toggle"
+          >
+            <IonLabel>Payments</IonLabel>
+            <IonIcon
+              :icon="
+                isPaymentExpanded(order.order_id)
+                  ? chevronUpOutline
+                  : chevronDownOutline
+              "
+              slot="end"
+            />
+          </IonItem>
+          <div
+            v-if="isPaymentExpanded(order.order_id) && order.payment"
+            class="payment-details"
+          >
+            <div class="payment-left">
+              <div class="payment-info">
+                <p><strong>Expected Amount</strong></p>
+                <div>MWK {{ order.payment.amount }}</div>
+              </div>
+              <div
+                v-if="order.payment.payment_screenshot"
+                class="payment-screenshot"
+              >
+                <!-- Use the FullScreenImage component here -->
+                <imageDisplay
+                  :imageUrl="
+                    getImageUrl(order.payment.payment_screenshot.image_path)
+                  "
+                  :alt="order.payment.payment_screenshot.alt_text"
+                />
+              </div>
+            </div>
+            <div class="payment-divider"></div>
+            <div class="payment-refund">
+              <!-- Refund Section (BUY orders) -->
+              <template v-if="orderType === 'buy'">
+                <template v-if="order.payment.status === 'completed'">
+                  <p class="refund-message">
+                    Payment has been confirmed by seller, kindly follow up on
+                    your order
+                  </p>
+                  <button
+                    class="chat-button"
+                    @click="chatWithSeller(order.payment.payment_id)"
+                  >
+                    <ion-icon :icon="chatIcon" />
+                    <span>Message Seller</span>
+                  </button>
+                </template>
+                <template v-else-if="order.payment.status === 'failed'">
+                  <p><strong>Payment</strong></p>
+                  <p class="refund-message">
+                    The user did not confirm the payment
+                  </p>
+                  <button
+                    class="confirm-payment-button"
+                    @click="confirmPayment(order.payment.payment_id)"
+                  >
+                    Resend Screenshot
+                  </button>
+                  <button
+                    class="refund-button"
+                    @click="cancelOrder(order.payment.payment_id)"
+                  >
+                    Cancel Order
+                  </button>
+                  <p>or</p>
+                  <button
+                    class="chat-button"
+                    @click="chatWithSeller(order.payment.payment_id)"
+                  >
+                    <ion-icon :icon="chatIcon" />
+                    <span>Message Seller</span>
+                  </button>
+                </template>
+                <template v-else-if="order.payment.status === 'canceled'">
+                  <p class="refund-message">
+                    The seller has been notified of the refund
+                  </p>
+                  <button
+                    class="reactivate-order-button"
+                    @click="reactivateOrder(order.payment.payment_id)"
+                  >
+                    Reactivate Order
+                  </button>
+                  <button
+                    class="chat-button"
+                    @click="chatWithSeller(order.payment.payment_id)"
+                  >
+                    <ion-icon :icon="chatIcon" />
+                    <span>Message Seller</span>
+                  </button>
+                </template>
+                <template v-else-if="order.payment.status === 'refunding'">
+                  <p><strong>Refunded</strong></p>
+                  <div v-if="order.refund && order.refund.refund_screenshot">
+                    <imageDisplay
+                      :imageUrl="
+                        getImageUrl(order.refund.refund_screenshot.image_path)
+                      "
+                      :alt="
+                        order.refund.refund_screenshot.alt_text ||
+                        'Refund Screenshot'
+                      "
+                    />
+                  </div>
+                  <button
+                    class="not-received-button"
+                    @click="refundPaymentNotReceived(order.payment.payment_id)"
+                  >
+                    Not Received
+                  </button>
+                  <button
+                    class="confirm-refund-button"
+                    @click="confirmRefund(order.payment.payment_id)"
+                  >
+                    Confirm Refund
+                  </button>
+                </template>
+                <template v-else-if="order.payment.status === 'refunded'">
+                  <p><strong>Refund</strong></p>
+                  <div v-if="order.refund && order.refund.refund_screenshot">
+                    <imageDisplay
+                      :imageUrl="
+                        getImageUrl(order.refund.refund_screenshot.image_path)
+                      "
+                      :alt="
+                        order.refund.refund_screenshot.alt_text ||
+                        'Refund Screenshot'
+                      "
+                    />
+                  </div>
+                </template>
+                <template v-else-if="order.payment.status === 'refund'">
+                  <p><strong>Refund</strong></p>
+                  <p class="refund-message">
+                    Seller is refunding this payment. Waiting for screenshot.
+                  </p>
+                  <button
+                    class="chat-button"
+                    @click="chatWithSeller(order.payment.payment_id)"
+                  >
+                    <ion-icon :icon="chatIcon" />
+                    <span>Message Seller</span>
+                  </button>
+                </template>
+                <template v-else>
+                  <p><strong>Refund</strong></p>
+                  <p class="refund-message">
+                    Would you like to cancel the order and request a refund?
+                  </p>
+                  <button
+                    class="refund-button"
+                    @click="cancelOrder(order.payment.payment_id)"
+                  >
+                    Cancel Order
+                  </button>
+                  <button
+                    class="chat-button"
+                    @click="chatWithSeller(order.payment.payment_id)"
+                  >
+                    <ion-icon :icon="chatIcon" />
+                    <span>Message Seller</span>
+                  </button>
+                </template>
+              </template>
+
+              <!-- Refund Section (SELL orders) -->
+              <template v-else>
+                <template v-if="order.payment.status === 'pending'">
+                  <p><strong>Confirm Payment</strong></p>
+                  <p class="refund-message">
+                    Please confirm. Didn't receive this payment? Contact the
+                    buyer.
+                  </p>
+                  <button
+                    class="chat-button"
+                    @click="chatWithBuyer(order.payment.payment_id)"
+                  >
+                    <ion-icon :icon="chatIcon" />
+                    <span>Message Buyer</span>
+                  </button>
+                </template>
+                <template v-else-if="order.payment.status === 'failed'">
+                  <p><strong>Confirm Payment</strong></p>
+                  <p class="refund-message">
+                    You took too long to confirm. Did you receive this payment?
+                  </p>
+                  <button
+                    class="confirm-payment-button"
+                    @click="confirmPayment(order.payment.payment_id)"
+                  >
+                    Confirm Payment
+                  </button>
+                  <p>or</p>
+                  <button
+                    class="chat-button"
+                    @click="chatWithBuyer(order.payment.payment_id)"
+                  >
+                    <ion-icon :icon="chatIcon" />
+                    <span>Message Buyer</span>
+                  </button>
+                </template>
+                <template v-else-if="order.payment.status === 'canceled'">
+                  <p><strong>Order Canceled</strong></p>
+                  <p class="refund-message">Kindly refund the seller</p>
+                  <button
+                    class="refund-button"
+                    @click="refundPayment(order.payment.payment_id)"
+                  >
+                    Refund Payment
+                  </button>
+                </template>
+                <template v-else-if="order.payment.status === 'refunding'">
+                  <p><strong>Refunded</strong></p>
+                  <div v-if="order.refund && order.refund.refund_screenshot">
+                    <imageDisplay
+                      :imageUrl="
+                        getImageUrl(order.refund.refund_screenshot.image_path)
+                      "
+                      :alt="
+                        order.refund.refund_screenshot.alt_text ||
+                        'Refund Screenshot'
+                      "
+                    />
+                  </div>
+                </template>
+                <template v-else-if="order.payment.status === 'refunded'">
+                  <p><strong>Refund</strong></p>
+                  <div v-if="order.refund && order.refund.refund_screenshot">
+                    <imageDisplay
+                      :imageUrl="
+                        getImageUrl(order.refund.refund_screenshot.image_path)
+                      "
+                      :alt="
+                        order.refund.refund_screenshot.alt_text ||
+                        'Refund Screenshot'
+                      "
+                    />
+                  </div>
+                </template>
+                <template v-else-if="order.payment.status === 'refund'">
+                  <ImageUploader
+                    class="ImageUploader"
+                    label="Refund Screenshot"
+                    placeholderMessage="Click to upload"
+                    @uploaded-images="
+                      (files) =>
+                        screenshotUploaded(
+                          files,
+                          order.order_id,
+                          order.payment.payment_id
+                        )
+                    "
+                  />
+                  <button
+                    class="chat-button"
+                    @click="chatWithBuyer(order.payment.payment_id)"
+                  >
+                    <ion-icon :icon="chatIcon" />
+                    <span>Message Buyer</span>
+                  </button>
+                </template>
+                <template v-else-if="order.payment.status === 'completed'">
+                  <p><strong>Refund</strong></p>
+                  <p class="refund-message">
+                    Would you like to refund this payment?
+                  </p>
+                  <button
+                    class="refund-button"
+                    @click="refundPayment(order.payment.payment_id)"
+                  >
+                    Refund Payment
+                  </button>
+                  <button
+                    class="cancel-confirmation-button"
+                    @click="reactivateOrder(order.payment.payment_id)"
+                  >
+                    undo confirmation
+                  </button>
+                  <button
+                    class="chat-button"
+                    @click="chatWithBuyer(order.payment.payment_id)"
+                  >
+                    <ion-icon :icon="chatIcon" />
+                    <span>Message Buyer</span>
+                  </button>
+                </template>
+              </template>
+            </div>
+          </div>
+        </IonList>
+      </IonCard>
+    </IonList>
   </div>
 </template>
 
@@ -490,6 +463,7 @@ import {
 } from "ionicons/icons";
 import { getImageUrl } from "@/utils/utilities";
 import ImageUploader from "@/components/ImageUploader.vue";
+import imageDisplay from "@/components/imageDisplay.vue";
 
 function formatDateOnly(dateString: string) {
   const date = new Date(dateString);
@@ -502,7 +476,7 @@ function formatDateOnly(dateString: string) {
 
 export default defineComponent({
   name: "OrdersDisplay",
-  components: { ImageUploader },
+  components: { ImageUploader, imageDisplay },
   props: {
     orders: {
       type: Array as PropType<any[]>,
@@ -549,9 +523,8 @@ export default defineComponent({
       expandedPayments.value[orderId] = !expandedPayments.value[orderId];
     };
 
-    const isPaymentExpanded = (orderId: number) => {
-      return !!expandedPayments.value[orderId];
-    };
+    const isPaymentExpanded = (orderId: number) =>
+      !!expandedPayments.value[orderId];
 
     const confirmPayment = (paymentId: number) => {
       emit("confirmButtonClicked", paymentId);
@@ -593,39 +566,43 @@ export default defineComponent({
       emit("screenshotUploaded", files, orderId, paymentId);
     };
 
-    const formattedError = computed(() => {
-      if (typeof props.error === "string") return props.error;
-      return props.error?.message || "";
-    });
+    const formattedError = computed(() =>
+      typeof props.error === "string" ? props.error : props.error?.message || ""
+    );
+
+    const isRefundStatus = (status: string) =>
+      ["refund", "refunding", "refunded"].includes(status);
 
     return {
       expandedPayments,
-      refundPaymentNotReceived,
-      screenshotUploaded,
       togglePaymentDetails,
       isPaymentExpanded,
       confirmPayment,
       refundPayment,
+      refundPaymentNotReceived,
       cancelOrder,
       chatWithSeller,
       chatWithBuyer,
       reactivateOrder,
       confirmRefund,
+      screenshotUploaded,
       formattedError,
       chevronUpOutline,
       chevronDownOutline,
       chatIcon: chatbubblesOutline,
       getImageUrl,
       formatDateOnly,
+      isRefundStatus,
     };
   },
 });
 </script>
 
 <style scoped>
+/* (All existing styles remain unchanged) */
 .container {
   background: #fafafa;
-  padding: 1.5rem;
+  padding: 0px 1rem;
   min-height: 100vh;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   font-size: 0.9rem;
@@ -813,11 +790,6 @@ export default defineComponent({
 }
 .payment-screenshot {
   text-align: center;
-}
-.payment-image {
-  max-width: 130px;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 .payment-divider {
   width: 1px;
