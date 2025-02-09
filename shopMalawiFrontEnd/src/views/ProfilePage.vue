@@ -53,21 +53,21 @@
           <IonCol size="6" @click="toggleOrdersList">
             <div class="tile">
               <IonIcon :icon="ordersIcon" class="tile-icon" />
-              <p class="tile-label">Orders</p>
+              <p class="tile-label">Manage Order</p>
             </div>
           </IonCol>
-          <IonCol size="6" @click="goToWishlist">
+          <IonCol size="6" @click="goToCoupons">
             <div class="tile">
-              <IonIcon :icon="wishlistIcon" class="tile-icon" />
-              <p class="tile-label">Wishlist</p>
+              <IonIcon :icon="productsIcon" class="tile-icon" />
+              <p class="tile-label">Manage Your Products</p>
             </div>
           </IonCol>
         </IonRow>
         <IonRow>
-          <IonCol size="6" @click="goToCoupons">
+          <IonCol size="6" @click="goToWishlist">
             <div class="tile">
-              <IonIcon :icon="couponsIcon" class="tile-icon" />
-              <p class="tile-label">Coupons</p>
+              <IonIcon :icon="wishlistIcon" class="tile-icon" />
+              <p class="tile-label">Wishlist</p>
             </div>
           </IonCol>
           <IonCol size="6" @click="goToHistory">
@@ -86,7 +86,7 @@
           </IonCol>
           <IonCol size="6" @click="toggleAccountDetailsManager">
             <div class="tile">
-              <IonIcon :icon="accountIcon" class="tile-icon" />
+              <IonIcon :icon="paymentIcon" class="tile-icon" />
               <p class="tile-label">Payment Methods</p>
             </div>
           </IonCol>
@@ -132,9 +132,9 @@ import {
   settingsOutline,
   bagHandleOutline,
   heartOutline,
-  ticketOutline,
   timeOutline,
-  personCircleOutline,
+  cardOutline,
+  storefrontOutline,
 } from "ionicons/icons";
 
 export default {
@@ -170,12 +170,13 @@ export default {
 
     const userId = computed(() => authStore.user?.id);
 
+    // Assign new icons for the updated tiles
     const settingsIcon = settingsOutline;
-    const ordersIcon = bagHandleOutline;
+    const ordersIcon = bagHandleOutline; // For Manage Order
     const wishlistIcon = heartOutline;
-    const couponsIcon = ticketOutline;
+    const productsIcon = storefrontOutline; // For Manage Your Products
     const historyIcon = timeOutline;
-    const accountIcon = personCircleOutline;
+    const paymentIcon = cardOutline; // For Payment Methods
 
     const showSettings = ref(false);
     const popoverEvent = ref(null);
@@ -267,9 +268,9 @@ export default {
       settingsIcon,
       ordersIcon,
       wishlistIcon,
-      couponsIcon,
+      productsIcon,
       historyIcon,
-      accountIcon,
+      paymentIcon,
       goToWishlist,
       goToCoupons,
       goToHistory,

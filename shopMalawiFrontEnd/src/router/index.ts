@@ -1,3 +1,4 @@
+//\src\router\index.ts
 import { createRouter, createWebHistory } from "@ionic/vue-router";
 import { RouteRecordRaw } from "vue-router";
 import SellDashboard from "@/views/SellDashboard.vue";
@@ -10,6 +11,7 @@ import SearchResultsPage from "@/views/searchResultsPage.vue";
 import ProductPage from "@/views/productPage.vue";
 import PayPage from "@/views/PayPage.vue";
 import LookingForPage from "@/views/LookingForPage.vue";
+import StorePage from "@/components/StorePage.vue"; // New store page
 import { useAuthStore } from "@/stores/authStore";
 
 const routes: Array<RouteRecordRaw> = [
@@ -71,6 +73,12 @@ const routes: Array<RouteRecordRaw> = [
     path: "/looking-for",
     name: "LookingFor",
     component: LookingForPage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/store",
+    name: "Store",
+    component: StorePage,
     meta: { requiresAuth: true },
   },
 ];

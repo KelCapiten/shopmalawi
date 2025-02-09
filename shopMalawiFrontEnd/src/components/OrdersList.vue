@@ -101,6 +101,7 @@ export default defineComponent({
       { label: "All", value: "all", icon: appsOutline },
       { label: "Pending", value: "pending", icon: timeOutline },
       { label: "Completed", value: "completed", icon: checkmarkCircleOutline },
+      { label: "Canceled", value: "canceled", icon: closeCircleOutline },
       { label: "Failed", value: "failed", icon: closeCircleOutline },
       { label: "Refund", value: "refund", icon: returnDownBackOutline },
     ];
@@ -125,8 +126,8 @@ export default defineComponent({
         if (!status) return false;
         if (selectedFilter.value === "pending") return status === "pending";
         if (selectedFilter.value === "completed") return status === "completed";
-        if (selectedFilter.value === "failed")
-          return status === "failed" || status === "canceled";
+        if (selectedFilter.value === "canceled") return status === "canceled";
+        if (selectedFilter.value === "failed") return status === "failed";
         if (selectedFilter.value === "refund")
           return ["refund", "refunding", "refunded"].includes(status);
         return true;
@@ -140,8 +141,8 @@ export default defineComponent({
         if (!status) return false;
         if (selectedFilter.value === "pending") return status === "pending";
         if (selectedFilter.value === "completed") return status === "completed";
-        if (selectedFilter.value === "failed")
-          return status === "failed" || status === "canceled";
+        if (selectedFilter.value === "failed") return status === "failed";
+        if (selectedFilter.value === "canceled") return status === "canceled";
         if (selectedFilter.value === "refund")
           return ["refund", "refunding", "refunded"].includes(status);
         return true;

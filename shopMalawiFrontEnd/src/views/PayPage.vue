@@ -18,7 +18,7 @@
         @decrement="handleDecrement"
       />
 
-      <PaymentMethod />
+      <PaymentMethod ref="paymentMethodRef" />
 
       <IonCard class="summary-card">
         <IonCardHeader>
@@ -69,6 +69,16 @@
       @left-button-click="onCancelOrder"
       @right-button-click="onPlaceOrder"
     />
+
+    <!-- Centered Success Popup -->
+    <transition name="fade">
+      <div v-if="showSuccessPopup" class="success-popup">
+        <div class="popup-content">
+          <h2>Success!</h2>
+          <p>{{ popupMessage }}</p>
+        </div>
+      </div>
+    </transition>
   </IonPage>
 </template>
 
@@ -94,6 +104,9 @@ export default defineComponent({
     const { submitOrderAndPayment, loading, error, orderResponse } =
       useOrderPayment();
     const product = ref<any>(null);
+    const paymentMethodRef = ref<any>(null);
+    const showSuccessPopup = ref(false);
+    const popupMessage = ref("");
 
     onMounted(() => {
       const loadedProduct = loadProductFromSessionStorage<any>();
@@ -121,7 +134,9 @@ export default defineComponent({
     const onCancelOrder = () => router.back();
 
     const onPlaceOrder = async () => {
-      // Update the orders store with total values
+      if (!paymentMethodRef.value || !paymentMethodRef.value.validate()) {
+        return;
+      }
       ordersStore.setTotalAmount(total.value);
       ordersStore.setPaymentAmount(total.value);
       ordersStore.setOrderItems([
@@ -133,7 +148,6 @@ export default defineComponent({
       ]);
       ordersStore.initUserId();
 
-      // Build the orderData object from the orders store
       const orderData = {
         user_id: ordersStore.payload.user_id,
         shipping_address: ordersStore.payload.shipping_address,
@@ -144,23 +158,18 @@ export default defineComponent({
         order_items: ordersStore.payload.order_items,
       };
 
-      // Ensure the payment screenshot exists
-      if (!ordersStore.payload.paymentScreenshot) {
-        alert("Please upload a payment screenshot.");
-        return;
-      }
-
-      // Submit order and payment to the backend
       await submitOrderAndPayment(
         orderData,
-        ordersStore.payload.paymentScreenshot
+        ordersStore.payload.paymentScreenshot!
       );
 
-      // After submission you might want to navigate to a confirmation page or show a message
       if (orderResponse.value) {
-        router.push({
-          name: "Profile",
-        });
+        popupMessage.value = `${orderResponse.value.message}. Order ID: ${orderResponse.value.order_id}.`;
+        showSuccessPopup.value = true;
+        setTimeout(() => {
+          showSuccessPopup.value = false;
+          router.push({ name: "Profile", query: { activateOrders: "true" } });
+        }, 10000);
       }
     };
 
@@ -195,6 +204,9 @@ export default defineComponent({
       loading,
       error,
       orderResponse,
+      paymentMethodRef,
+      showSuccessPopup,
+      popupMessage,
     };
   },
 });
@@ -203,5 +215,47 @@ export default defineComponent({
 <style scoped>
 .summary-card {
   margin-top: 1.5rem;
+}
+
+.success-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.popup-content {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  text-align: center;
+  animation: scaleIn 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

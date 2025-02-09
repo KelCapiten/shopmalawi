@@ -87,7 +87,7 @@ export const createOrderAndPayment = async (req, res) => {
     await connection.commit();
 
     res.status(201).json({
-      message: "Order and payment created successfully",
+      message: "Your Order and Payment have been received successfully",
       order_id,
       payment_id: paymentResult.insertId,
     });

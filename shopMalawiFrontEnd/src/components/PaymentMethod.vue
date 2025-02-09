@@ -9,7 +9,11 @@
       {{ errorLocations }}
     </div>
     <div v-if="!loadingLocations && !errorLocations" class="location-selector">
-      <select v-model="selectedLocation" class="custom-select">
+      <select
+        v-model="selectedLocation"
+        class="custom-select"
+        :class="{ 'highlight-green': validationErrors.location }"
+      >
         <option value="" disabled>Select a location</option>
         <option
           v-for="location in locations"
@@ -33,7 +37,11 @@
       v-if="!loadingPaymentMethods && !errorPaymentMethods"
       class="payment-method"
     >
-      <select v-model="selectedPaymentMethod" class="custom-select">
+      <select
+        v-model="selectedPaymentMethod"
+        class="custom-select"
+        :class="{ 'highlight-green': validationErrors.paymentMethod }"
+      >
         <option value="" disabled>Select a payment method</option>
         <option
           v-for="method in paymentMethods"
@@ -53,9 +61,12 @@
     :enableForm="false"
     :disableActions="true"
   />
-  <IonCard class="uploader">
+  <IonCard
+    v-if="selectedPaymentMethod"
+    class="uploader"
+    :class="{ 'highlight-green': validationErrors.screenshot }"
+  >
     <ImageUploader
-      v-if="selectedPaymentMethod"
       label="Proof of Payment"
       placeholderMessage="Upload the transaction screenshots here"
       @uploaded-images="handleUploadedImages"
@@ -64,7 +75,7 @@
 </template>
 
 <script>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed, watch, reactive } from "vue";
 import ImageUploader from "@/components/ImageUploader.vue";
 import AccountDetailsManager from "@/components/AccountDetailsManager.vue";
 import usePaymentMethods from "@/composables/usePaymentMethods";
@@ -95,9 +106,23 @@ export default {
     const selectedPaymentMethod = ref("");
     const selectedLocation = ref("");
 
+    const validationErrors = reactive({
+      location: false,
+      paymentMethod: false,
+      screenshot: false,
+    });
+
     const handleUploadedImages = (files) => {
       if (files && files.length > 0) {
-        ordersStore.setPaymentScreenshot(files[0]);
+        let file = files[0];
+        // If file is not an instance of File, construct a new File.
+        if (!(file instanceof File)) {
+          file = new File([file], file.name, {
+            type: file.type,
+            lastModified: file.lastModified,
+          });
+        }
+        ordersStore.setPaymentScreenshot(file);
       }
     };
 
@@ -123,11 +148,49 @@ export default {
         ordersStore.setShippingTown(locationObj.name);
         ordersStore.setShippingAddress(locationObj.name);
       }
+      if (newLocationId) {
+        validationErrors.location = false;
+      }
     });
 
     watch(selectedPaymentMethod, (newMethod) => {
       ordersStore.setPaymentMethodId(Number(newMethod));
+      if (newMethod) {
+        validationErrors.paymentMethod = false;
+      }
     });
+
+    watch(
+      () => ordersStore.payload.paymentScreenshot,
+      (newVal) => {
+        if (newVal) {
+          validationErrors.screenshot = false;
+        }
+      }
+    );
+
+    const validate = () => {
+      let valid = true;
+      if (!selectedLocation.value) {
+        validationErrors.location = true;
+        valid = false;
+      } else {
+        validationErrors.location = false;
+      }
+      if (!selectedPaymentMethod.value) {
+        validationErrors.paymentMethod = true;
+        valid = false;
+      } else {
+        validationErrors.paymentMethod = false;
+      }
+      if (!ordersStore.payload.paymentScreenshot) {
+        validationErrors.screenshot = true;
+        valid = false;
+      } else {
+        validationErrors.screenshot = false;
+      }
+      return valid;
+    };
 
     return {
       paymentMethods,
@@ -141,6 +204,8 @@ export default {
       handleUploadedImages,
       userId,
       selectedBankName,
+      validationErrors,
+      validate,
     };
   },
 };
@@ -211,5 +276,9 @@ export default {
 
 select::-ms-expand {
   display: none;
+}
+
+.highlight-green {
+  border: 2px solid green;
 }
 </style>

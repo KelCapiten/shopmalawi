@@ -24,6 +24,7 @@ export const useOrdersAndPaymentsStore = defineStore(
 
     let syncInterval: ReturnType<typeof setInterval> | null = null;
     let isSyncing = false;
+    let pendingSyncRequest = false;
 
     const setBuyOrders = (ordersFromBackend: any[]) => {
       buyOrders.value = ordersFromBackend.map((orderFromBackend) => {
@@ -112,7 +113,10 @@ export const useOrdersAndPaymentsStore = defineStore(
 
     const sync = async () => {
       if (currentUserId.value === null) return;
-      if (isSyncing) return;
+      if (isSyncing) {
+        pendingSyncRequest = true;
+        return;
+      }
       isSyncing = true;
       try {
         for (const update of pendingUpdates.value) {
@@ -138,6 +142,10 @@ export const useOrdersAndPaymentsStore = defineStore(
         await fetchOrders();
       } finally {
         isSyncing = false;
+        if (pendingSyncRequest) {
+          pendingSyncRequest = false;
+          await sync();
+        }
       }
     };
 
