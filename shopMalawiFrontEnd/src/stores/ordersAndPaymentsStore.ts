@@ -2,184 +2,190 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import {
-  createOrderAndPayment,
   getBuyOrders,
   getSellOrders,
   updatePaymentStatus,
   recordRefund,
 } from "@/services/orderPaymentService";
 
-interface PendingUpdate {
-  type: "updatePaymentStatus" | "recordRefund";
-  paymentId?: number;
-  status?: string;
-  refundData?: { order_id: number; reason?: string };
-  refundScreenshot?: File;
-}
-
 export const useOrdersAndPaymentsStore = defineStore(
-  "ordersAndPaymentsStore",
+  "OrdersAndPaymentsStore",
   () => {
     const loading = ref(false);
     const error = ref<Error | null>(null);
-    const orderResponse = ref<any>(null);
     const buyOrders = ref<any[]>([]);
     const sellOrders = ref<any[]>([]);
-    const pendingUpdates = ref<PendingUpdate[]>([]);
     const currentUserId = ref<number | null>(null);
-    let syncInterval: ReturnType<typeof setInterval>;
+    const newOrderIds = ref<number[]>([]);
 
-    const setUserId = (id: number) => {
-      currentUserId.value = id;
-    };
+    const pendingUpdates = ref<
+      Array<{ orderType: "buy" | "sell"; paymentId: number; newStatus: string }>
+    >([]);
 
-    const submitOrderAndPayment = async (
-      orderData: {
-        user_id: number;
-        shipping_address: string;
-        shipping_town: string;
-        total_amount: number;
-        payment_method_id: number;
-        payment_amount: number;
-        order_items: { product_id: number; quantity: number; price: number }[];
-      },
-      paymentScreenshot: File
-    ) => {
-      loading.value = true;
-      error.value = null;
-      try {
-        const response = await createOrderAndPayment(
-          orderData,
-          paymentScreenshot
+    let syncInterval: ReturnType<typeof setInterval> | null = null;
+    let isSyncing = false;
+
+    const setBuyOrders = (ordersFromBackend: any[]) => {
+      buyOrders.value = ordersFromBackend.map((orderFromBackend) => {
+        const localOrder = buyOrders.value.find(
+          (o) => o.payment?.payment_id === orderFromBackend.payment?.payment_id
         );
-        orderResponse.value = response.data;
-      } catch (err: any) {
-        error.value = err;
-      } finally {
-        loading.value = false;
-      }
-    };
-
-    const fetchBuyOrders = async (userId?: number) => {
-      const id = userId || currentUserId.value;
-      if (!id) return;
-      loading.value = true;
-      error.value = null;
-      try {
-        const response = await getBuyOrders(id);
-        buyOrders.value = response.data;
-      } catch (err: any) {
-        error.value = err;
-      } finally {
-        loading.value = false;
-      }
-    };
-
-    const fetchSellOrders = async (userId?: number) => {
-      const id = userId || currentUserId.value;
-      if (!id) return;
-      loading.value = true;
-      error.value = null;
-      try {
-        const response = await getSellOrders(id);
-        sellOrders.value = response.data;
-      } catch (err: any) {
-        error.value = err;
-      } finally {
-        loading.value = false;
-      }
-    };
-
-    const updateLocalPaymentStatus = (paymentId: number, status: string) => {
-      buyOrders.value = buyOrders.value.map((order) => {
-        if (order.payment && order.payment.id === paymentId) {
-          return { ...order, payment: { ...order.payment, status } };
+        if (
+          localOrder &&
+          (localOrder.dirty || localOrder.payment?.status === "refunding")
+        ) {
+          return localOrder;
         }
-        return order;
-      });
-      sellOrders.value = sellOrders.value.map((order) => {
-        if (order.payment && order.payment.id === paymentId) {
-          return { ...order, payment: { ...order.payment, status } };
-        }
-        return order;
+        return { ...orderFromBackend, dirty: false };
       });
     };
 
-    const updatePaymentStatusHandler = async (
+    const setSellOrders = (ordersFromBackend: any[]) => {
+      sellOrders.value = ordersFromBackend.map((orderFromBackend) => {
+        const localOrder = sellOrders.value.find(
+          (o) => o.payment?.payment_id === orderFromBackend.payment?.payment_id
+        );
+        if (
+          localOrder &&
+          (localOrder.dirty || localOrder.payment?.status === "refunding")
+        ) {
+          return localOrder;
+        }
+        return { ...orderFromBackend, dirty: false };
+      });
+    };
+
+    const updateOrderPaymentStatus = (
+      orderType: "buy" | "sell",
       paymentId: number,
-      status: string
+      newStatus: string
     ) => {
-      updateLocalPaymentStatus(paymentId, status);
-      pendingUpdates.value.push({
-        type: "updatePaymentStatus",
-        paymentId,
-        status,
-      });
-      return Promise.resolve();
-    };
-
-    const recordRefundHandler = async (
-      refundData: { order_id: number; reason?: string },
-      refundScreenshot: File
-    ) => {
-      pendingUpdates.value.push({
-        type: "recordRefund",
-        refundData,
-        refundScreenshot,
-      });
-      return Promise.resolve();
-    };
-
-    const syncUpdates = async () => {
-      const remaining: PendingUpdate[] = [];
-      for (const update of pendingUpdates.value) {
-        if (update.type === "updatePaymentStatus") {
-          try {
-            await updatePaymentStatus(update.paymentId!, update.status!);
-          } catch (err: any) {
-            remaining.push(update);
-          }
-        } else if (update.type === "recordRefund") {
-          try {
-            await recordRefund(update.refundData!, update.refundScreenshot!);
-          } catch (err: any) {
-            remaining.push(update);
-          }
+      const orders = orderType === "buy" ? buyOrders.value : sellOrders.value;
+      const order = orders.find((o) => o.payment?.payment_id === paymentId);
+      if (order && order.payment) {
+        order.payment.status = newStatus;
+        order.dirty = true;
+        const alreadyPending = pendingUpdates.value.find(
+          (u) => u.paymentId === paymentId && u.orderType === orderType
+        );
+        if (!alreadyPending) {
+          pendingUpdates.value.push({ orderType, paymentId, newStatus });
         }
       }
-      pendingUpdates.value = remaining;
-      if (currentUserId.value) {
-        await fetchBuyOrders(currentUserId.value);
-        await fetchSellOrders(currentUserId.value);
+    };
+
+    const fetchOrders = async (userId?: number) => {
+      if (userId !== undefined) {
+        currentUserId.value = userId;
+      }
+      if (currentUserId.value === null) return;
+      loading.value = true;
+      error.value = null;
+      try {
+        // Capture old order IDs before updating
+        const oldBuyOrderIds = new Set(buyOrders.value.map((o) => o.order_id));
+        const oldSellOrderIds = new Set(
+          sellOrders.value.map((o) => o.order_id)
+        );
+
+        const buyResponse = await getBuyOrders(currentUserId.value);
+        setBuyOrders(buyResponse.data);
+        const sellResponse = await getSellOrders(currentUserId.value);
+        setSellOrders(sellResponse.data);
+
+        // Determine new entries
+        const newBuyIds = buyResponse.data
+          .filter((order: any) => !oldBuyOrderIds.has(order.order_id))
+          .map((order: any) => order.order_id);
+        const newSellIds = sellResponse.data
+          .filter((order: any) => !oldSellOrderIds.has(order.order_id))
+          .map((order: any) => order.order_id);
+
+        // Combine and remove duplicates
+        newOrderIds.value = Array.from(new Set([...newBuyIds, ...newSellIds]));
+      } catch (err: any) {
+        error.value = err;
+      } finally {
+        loading.value = false;
       }
     };
 
-    const startSync = () => {
+    const sync = async () => {
+      if (currentUserId.value === null) return;
+      if (isSyncing) return;
+      isSyncing = true;
+      try {
+        for (const update of pendingUpdates.value) {
+          try {
+            loading.value = true;
+            error.value = null;
+            await updatePaymentStatus(update.paymentId, update.newStatus);
+            const orders =
+              update.orderType === "buy" ? buyOrders.value : sellOrders.value;
+            const order = orders.find(
+              (o) => o.payment?.payment_id === update.paymentId
+            );
+            if (order) {
+              order.dirty = false;
+            }
+          } catch (err: any) {
+            error.value = err;
+          } finally {
+            loading.value = false;
+          }
+        }
+        pendingUpdates.value = [];
+        await fetchOrders();
+      } finally {
+        isSyncing = false;
+      }
+    };
+
+    const startSync = (userId: number, intervalMs = 30000) => {
+      if (syncInterval !== null) clearInterval(syncInterval);
+      currentUserId.value = userId;
       syncInterval = setInterval(() => {
-        syncUpdates();
-      }, 60000);
+        sync();
+      }, intervalMs);
     };
 
     const stopSync = () => {
-      clearInterval(syncInterval);
+      if (syncInterval !== null) {
+        clearInterval(syncInterval);
+        syncInterval = null;
+      }
     };
 
-    startSync();
+    const submitRefund = async (
+      order_id: number,
+      refundScreenshot: File,
+      paymentId: number
+    ) => {
+      try {
+        loading.value = true;
+        error.value = null;
+        await recordRefund({ order_id }, refundScreenshot);
+        await updatePaymentStatus(paymentId, "refunding");
+      } catch (err: any) {
+        error.value = err;
+      } finally {
+        loading.value = false;
+      }
+    };
 
     return {
       loading,
       error,
-      orderResponse,
       buyOrders,
       sellOrders,
-      submitOrderAndPayment,
-      fetchBuyOrders,
-      fetchSellOrders,
-      updatePaymentStatusHandler,
-      recordRefundHandler,
-      setUserId,
-      syncUpdates,
+      newOrderIds,
+      pendingUpdates,
+      updateOrderPaymentStatus,
+      fetchOrders,
+      sync,
+      startSync,
       stopSync,
+      submitRefund,
     };
   }
 );

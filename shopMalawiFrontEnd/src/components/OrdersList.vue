@@ -74,8 +74,7 @@
 <script lang="ts">
 import { defineComponent, onMounted, ref, computed } from "vue";
 import OrdersDisplay from "@/components/ordersDisplay.vue";
-import useOrderPayment from "@/composables/useOrderPayment";
-// Import icons from Ionicons
+import { useOrdersAndPaymentsStore } from "@/stores/ordersAndPaymentsStore";
 import {
   appsOutline,
   timeOutline,
@@ -94,21 +93,10 @@ export default defineComponent({
     },
   },
   setup(props) {
-    const {
-      loading,
-      error,
-      buyOrders,
-      sellOrders,
-      fetchBuyOrders,
-      fetchSellOrders,
-      updatePaymentStatusHandler,
-      recordRefundHandler,
-    } = useOrderPayment();
-
+    const store = useOrdersAndPaymentsStore();
     const selectedTab = ref("buy");
     const selectedFilter = ref("all");
 
-    // Define filter options with icons
     const filters = [
       { label: "All", value: "all", icon: appsOutline },
       { label: "Pending", value: "pending", icon: timeOutline },
@@ -118,17 +106,12 @@ export default defineComponent({
     ];
 
     onMounted(() => {
-      fetchBuyOrders(props.userId);
-      fetchSellOrders(props.userId);
+      store.fetchOrders(props.userId);
+      store.startSync(props.userId);
     });
 
-    const setTab = async (tab: string) => {
+    const setTab = (tab: string) => {
       selectedTab.value = tab;
-      if (tab === "sell") {
-        await fetchSellOrders(props.userId);
-      } else {
-        fetchBuyOrders(props.userId);
-      }
     };
 
     const setFilter = (filter: string) => {
@@ -136,8 +119,8 @@ export default defineComponent({
     };
 
     const filteredBuyOrders = computed(() => {
-      if (selectedFilter.value === "all") return buyOrders.value;
-      return buyOrders.value.filter((order: any) => {
+      if (selectedFilter.value === "all") return store.buyOrders;
+      return store.buyOrders.filter((order: any) => {
         const status = order.payment?.status;
         if (!status) return false;
         if (selectedFilter.value === "pending") return status === "pending";
@@ -151,8 +134,8 @@ export default defineComponent({
     });
 
     const filteredSellOrders = computed(() => {
-      if (selectedFilter.value === "all") return sellOrders.value;
-      return sellOrders.value.filter((order: any) => {
+      if (selectedFilter.value === "all") return store.sellOrders;
+      return store.sellOrders.filter((order: any) => {
         const status = order.payment?.status;
         if (!status) return false;
         if (selectedFilter.value === "pending") return status === "pending";
@@ -169,60 +152,34 @@ export default defineComponent({
       console.log("Order item clicked:", payload);
     };
 
-    const handleConfirmButtonClicked = async (paymentId: number) => {
-      try {
-        await updatePaymentStatusHandler(paymentId, "completed");
-        await fetchSellOrders(props.userId);
-      } catch (err) {
-        console.error("Failed to update payment status:", err);
-      }
+    const handleConfirmButtonClicked = (paymentId: number) => {
+      store.updateOrderPaymentStatus("sell", paymentId, "completed");
+      store.updateOrderPaymentStatus("buy", paymentId, "completed");
     };
 
-    const handleRefundButtonClicked = async (paymentId: number) => {
-      try {
-        await updatePaymentStatusHandler(paymentId, "refund");
-        await fetchBuyOrders(props.userId);
-        await fetchSellOrders(props.userId);
-      } catch (err) {
-        console.error("Failed to update refund status:", err);
-      }
+    const handleRefundButtonClicked = (paymentId: number) => {
+      store.updateOrderPaymentStatus("sell", paymentId, "refund");
+      store.updateOrderPaymentStatus("buy", paymentId, "refund");
     };
 
-    const handleRefundNotReceivedButtonClicked = async (paymentId: number) => {
-      try {
-        await updatePaymentStatusHandler(paymentId, "refund");
-        await fetchBuyOrders(props.userId);
-      } catch (err) {
-        console.error("Failed to update refund status:", err);
-      }
+    const handleRefundNotReceivedButtonClicked = (paymentId: number) => {
+      store.updateOrderPaymentStatus("sell", paymentId, "refund");
+      store.updateOrderPaymentStatus("buy", paymentId, "refund");
     };
 
-    const handleReactivateOrderClicked = async (paymentId: number) => {
-      try {
-        await updatePaymentStatusHandler(paymentId, "pending");
-        await fetchSellOrders(props.userId);
-        await fetchBuyOrders(props.userId);
-      } catch (err) {
-        console.error("Failed to update refund status:", err);
-      }
+    const handleReactivateOrderClicked = (paymentId: number) => {
+      store.updateOrderPaymentStatus("sell", paymentId, "pending");
+      store.updateOrderPaymentStatus("buy", paymentId, "pending");
     };
 
-    const handleCancelOrderClicked = async (paymentId: number) => {
-      try {
-        await updatePaymentStatusHandler(paymentId, "canceled");
-        await fetchBuyOrders(props.userId);
-      } catch (err) {
-        console.error("Failed to update refund status:", err);
-      }
+    const handleCancelOrderClicked = (paymentId: number) => {
+      store.updateOrderPaymentStatus("sell", paymentId, "canceled");
+      store.updateOrderPaymentStatus("buy", paymentId, "canceled");
     };
 
-    const handleConfirmRefundClicked = async (paymentId: number) => {
-      try {
-        await updatePaymentStatusHandler(paymentId, "refunded");
-        await fetchBuyOrders(props.userId);
-      } catch (err) {
-        console.error("Failed to update refund status:", err);
-      }
+    const handleConfirmRefundClicked = (paymentId: number) => {
+      store.updateOrderPaymentStatus("sell", paymentId, "refunded");
+      store.updateOrderPaymentStatus("buy", paymentId, "refunded");
     };
 
     const handleRefundUpload = async (
@@ -230,21 +187,17 @@ export default defineComponent({
       order_id: number,
       paymentId: number
     ) => {
-      try {
-        if (!files.length) return;
-        await updatePaymentStatusHandler(paymentId, "refunding");
-        await recordRefundHandler({ order_id }, files[0]);
-        await fetchSellOrders(props.userId);
-      } catch (err) {
-        console.error("Failed to record refund:", err);
-      }
+      if (!files.length) return;
+      const refundScreenshot = files[0];
+      await store.submitRefund(order_id, refundScreenshot, paymentId);
+      store.startSync(props.userId, 5);
     };
 
     return {
-      loading,
-      error,
-      buyOrders,
-      sellOrders,
+      loading: store.loading,
+      error: store.error,
+      buyOrders: store.buyOrders,
+      sellOrders: store.sellOrders,
       selectedTab,
       selectedFilter,
       filters,
@@ -280,12 +233,10 @@ export default defineComponent({
   margin: 0;
   font-size: 1rem;
 }
-
 .tab-selector {
   display: flex;
   width: 100%;
 }
-
 .tab-button {
   flex: 1;
   background: #e0e0e0;
@@ -296,16 +247,13 @@ export default defineComponent({
   transition: background 0.3s;
   outline: none;
 }
-
 .tab-button:not(:last-child) {
   border-right: 1px solid #ccc;
 }
-
 .tab-button.active {
   background: #007aff;
   color: #fff;
 }
-
 .filter-bar {
   display: flex;
   gap: 0.5rem;
@@ -320,11 +268,9 @@ export default defineComponent({
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-
 .filter-bar::-webkit-scrollbar {
   display: none;
 }
-
 .filter-button {
   display: flex;
   align-items: center;
@@ -337,17 +283,14 @@ export default defineComponent({
   transition: background 0.3s, color 0.3s;
   outline: none;
 }
-
 .filter-button.active {
   background: #007aff;
   color: #fff;
   border-radius: 4px;
 }
-
 .filter-icon {
   font-size: 1.1rem;
 }
-
 .orders-content {
   margin-top: 1rem;
 }

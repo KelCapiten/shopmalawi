@@ -121,7 +121,8 @@
 </template>
 
 <script>
-import { computed, ref, nextTick } from "vue";
+import { computed, ref, nextTick, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/authStore";
 import appFooter from "@/components/appFooter.vue";
 import CategoriesManager from "@/components/CategoriesManager.vue";
@@ -146,6 +147,7 @@ export default {
   },
   setup() {
     const authStore = useAuthStore();
+    const route = useRoute();
 
     const user = computed(() => ({
       name:
@@ -238,6 +240,14 @@ export default {
     const goToWishlist = () => {};
     const goToCoupons = () => {};
     const goToHistory = () => {};
+
+    // Automatically activate the orders tab if the route query parameter is set.
+    onMounted(() => {
+      if (route.query.activateOrders) {
+        showOrdersList.value = true;
+        scrollToSection(ordersListRef);
+      }
+    });
 
     return {
       user,

@@ -158,7 +158,9 @@ export default defineComponent({
 
       // After submission you might want to navigate to a confirmation page or show a message
       if (orderResponse.value) {
-        console.log("Done");
+        router.push({
+          name: "Profile",
+        });
       }
     };
 
