@@ -1,3 +1,4 @@
+//src/types/index.ts
 export interface Image {
   image_path: string;
   alt_text: string;
@@ -48,4 +49,18 @@ export interface PaymentMethod {
 export interface Location {
   id: number;
   name: string;
+}
+
+// New interface for the store table
+export interface Store {
+  id: number;
+  brand_name: string;
+  tagline?: string;
+  description?: string;
+  banner_url?: string;
+  profile_picture_url?: string;
+  owner_id: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }

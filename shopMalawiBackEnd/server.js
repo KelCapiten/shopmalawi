@@ -1,4 +1,4 @@
-//\server.js
+//server.js
 import express from "express";
 import dotenv from "dotenv";
 import corsMiddleware from "./middleware/corsMiddleware.js";
@@ -13,6 +13,7 @@ import locationsRoutes from "./routes/locations.js";
 import inquiriesRoutes from "./routes/inquiries.js";
 import bankDetailsRoutes from "./routes/bankDetails.js";
 import orderPaymentRoutes from "./routes/orderAndPayment.js";
+import userstoreRoutes from "./routes/userstore.js";
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use("/api/locations", locationsRoutes);
 app.use("/api/inquiries", inquiriesRoutes);
 app.use("/api/bank-details", bankDetailsRoutes);
 app.use("/api/order-pay", orderPaymentRoutes);
+app.use("/api/userstores", userstoreRoutes);
 
 // Start Server
 app.listen(port, () => {

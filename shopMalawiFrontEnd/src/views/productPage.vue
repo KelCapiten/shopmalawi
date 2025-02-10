@@ -1,7 +1,7 @@
 // src/views/productPage.vue
 <template>
   <ion-page>
-    <ShareToolbar class="fixed-toolbar" />
+    <ShareToolbar :enableShareToolbar="true" class="fixed-toolbar" />
 
     <ion-content @ionScroll="handleScroll" :scrollEvents="true">
       <div v-if="product">

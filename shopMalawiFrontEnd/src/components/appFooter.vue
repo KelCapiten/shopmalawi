@@ -1,17 +1,18 @@
+//\src\components\appFooter.vue
 <template>
   <ion-footer>
     <ion-toolbar>
       <ion-buttons class="footer-buttons">
-        <ion-button router-link="/home">
-          <div class="button-content">
-            <ion-icon :icon="homeOutline"></ion-icon>
-            <ion-label>Home</ion-label>
-          </div>
-        </ion-button>
         <ion-button router-link="/shop">
           <div class="button-content">
             <ion-icon :icon="cartOutline"></ion-icon>
             <ion-label>Shop</ion-label>
+          </div>
+        </ion-button>
+        <ion-button router-link="/store">
+          <div class="button-content">
+            <ion-icon :icon="storefrontOutline"></ion-icon>
+            <ion-label>Your Store</ion-label>
           </div>
         </ion-button>
         <ion-button router-link="/looking-for">
@@ -40,22 +41,22 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import {
-  homeOutline,
   cartOutline,
   searchOutline,
   pricetagOutline,
   personOutline,
+  storefrontOutline,
 } from "ionicons/icons";
 
 export default defineComponent({
   name: "AppFooter",
   setup() {
     return {
-      homeOutline,
       cartOutline,
       searchOutline,
       pricetagOutline,
       personOutline,
+      storefrontOutline,
     };
   },
 });

@@ -1,14 +1,15 @@
 // src/main.ts
 import { createApp } from "vue";
 import { createPinia } from "pinia";
+import piniaPersist from "pinia-plugin-persistedstate";
 import App from "./App.vue";
 import router from "./router";
 import { IonicVue } from "@ionic/vue";
 import { addIcons } from "ionicons";
 import { trashOutline } from "ionicons/icons";
 import IonicComponents from "./ionic-components";
-import { useAuthStore } from "@/stores/authStore"; // Import the store
-import { initializeApiClient } from "@/services/apiClient"; // Import the initialize function
+import { useAuthStore } from "@/stores/authStore";
+import { initializeApiClient } from "@/services/apiClient";
 
 /* Core CSS required for Ionic components to work properly */
 import "@ionic/vue/css/core.css";
@@ -33,11 +34,11 @@ addIcons({
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faTrash, faSearch } from "@fortawesome/free-solid-svg-icons";
-// Add icons to the library
 library.add(faTrash, faSearch);
 
 const app = createApp(App);
 const pinia = createPinia();
+pinia.use(piniaPersist);
 
 app.component("font-awesome-icon", FontAwesomeIcon);
 app.use(IonicVue);
@@ -45,14 +46,12 @@ app.use(IonicComponents);
 app.use(pinia);
 app.use(router);
 
-// Initialize Pinia stores before accessing them
 app.mixin({
   setup() {
     // Ensure Pinia is initialized
   },
 });
 
-// After Pinia is set up, access the authStore and initialize the API client
 const authStore = useAuthStore();
 initializeApiClient(authStore);
 

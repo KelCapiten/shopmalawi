@@ -1,15 +1,12 @@
+//\src\components\ShareToolbar.vue
 <template>
-  <!-- Using no-border & no-shadow on ion-header (Ionic attribute props) -->
-  <IonHeader no-border no-shadow>
-    <IonToolbar class="transparent-toolbar">
-      <!-- Left icon button (Back) -->
+  <IonHeader no-border no-shadow v-if="enableShareToolbar">
+    <IonToolbar class="share-toolbar">
       <IonButtons slot="start">
         <IonButton class="circle-button" fill="clear" @click="router.back()">
           <IonIcon :icon="arrowBack" />
         </IonButton>
       </IonButtons>
-
-      <!-- Right icon buttons (Search, Share) -->
       <IonButtons slot="end">
         <IonButton class="circle-button" fill="clear" @click="onSearchClick">
           <IonIcon :icon="searchOutline" />
@@ -20,18 +17,46 @@
       </IonButtons>
     </IonToolbar>
   </IonHeader>
+  <IonHeader v-if="enableNavigationToolbar">
+    <IonToolbar class="navigation-toolbar">
+      <IonButton class="nav-icon-button" fill="clear" @click="goHome">
+        <IonIcon :icon="homeOutline" />
+      </IonButton>
+      <IonButton class="nav-icon-button" fill="clear" @click="goMessage">
+        <IonIcon :icon="chatbubbleOutline" />
+      </IonButton>
+      <IonButton class="nav-icon-button" fill="clear" @click="goBack">
+        <IonIcon :icon="chevronBackOutline" />
+        <IonLabel class="back-label">Back</IonLabel>
+      </IonButton>
+    </IonToolbar>
+  </IonHeader>
 </template>
 
 <script setup lang="ts">
+import { defineProps } from "vue";
 import {
   IonHeader,
   IonToolbar,
   IonButtons,
   IonButton,
   IonIcon,
+  IonLabel,
 } from "@ionic/vue";
-import { arrowBack, searchOutline, shareSocialOutline } from "ionicons/icons";
-import { useRouter } from "vue-router"; // Import useRouter
+import {
+  arrowBack,
+  searchOutline,
+  shareSocialOutline,
+  homeOutline,
+  chatbubbleOutline,
+  chevronBackOutline,
+} from "ionicons/icons";
+import { useRouter } from "vue-router";
+
+const { enableShareToolbar, enableNavigationToolbar } = defineProps({
+  enableShareToolbar: { type: Boolean, default: false },
+  enableNavigationToolbar: { type: Boolean, default: false },
+});
 
 const router = useRouter();
 
@@ -42,47 +67,63 @@ function onSearchClick() {
 function onShareClick() {
   console.log("Share button clicked");
 }
+
+function goHome() {
+  router.push("/shop");
+}
+
+function goMessage() {
+  router.push("");
+}
+
+function goBack() {
+  router.back();
+}
 </script>
 
 <style scoped>
-/* 1) Make the toolbar fully transparent (and remove any shadow) */
-.transparent-toolbar {
+.share-toolbar {
   --ion-toolbar-background: transparent;
   --ion-toolbar-border-color: transparent;
 }
 ion-header,
 ion-toolbar {
-  /* Remove any border or shadow */
   --ion-toolbar-border-color: transparent;
   --ion-toolbar-shadow: none;
   box-shadow: none !important;
 }
-/*
-  2) Force circular buttons with a fixed size.
-     No need for shape="round", since we do it in CSS.
-*/
 .circle-button {
-  /* Fixed size for the circle */
   width: 32px;
   height: 20px;
   border-radius: 45%;
-
-  /* White, semi-transparent background */
   background-color: rgb(255, 255, 255);
-
-  /* Center the icon */
   display: flex;
   align-items: center;
   justify-content: center;
-
-  /* No extra space, no shadow */
   padding: 0;
   margin: 5px;
 }
-
-/* 3) Make the icon bigger */
 .circle-button ion-icon {
   font-size: 17px;
-  color: #000; /* Black icon color */
+  color: #000;
+}
+.navigation-toolbar {
+  background-color: #fff;
+  color: #000;
+}
+.nav-icon-button {
+  background-color: #f8f8f8;
+  border-radius: 50%;
+  padding: 8px;
+  margin: 0 4px;
+}
+.nav-icon-button ion-icon {
+  font-size: 20px;
+  color: #000;
+}
+.back-label {
+  font-size: 16px;
+  color: #000;
+  margin-left: 4px;
 }
 </style>

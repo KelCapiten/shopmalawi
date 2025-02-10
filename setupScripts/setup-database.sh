@@ -154,6 +154,23 @@ CREATE TABLE images (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ); ENGINE=InnoDB;
 
+-- Stores Table
+CREATE TABLE IF NOT EXISTS stores (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    brand_name VARCHAR(255) NOT NULL,
+    tagline VARCHAR(255),
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    banner_url VARCHAR(255),
+    profile_picture_url VARCHAR(255),
+    owner_id INT NOT NULL, -- References users table
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FULLTEXT (brand_name, tagline, description),
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX (owner_id)
+) ENGINE=InnoDB;
+
 -- System Images Table 
 CREATE TABLE system_images (
     id INT AUTO_INCREMENT PRIMARY KEY,

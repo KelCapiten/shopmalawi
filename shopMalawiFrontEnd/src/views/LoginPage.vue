@@ -95,7 +95,7 @@ export default defineComponent({
   },
   mounted() {
     if (this.authStore.isAuthenticated()) {
-      this.$router.push("/home");
+      this.$router.push("/shop");
     }
 
     setTimeout(() => {
@@ -164,7 +164,7 @@ export default defineComponent({
         });
 
         this.showToast("Login successful!", "success");
-        this.$router.push("/home");
+        this.$router.push("/shop");
       } catch (error: any) {
         if (error.name === "TypeError") {
           this.showToast(

@@ -86,8 +86,7 @@ const emit = defineEmits([
 const router = useRouter();
 
 function onStoreClick(): void {
-  emit("store-click");
-  router.push("/shop");
+  router.push("/store");
 }
 
 function onCartClick(): void {
