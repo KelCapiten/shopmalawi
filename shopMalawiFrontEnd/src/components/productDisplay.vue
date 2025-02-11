@@ -1,4 +1,4 @@
-//\src\components\productDisplay.vue
+// src/components/productDisplay.vue
 <template>
   <div>
     <label v-if="hasProducts" class="section-heading">{{ heading }}</label>
@@ -64,14 +64,14 @@
             <div class="item-details">
               <div class="price-container">
                 <p class="price">MWK {{ product.price }}</p>
-                <ion-icon
+                <IonIcon
                   v-if="
                     product.uploaded_by_userID === userId && showDeleteButton
                   "
-                  name="trash"
+                  :icon="trashOutline"
                   class="delete-icon"
                   @click.stop="$emit('removeOfferedProduct', product.id)"
-                ></ion-icon>
+                />
               </div>
               <label class="product-name">{{ product.name }}</label>
               <label class="stock-info">
@@ -111,13 +111,14 @@
 import { defineComponent, PropType, computed } from "vue";
 import { Product } from "@/types";
 import { getPrimaryImage } from "@/utils/utilities";
-import { addIcons } from "ionicons";
-import { trash } from "ionicons/icons";
-
-addIcons({ trash });
+import { IonIcon } from "@ionic/vue";
+import { trashOutline } from "ionicons/icons";
 
 export default defineComponent({
   name: "ProductDisplay",
+  components: {
+    IonIcon,
+  },
   props: {
     products: {
       type: Array as PropType<Product[] | any[]>,
@@ -199,7 +200,7 @@ export default defineComponent({
       )
     );
     return {
-      trash,
+      trashOutline,
       hasProducts,
     };
   },

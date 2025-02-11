@@ -22,7 +22,7 @@ export async function getStore(query?: {
 
   const { data } = await apiClient.get<
     GetStoreResponseSingle | GetStoreResponseMultiple
-  >(`/api/stores/getStore?${params.toString()}`);
+  >(`/api/userstores/getStore?${params.toString()}`);
 
   // When an "id" is provided, the endpoint returns { store: Store }
   if ("store" in data) {
@@ -34,7 +34,7 @@ export async function getStore(query?: {
 
 export async function addStore(newStore: Store): Promise<Store> {
   const { data } = await apiClient.post<{ store: Store }>(
-    "/api/stores/addStore",
+    "/api/userstores/addStore",
     newStore
   );
   return data.store;
@@ -45,7 +45,7 @@ export async function updateStore(
   updatedStore: Partial<Store>
 ): Promise<{ message: string }> {
   const { data } = await apiClient.put<{ message: string }>(
-    `/api/stores/updateStore/${id}`,
+    `/api/userstores/updateStore/${id}`,
     updatedStore
   );
   return data;

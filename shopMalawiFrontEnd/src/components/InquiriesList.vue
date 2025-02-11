@@ -20,7 +20,7 @@
           <!-- Trash icon on the far right (visible only if the logged in user uploaded the inquiry) -->
           <ion-icon
             v-if="inquiry.uploaded_by_user_id === userId"
-            :icon="trash"
+            :icon="trashOutline"
             class="delete-icon"
             @click.stop="$emit('deleteInquiry', inquiry.id)"
           ></ion-icon>
@@ -121,7 +121,7 @@ import { defineComponent, PropType } from "vue";
 import productDisplay from "@/components/productDisplay.vue";
 import FullScreenImage from "@/components/imageDisplay.vue";
 import { getImageUrl, formatDate } from "@/utils/utilities";
-import { createOutline, trash } from "ionicons/icons";
+import { createOutline, trashOutline } from "ionicons/icons";
 
 export default defineComponent({
   name: "InquiriesList",
@@ -164,8 +164,8 @@ export default defineComponent({
     return {
       searchQuery: "",
       visibleProductCardGridId: null as number | null,
-      createOutline, // imported icon from ionicons/icons
-      trash, // imported icon from ionicons/icons
+      createOutline,
+      trashOutline,
     };
   },
   methods: {
@@ -297,7 +297,7 @@ export default defineComponent({
   cursor: pointer;
   font-size: 1.2rem;
   margin-left: 10px;
-  color: #e74c3c;
+  color: #da3030;
 }
 
 .inquiry-images .image-grid {
