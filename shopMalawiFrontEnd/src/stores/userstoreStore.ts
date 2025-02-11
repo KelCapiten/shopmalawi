@@ -61,7 +61,6 @@ export const useUserstoreStore = defineStore("userstoreStore", {
       );
       // Update our store state
       this.products = products.value;
-      console.log(products);
       this.productsLoading = loading.value;
       this.productsError = error.value;
     },

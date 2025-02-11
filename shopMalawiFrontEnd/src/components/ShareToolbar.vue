@@ -1,4 +1,4 @@
-//\src\components\ShareToolbar.vue
+// src/components/ShareToolbar.vue
 <template>
   <IonHeader no-border no-shadow v-if="enableShareToolbar">
     <IonToolbar class="share-toolbar">
@@ -108,11 +108,14 @@ ion-toolbar {
   color: #000;
 }
 .navigation-toolbar {
-  background-color: #fff;
+  background-color: transparent;
+  --ion-toolbar-background: rgba(206, 206, 206, 0.8);
+  border: 1px solid rgb(230, 104, 55);
   color: #000;
+  box-shadow: none !important;
 }
 .nav-icon-button {
-  background-color: #f8f8f8;
+  background-color: transparent;
   border-radius: 50%;
   padding: 8px;
   margin: 0 4px;
@@ -125,5 +128,13 @@ ion-toolbar {
   font-size: 16px;
   color: #000;
   margin-left: 4px;
+}
+
+/* Remove all padding and margin in navigation toolbar elements */
+.navigation-toolbar ion-button,
+.navigation-toolbar ion-icon,
+.navigation-toolbar ion-label {
+  padding: 0 !important;
+  margin: 0 !important;
 }
 </style>

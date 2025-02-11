@@ -37,11 +37,13 @@
       </IonSegment>
 
       <!-- ProductDisplay for each segment -->
-      <div v-if="selectedSegment === 'featured'">
-        <ProductDisplay :products="featuredProducts" heading="TOP Picks" />
-      </div>
-      <div v-else-if="selectedSegment === 'all'">
-        <ProductDisplay :products="allProducts" heading="All Products" />
+      <div class="ProductDisplay">
+        <div v-if="selectedSegment === 'featured'">
+          <ProductDisplay :products="featuredProducts" heading="TOP Picks" />
+        </div>
+        <div v-else-if="selectedSegment === 'all'">
+          <ProductDisplay :products="allProducts" heading="All Products" />
+        </div>
       </div>
     </IonContent>
 
@@ -117,10 +119,14 @@ export default defineComponent({
 .store-segment {
   margin: 1rem;
 }
+.ProductDisplay {
+  padding: 0px 15px;
+}
 .floating-share-toolbar {
+  background-color: none;
   position: fixed;
   bottom: 16px;
-  right: 16px;
+  right: 0px;
   z-index: 1000;
 }
 </style>
