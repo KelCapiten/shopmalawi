@@ -12,9 +12,10 @@ export interface Product {
   price: number;
   subcategory_id: number;
   subcategory_name: string;
-  maincategory_id: number;
-  maincategory_name: string;
+  maincategory_id: number | null;
+  maincategory_name: string | null;
   stock_quantity: number;
+  is_active: boolean;
   uploaded_by_userID: number;
   uploaded_by: string;
   images: Image[];
@@ -51,7 +52,6 @@ export interface Location {
   name: string;
 }
 
-// New interface for the store table
 export interface Store {
   id: number;
   brand_name: string;

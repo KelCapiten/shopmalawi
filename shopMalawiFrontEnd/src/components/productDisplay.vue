@@ -54,6 +54,35 @@
             :class="itemClasses"
             @click="$emit('productClicked', product)"
           >
+            <!-- For bottom infoPosition, show the delete and edit icons at the top -->
+            <template v-if="infoPosition === 'bottom'">
+              <IonIcon
+                v-if="
+                  product.uploaded_by_userID === userId &&
+                  showDeleteButton &&
+                  product.is_active
+                "
+                :icon="trashOutline"
+                class="top-delete-icon"
+                @click.stop="$emit('deactivateProduct', product.id)"
+              />
+              <IonIcon
+                v-else-if="
+                  product.uploaded_by_userID === userId &&
+                  showDeleteButton &&
+                  !product.is_active
+                "
+                :icon="refreshOutline"
+                class="top-delete-icon"
+                @click.stop="$emit('activateProduct', product.id)"
+              />
+              <IonIcon
+                v-if="product.uploaded_by_userID === userId && showDeleteButton"
+                :icon="brushOutline"
+                class="top-edit-icon"
+                @click.stop="$emit('editProduct', product.id)"
+              />
+            </template>
             <div class="image-container">
               <img
                 :src="getPrimaryImage(product.images)"
@@ -64,14 +93,19 @@
             <div class="item-details">
               <div class="price-container">
                 <p class="price">MWK {{ product.price }}</p>
-                <IonIcon
+                <template
                   v-if="
-                    product.uploaded_by_userID === userId && showDeleteButton
+                    infoPosition !== 'bottom' &&
+                    product.uploaded_by_userID === userId &&
+                    showDeleteButton
                   "
-                  :icon="trashOutline"
-                  class="delete-icon"
-                  @click.stop="$emit('removeOfferedProduct', product.id)"
-                />
+                >
+                  <IonIcon
+                    :icon="trashOutline"
+                    class="delete-icon"
+                    @click.stop="$emit('removeOfferedProduct', product.id)"
+                  />
+                </template>
               </div>
               <label class="product-name">{{ product.name }}</label>
               <label class="stock-info">
@@ -112,7 +146,7 @@ import { defineComponent, PropType, computed } from "vue";
 import { Product } from "@/types";
 import { getPrimaryImage } from "@/utils/utilities";
 import { IonIcon } from "@ionic/vue";
-import { trashOutline } from "ionicons/icons";
+import { trashOutline, brushOutline, refreshOutline } from "ionicons/icons";
 
 export default defineComponent({
   name: "ProductDisplay",
@@ -185,7 +219,10 @@ export default defineComponent({
     "decrement",
     "increment",
     "removeOfferedProduct",
+    "editProduct",
     "emptyMessageButtonClicked",
+    "deactivateProduct",
+    "activateProduct",
   ],
   data() {
     return {
@@ -201,6 +238,8 @@ export default defineComponent({
     );
     return {
       trashOutline,
+      brushOutline,
+      refreshOutline,
       hasProducts,
     };
   },
@@ -271,6 +310,7 @@ p {
 }
 
 .item {
+  position: relative;
   display: flex;
   flex-direction: column;
   text-align: left;
@@ -284,6 +324,34 @@ p {
 
 .item:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.top-delete-icon {
+  position: absolute;
+  border: 2px solid white;
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 5px;
+  border-radius: 50%;
+  top: 15px;
+  right: 15px;
+  cursor: pointer;
+  color: #8b1111;
+  font-size: 1.3rem;
+  z-index: 1;
+}
+
+.top-edit-icon {
+  position: absolute;
+  border: 2px solid white;
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 5px;
+  border-radius: 50%;
+  top: 60px;
+  right: 15px;
+  cursor: pointer;
+  color: #087705;
+  font-size: 1.3rem;
+  z-index: 1;
 }
 
 .image-container {
@@ -312,8 +380,8 @@ p {
 
 .price-container {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
 .price {
@@ -354,7 +422,6 @@ p {
   overflow: hidden;
 }
 
-/* Styling for side counter */
 .side-counter {
   display: flex;
   flex-direction: column;
@@ -363,7 +430,6 @@ p {
   margin-top: 12px;
 }
 
-/* Styling for default counter (centered) */
 .default-counter {
   display: flex;
   flex-direction: column;

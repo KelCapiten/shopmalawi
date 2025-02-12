@@ -8,59 +8,71 @@ import { useProducts } from "@/composables/useProducts";
 export const useUserstoreStore = defineStore("userstoreStore", {
   state: () => ({
     store: null as Store | null,
-    products: [] as Product[],
+    // Note: The products returned from the API are grouped objects
+    // e.g., { id, name, products: Product[] }
+    products: [] as any[],
     productsLoading: false,
-    productsError: null as Error | null,
+    productsError: null as string | null,
+    // New state property for filtering products: "all", "active", or "inactive"
+    productFilter: "all",
   }),
+  getters: {
+    filteredProducts(state): any[] {
+      if (state.productFilter === "active") {
+        return state.products
+          .map((group: any) => ({
+            ...group,
+            products: group.products.filter((p: Product) => p.is_active),
+          }))
+          .filter((group: any) => group.products.length > 0);
+      }
+      if (state.productFilter === "inactive") {
+        return state.products
+          .map((group: any) => ({
+            ...group,
+            products: group.products.filter((p: Product) => !p.is_active),
+          }))
+          .filter((group: any) => group.products.length > 0);
+      }
+      return state.products;
+    },
+  },
   actions: {
     async fetchStore(query: { id?: number; owner_id?: number } = {}) {
       const authStore = useAuthStore();
-
-      // If no filter is provided, use the logged-in user's ID as owner_id
       if (!query.id && !query.owner_id && authStore.user) {
         query.owner_id = authStore.user.id;
       }
-
       try {
         const result = await getStore(query);
-
-        // If the endpoint returns multiple stores, pick the first
         if (Array.isArray(result)) {
           if (result.length) {
             this.store = result[0];
           } else {
-            // No store found for this user: use default placeholders
             this.store = this.getDefaultStore(authStore.user?.id);
           }
         } else {
-          // Single store result
           this.store = result;
         }
       } catch (error) {
         console.error("Error fetching store:", error);
-        // If there's an error, or no store found, set defaults
         this.store = this.getDefaultStore(authStore.user?.id);
       }
     },
 
     async fetchUserProducts() {
-      // Ensure we have a store and an owner id
       if (!this.store) {
         console.warn("No store available; cannot fetch products.");
         return;
       }
-      // Use the composable to fetch products
       const { fetchProducts, products, loading, error } = useProducts();
-      // Here we group by "owner" and pass the store's owner_id as the uploaded_by parameter.
-      await fetchProducts(
-        "subcategory",
-        undefined,
-        undefined,
-        undefined,
-        this.store.owner_id
-      );
-      // Update our store state
-      this.products = products.value;
+      await fetchProducts({
+        groupBy: "subcategory",
+        uploaded_by: this.store.owner_id,
+        includeInactive: true,
+      });
+      // Ensure products is always an array
+      this.products = products.value || [];
       this.productsLoading = loading.value;
       this.productsError = error.value;
     },
@@ -89,7 +101,11 @@ export const useUserstoreStore = defineStore("userstoreStore", {
       }
     },
 
-    // Helper: return a default Store object if the user has no registered store
+    // Action to update the product filter
+    setProductFilter(filter: string) {
+      this.productFilter = filter;
+    },
+
     getDefaultStore(ownerId: number | undefined): Store {
       return {
         id: 0,
@@ -105,7 +121,6 @@ export const useUserstoreStore = defineStore("userstoreStore", {
       };
     },
 
-    // Optional helper actions to update individual fields locally
     setBannerUrl(url: string) {
       if (this.store) {
         this.store.banner_url = url;

@@ -1,3 +1,4 @@
+//controllers/productController.js
 import db from "../config/db.js";
 
 // endpoint to add products
@@ -98,7 +99,14 @@ export const addProduct = async (req, res) => {
 export const getAllProducts = async (req, res) => {
   const connection = await db.getConnection();
   try {
-    const { category_id, startDate, endDate, groupBy, uploaded_by } = req.query;
+    const {
+      category_id,
+      startDate,
+      endDate,
+      groupBy,
+      uploaded_by,
+      includeInactive,
+    } = req.query;
 
     // Base SQL query: note we join on `images i` instead of `product_images pi`
     // Also filter by i.imageable_type = 'products'
@@ -107,12 +115,13 @@ export const getAllProducts = async (req, res) => {
         p.id, 
         p.name, 
         p.description, 
-        p.price + p.mark_up_amount AS price,  -- Include mark_up_amount in price
+        p.price,
         p.subcategory_id, 
         p.subcategory_name, 
         p.maincategory_id, 
         p.maincategory_name, 
         p.stock_quantity, 
+        p.is_active,
         p.uploaded_by AS uploaded_by_userID, 
         u.username AS uploaded_by,
         i.image_path, 
@@ -180,6 +189,11 @@ export const getAllProducts = async (req, res) => {
       queryParams.push(parseInt(uploaded_by, 10));
     }
 
+    // By default, include only active products unless includeInactive is explicitly set to "true"
+    if (!includeInactive || includeInactive !== "true") {
+      whereConditions.push(`p.is_active = true`);
+    }
+
     if (whereConditions.length > 0) {
       query += ` WHERE ` + whereConditions.join(" AND ");
     }
@@ -206,15 +220,15 @@ export const getAllProducts = async (req, res) => {
           id: product.id,
           name: product.name,
           description: product.description,
-          price: product.price, // Price already includes mark_up_amount
+          price: product.price,
           subcategory_id: product.subcategory_id,
           subcategory_name: product.subcategory_name,
           maincategory_id: product.maincategory_id,
           maincategory_name: product.maincategory_name,
           stock_quantity: product.stock_quantity,
+          is_active: product.is_active,
           uploaded_by_userID: product.uploaded_by_userID,
           uploaded_by: product.uploaded_by,
-          // If this row has an image, start images array with one item
           images: product.image_path
             ? [
                 {
@@ -414,6 +428,177 @@ export const getProductById = async (req, res) => {
   } catch (error) {
     console.error("Error fetching product by ID:", error);
     res.status(500).json({ message: "Failed to fetch product" });
+  } finally {
+    connection.release();
+  }
+};
+
+// Endpoint to deactivate a product (set is_active to false)
+export const deactivateProduct = async (req, res) => {
+  const { id } = req.params; // Expect product id in the URL params
+
+  if (!id) {
+    return res.status(400).json({ message: "Product id is required." });
+  }
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [result] = await connection.query(
+      "UPDATE products SET is_active = false WHERE id = ?",
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Product not found." });
+    }
+
+    await connection.commit();
+    res.status(200).json({ message: "Product deactivated successfully." });
+  } catch (error) {
+    console.error("Error deactivating product:", error);
+    await connection.rollback();
+    res.status(500).json({ message: "Failed to deactivate product." });
+  } finally {
+    connection.release();
+  }
+};
+
+// Endpoint to activate a product (set is_active to true)
+export const activateProduct = async (req, res) => {
+  const { id } = req.params; // Expect product id in the URL params
+
+  if (!id) {
+    return res.status(400).json({ message: "Product id is required." });
+  }
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [result] = await connection.query(
+      "UPDATE products SET is_active = true WHERE id = ?",
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Product not found." });
+    }
+
+    await connection.commit();
+    res.status(200).json({ message: "Product activated successfully." });
+  } catch (error) {
+    console.error("Error activating product:", error);
+    await connection.rollback();
+    res.status(500).json({ message: "Failed to activate product." });
+  } finally {
+    connection.release();
+  }
+};
+
+// Endpoint to edit a product
+export const editProduct = async (req, res) => {
+  // Get product id from URL params
+  const { id } = req.params;
+  // Get updated product fields from request body
+  const { name, description, price, category_id, stockQuantity } = req.body;
+
+  // Basic validation: ensure required fields are provided
+  if (
+    !id ||
+    !name ||
+    !description ||
+    !price ||
+    !category_id ||
+    !stockQuantity
+  ) {
+    return res.status(400).json({
+      message: "All required fields must be provided.",
+    });
+  }
+
+  // Calculate markup amount
+  const markUpAmount = parseFloat(price) * 0.1;
+
+  const connection = await db.getConnection();
+  try {
+    // 1) Fetch category info for the updated category_id
+    const [categoryInfo] = await connection.query(
+      `SELECT 
+         c1.name AS category_name, 
+         c1.id AS category_id,
+         c1.parent_id,
+         c2.name AS maincategory_name, 
+         c2.id AS maincategory_id
+       FROM categories c1
+       LEFT JOIN categories c2 ON c1.parent_id = c2.id
+       WHERE c1.id = ?`,
+      [category_id]
+    );
+
+    if (categoryInfo.length === 0) {
+      return res.status(400).json({ message: "Invalid category_id" });
+    }
+
+    const { category_name, parent_id, maincategory_id, maincategory_name } =
+      categoryInfo[0];
+    // Determine if the category is a main category
+    const isMainCategory = parent_id === null;
+
+    // 2) Start transaction
+    await connection.beginTransaction();
+
+    // 3) Update product in the `products` table
+    await connection.query(
+      `UPDATE products 
+       SET name = ?, description = ?, price = ?, mark_up_amount = ?, 
+           subcategory_id = ?, subcategory_name = ?, 
+           maincategory_id = ?, maincategory_name = ?, 
+           stock_quantity = ?
+       WHERE id = ?`,
+      [
+        name,
+        description,
+        price,
+        markUpAmount,
+        isMainCategory ? category_id : category_id,
+        isMainCategory ? category_name : category_name,
+        isMainCategory ? category_id : maincategory_id,
+        isMainCategory ? category_name : maincategory_name,
+        stockQuantity,
+        id,
+      ]
+    );
+
+    if (req.files && req.files.length > 0) {
+      await connection.query(
+        "DELETE FROM images WHERE imageable_id = ? AND imageable_type = 'products'",
+        [id]
+      );
+
+      const imageQueries = req.files.map((file, index) => {
+        const modifiedFilePath = `/${file.path.replace(/\\/g, "/")}`;
+        return connection.query(
+          `INSERT INTO images 
+           (imageable_id, imageable_type, image_path, alt_text, is_primary)
+           VALUES (?, 'products', ?, ?, ?)`,
+          [id, modifiedFilePath, null, index === 0]
+        );
+      });
+
+      await Promise.all(imageQueries);
+    }
+
+    await connection.commit();
+
+    res.status(200).json({ message: "Product updated successfully." });
+  } catch (error) {
+    console.error("Error editing product:", error);
+    await connection.rollback();
+    res.status(500).json({ message: "Failed to update product." });
   } finally {
     connection.release();
   }

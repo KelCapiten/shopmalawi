@@ -1,16 +1,18 @@
-//\routes\products.js
+//routes/products.js
 import express from "express";
 import { authenticateUser } from "../middleware/authMiddleware.js";
 import {
   addProduct,
   getAllProducts,
   getProductById,
+  deactivateProduct,
+  activateProduct,
+  editProduct,
 } from "../controllers/productController.js";
 import { upload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
-// Add Product Route
 router.post(
   "/addProduct",
   authenticateUser,
@@ -18,10 +20,16 @@ router.post(
   addProduct
 );
 
-// Fetch all products with filters
-router.get("/getAllProducts", getAllProducts);
+router.put(
+  "/editProduct/:id",
+  authenticateUser,
+  upload.array("images", 4),
+  editProduct
+);
 
-// Fetch a single product by ID
+router.put("/deactivateProduct/:id", authenticateUser, deactivateProduct);
+router.put("/activateProduct/:id", authenticateUser, activateProduct);
+router.get("/getAllProducts", getAllProducts);
 router.get("/getProduct/:id", getProductById);
 
 export default router;

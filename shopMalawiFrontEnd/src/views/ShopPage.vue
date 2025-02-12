@@ -1,3 +1,4 @@
+//src/views/ShopPage.vue
 <template>
   <ion-page>
     <appHeader />
@@ -5,7 +6,7 @@
     <ion-content>
       <ProductDisplay
         class="product-display-body"
-        :products="products"
+        :products="displayedProducts"
         :isLoading="loading"
         :error="error"
         :infoPosition="'bottom'"
@@ -26,7 +27,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, computed } from "vue";
+import { defineComponent, computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { IonPage, IonContent, IonSpinner } from "@ionic/vue";
 import { useProducts } from "@/composables/useProducts";
@@ -46,51 +47,54 @@ export default defineComponent({
     ProductDisplay,
   },
   setup() {
-    // Route for reading query parameters (categoryId).
     const route = useRoute();
-
-    // Our product composable
     const { products, loading, error, fetchProducts } = useProducts();
     const hasProducts = ref(false);
 
-    // Convert the route query param to a number or null, e.g. /shop?categoryId=3
+    // Always work with an array for display
+    const displayedProducts = computed(() => products.value || []);
+
+    // Compute categoryId from route query param
     const categoryId = computed(() => {
       const queryVal = route.query.categoryId;
       return queryVal ? parseInt(queryVal as string, 10) : null;
     });
 
-    watch(
-      categoryId,
-      async (newCatId) => {
-        // Start loading
-        loading.value = true;
-        error.value = null;
-
-        try {
-          if (newCatId) {
-            // Fetch products specific to this category
-            await fetchProducts("subcategory", newCatId);
-          } else {
-            // No category param -> fetch all subcategory-grouped products
-            await fetchProducts("subcategory");
-          }
-        } catch (err) {
-          error.value = err as Error;
-        } finally {
-          hasProducts.value = products.value.length > 0;
-          loading.value = false;
+    const fetchFilteredProducts = async () => {
+      loading.value = true;
+      error.value = null;
+      try {
+        if (categoryId.value) {
+          await fetchProducts({
+            groupBy: "subcategory",
+            category_id: categoryId.value,
+          });
+        } else {
+          await fetchProducts({ groupBy: "subcategory" });
         }
-      },
-      { immediate: true }
-    );
+      } catch (err: any) {
+        error.value = err instanceof Error ? err.message : String(err);
+      } finally {
+        loading.value = false;
+      }
+    };
 
-    // Also watch the products array to keep hasProducts in sync if needed
+    onMounted(() => {
+      fetchFilteredProducts();
+    });
+
+    // Re-fetch products when the categoryId changes
+    watch(categoryId, () => {
+      fetchFilteredProducts();
+    });
+
+    // Keep hasProducts in sync with products
     watch(products, (newProducts) => {
-      hasProducts.value = newProducts.length > 0;
+      hasProducts.value = (newProducts && newProducts.length > 0) || false;
     });
 
     return {
-      products,
+      displayedProducts,
       loading,
       error,
       hasProducts,

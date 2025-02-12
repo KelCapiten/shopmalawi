@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS products (
     maincategory_id INT,
     maincategory_name VARCHAR(100),
     stock_quantity INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
     uploaded_by INT NOT NULL, -- References users table
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

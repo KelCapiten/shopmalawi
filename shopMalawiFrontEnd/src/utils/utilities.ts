@@ -1,6 +1,7 @@
 // src/utils/utilities.ts
 import router from "@/router";
 import { Product } from "@/types";
+import type { Category } from "@/types";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:1994";
@@ -56,4 +57,14 @@ export function loadProductFromSessionStorage<T>(): T | null {
     router.replace({ name: "shop" });
     return null;
   }
+}
+
+export function computeSubcategories(categories: Category[]): Category[] {
+  return categories
+    .flatMap((category) =>
+      category.subcategories && category.subcategories.length > 0
+        ? category.subcategories
+        : [category]
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
 }

@@ -36,13 +36,43 @@
         </IonSegmentButton>
       </IonSegment>
 
+      <!-- Filters Bar for "all" segment -->
+      <div v-if="selectedSegment === 'all'" class="filter-bar">
+        <button
+          v-for="filter in filters"
+          :key="filter.value"
+          :class="{
+            'filter-button': true,
+            active: userstore.productFilter === filter.value,
+          }"
+          @click="userstore.setProductFilter(filter.value)"
+        >
+          <ion-icon :icon="filter.icon" class="filter-icon"></ion-icon>
+          <span>{{ filter.label }}</span>
+        </button>
+      </div>
+
       <!-- ProductDisplay for each segment -->
       <div class="ProductDisplay">
         <div v-if="selectedSegment === 'featured'">
-          <ProductDisplay :products="featuredProducts" heading="TOP Picks" />
+          <ProductDisplay
+            heading="TOP Picks"
+            :showDeleteButton="true"
+            :products="featuredProducts"
+            :userId="authStore.user?.id || 0"
+            @deactivateProduct="handleDeactivateProduct"
+            @activateProduct="handleActivateProduct"
+          />
         </div>
         <div v-else-if="selectedSegment === 'all'">
-          <ProductDisplay :products="allProducts" heading="All Products" />
+          <ProductDisplay
+            heading="All Products"
+            :showDeleteButton="true"
+            :products="userstore.filteredProducts"
+            :userId="authStore.user?.id || 0"
+            @deactivateProduct="handleDeactivateProduct"
+            @activateProduct="handleActivateProduct"
+          />
         </div>
       </div>
     </IonContent>
@@ -62,7 +92,14 @@ import ShareToolbar from "./ShareToolbar.vue";
 import HeroSection from "./HeroSection.vue";
 import ProductDisplay from "@/components/productDisplay.vue";
 import { useUserstoreStore } from "@/stores/userstoreStore";
-import { trashOutline } from "ionicons/icons";
+import { useAuthStore } from "@/stores/authStore";
+import { useProductsStore } from "@/stores/productsStore";
+import {
+  trashOutline,
+  appsOutline,
+  checkmarkCircleOutline,
+  closeCircleOutline,
+} from "ionicons/icons";
 
 export default defineComponent({
   name: "StorePage",
@@ -73,31 +110,63 @@ export default defineComponent({
   },
   setup() {
     const userstore = useUserstoreStore();
+    const authStore = useAuthStore();
+    const productsStore = useProductsStore();
     const selectedSegment = ref("featured");
 
-    // Fetch user products on mount
     onMounted(() => {
       userstore.fetchUserProducts();
     });
 
-    // Featured products are a filtered subset (for demo purposes, those with odd IDs)
     const featuredProducts = computed(() =>
       userstore.products.filter((p) => p.id % 2)
     );
-    // All products come from the store's fetched products
-    const allProducts = computed(() => userstore.products);
+
+    const filters = [
+      { label: "All", value: "all", icon: appsOutline },
+      {
+        label: "Active Products",
+        value: "active",
+        icon: checkmarkCircleOutline,
+      },
+      {
+        label: "Inactive Products",
+        value: "inactive",
+        icon: closeCircleOutline,
+      },
+    ];
 
     const editBrandStory = () => {
       console.log("Edit brand story clicked");
-      // Add your logic to enable editing of the brand story here
     };
+
+    async function handleDeactivateProduct(productId: number) {
+      try {
+        await productsStore.deactivateProduct(productId);
+        await userstore.fetchUserProducts();
+      } catch (error) {
+        console.error("Failed to deactivate product", error);
+      }
+    }
+
+    async function handleActivateProduct(productId: number) {
+      try {
+        await productsStore.activateProduct(productId);
+        await userstore.fetchUserProducts();
+      } catch (error) {
+        console.error("Failed to activate product", error);
+      }
+    }
 
     return {
       userstore,
+      authStore,
       selectedSegment,
       featuredProducts,
-      allProducts,
+      filters,
       editBrandStory,
+      handleDeactivateProduct,
+      handleActivateProduct,
       trashIcon: trashOutline,
     };
   },
@@ -128,5 +197,44 @@ export default defineComponent({
   bottom: 16px;
   right: 0px;
   z-index: 1000;
+}
+
+/* Filters Bar styles */
+.filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-evenly;
+  background: #f7f7f7;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin: 1rem 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.filter-bar::-webkit-scrollbar {
+  display: none;
+}
+.filter-button {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  transition: background 0.3s, color 0.3s;
+  outline: none;
+}
+.filter-button.active {
+  background: #007aff;
+  color: #fff;
+  border-radius: 4px;
+}
+.filter-icon {
+  font-size: 1.1rem;
 }
 </style>

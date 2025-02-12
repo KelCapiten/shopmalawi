@@ -1,4 +1,4 @@
-//\src\components\InputForm.vue
+//src/components/InputForm.vue
 <template>
   <div class="form-container">
     <label class="form-label">
@@ -97,11 +97,12 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, watch } from "vue";
+import { defineComponent, ref, onMounted, watch, computed } from "vue";
 import ImageUploader from "@/components/ImageUploader.vue";
 import { useCategories } from "@/composables/useCategories";
 import useLocations from "@/composables/useLocations";
 import { useInquiries } from "@/composables/useInquiry";
+import { computeSubcategories } from "@/utils/utilities";
 
 // Extend the inquiry form type with an optional id property.
 interface InquiryForm {
@@ -151,7 +152,7 @@ export default defineComponent({
           category_id: props.inquiryToEdit.category_id || null,
           location_id: props.inquiryToEdit.location_id || null,
           stock_quantity: props.inquiryToEdit.stock_quantity || null,
-          id: props.inquiryToEdit.id, // now available as an optional property
+          id: props.inquiryToEdit.id,
         };
       }
     });
@@ -228,11 +229,16 @@ export default defineComponent({
       }
     };
 
+    const subcategories = computed(() =>
+      computeSubcategories(categories.value)
+    );
+
     return {
       inquiry,
       files,
       locations,
-      categories,
+      // Use computed subcategories in place of categories.
+      categories: subcategories,
       isSending,
       imageUploaderRef,
       handleFilesSelected,
