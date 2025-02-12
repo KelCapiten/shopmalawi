@@ -47,7 +47,7 @@
           }"
           @click="userstore.setProductFilter(filter.value)"
         >
-          <ion-icon :icon="filter.icon" class="filter-icon"></ion-icon>
+          <IonIcon :icon="filter.icon" class="filter-icon" />
           <span>{{ filter.label }}</span>
         </button>
       </div>
@@ -62,6 +62,7 @@
             :userId="authStore.user?.id || 0"
             @deactivateProduct="handleDeactivateProduct"
             @activateProduct="handleActivateProduct"
+            @editProduct="handleEditProduct"
           />
         </div>
         <div v-else-if="selectedSegment === 'all'">
@@ -72,33 +73,58 @@
             :userId="authStore.user?.id || 0"
             @deactivateProduct="handleDeactivateProduct"
             @activateProduct="handleActivateProduct"
+            @editProduct="handleEditProduct"
           />
         </div>
       </div>
     </IonContent>
 
-    <div class="floating-share-toolbar">
+    <!-- Floating Share Toolbar (hidden when overlay is visible) -->
+    <div class="floating-share-toolbar" v-if="!showSellDashboard">
       <ShareToolbar
         :enableNavigationToolbar="true"
         :enableShareToolbar="false"
       />
     </div>
+
+    <!-- Sell Product Form Overlay -->
+    <transition name="slide-fade">
+      <div
+        v-if="showSellDashboard"
+        ref="sellDashboardContainer"
+        class="sell-dashboard-container"
+      >
+        <IonButton
+          fill="clear"
+          class="close-sell-dashboard"
+          @click="closeSellDashboard"
+        >
+          <IonIcon :icon="closeOutline" style="color: red; font-size: 24px" />
+        </IonButton>
+        <sellProductForm
+          submitButtonText="Save Changes"
+          headingLabel="Update Your Products Info"
+          @product-saved="closeSellDashboard"
+        />
+      </div>
+    </transition>
   </IonPage>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted } from "vue";
+import { defineComponent, ref, computed, onMounted, nextTick } from "vue";
 import ShareToolbar from "./ShareToolbar.vue";
 import HeroSection from "./HeroSection.vue";
 import ProductDisplay from "@/components/productDisplay.vue";
+import sellProductForm from "@/components/sellProductForm.vue"; // New form component
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useProductsStore } from "@/stores/productsStore";
 import {
-  trashOutline,
   appsOutline,
   checkmarkCircleOutline,
   closeCircleOutline,
+  closeOutline, // The close icon
 } from "ionicons/icons";
 
 export default defineComponent({
@@ -107,6 +133,7 @@ export default defineComponent({
     ShareToolbar,
     HeroSection,
     ProductDisplay,
+    sellProductForm,
   },
   setup() {
     const userstore = useUserstoreStore();
@@ -119,7 +146,7 @@ export default defineComponent({
     });
 
     const featuredProducts = computed(() =>
-      userstore.products.filter((p) => p.id % 2)
+      userstore.products.filter((group: any) => group.id % 2)
     );
 
     const filters = [
@@ -158,6 +185,25 @@ export default defineComponent({
       }
     }
 
+    function handleEditProduct(productId: number) {
+      userstore.prefillProductForEdit(productId);
+      showSellDashboard.value = true;
+      nextTick(() => {
+        sellDashboardContainer.value?.scrollIntoView({ behavior: "smooth" });
+      });
+    }
+
+    // Flag to control the visibility of the overlay
+    const showSellDashboard = ref(false);
+    // Ref for the overlay container to enable scrolling it into view
+    const sellDashboardContainer = ref<HTMLElement | null>(null);
+
+    function closeSellDashboard() {
+      showSellDashboard.value = false;
+      // Optionally, clear the product form when closing
+      productsStore.clearProduct();
+    }
+
     return {
       userstore,
       authStore,
@@ -167,7 +213,11 @@ export default defineComponent({
       editBrandStory,
       handleDeactivateProduct,
       handleActivateProduct,
-      trashIcon: trashOutline,
+      handleEditProduct,
+      showSellDashboard,
+      sellDashboardContainer,
+      closeSellDashboard,
+      closeOutline,
     };
   },
 });
@@ -185,21 +235,10 @@ export default defineComponent({
   font-size: 0.8rem;
   color: rgb(6, 141, 231);
 }
+
 .store-segment {
   margin: 1rem;
 }
-.ProductDisplay {
-  padding: 0px 15px;
-}
-.floating-share-toolbar {
-  background-color: none;
-  position: fixed;
-  bottom: 16px;
-  right: 0px;
-  z-index: 1000;
-}
-
-/* Filters Bar styles */
 .filter-bar {
   display: flex;
   gap: 0.5rem;
@@ -236,5 +275,49 @@ export default defineComponent({
 }
 .filter-icon {
   font-size: 1.1rem;
+}
+
+.ProductDisplay {
+  padding: 0px 15px;
+}
+
+.floating-share-toolbar {
+  position: fixed;
+  bottom: 16px;
+  right: 0px;
+  z-index: 10;
+}
+.sell-dashboard-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+  max-width: 500px;
+  background-color: #fff;
+  z-index: 11;
+  overflow-y: auto;
+  padding: 60px 20px 20px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.close-sell-dashboard {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 12;
+  background: transparent;
+  border: none;
+}
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.5s ease;
+}
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
 }
 </style>

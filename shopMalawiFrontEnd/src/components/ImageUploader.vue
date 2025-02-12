@@ -1,4 +1,4 @@
-//\src\components\ImageUploader.vue
+//src/components/ImageUploader.vue
 <template>
   <div class="form-group">
     <label class="form-label">{{ label }}</label>
@@ -27,7 +27,7 @@
 </template>
 
 <script lang="ts">
-import { ref, computed, defineComponent } from "vue";
+import { ref, computed, defineComponent, watch, onMounted } from "vue";
 import { cloudUploadOutline } from "ionicons/icons";
 import { Swiper, SwiperSlide } from "swiper/vue";
 import { Pagination } from "swiper/modules";
@@ -36,7 +36,7 @@ import "swiper/css/pagination";
 
 interface PreviewImage {
   url: string;
-  file: File;
+  file?: File; // Optional if preexisting images don't have a File object
 }
 
 export default defineComponent({
@@ -54,9 +54,14 @@ export default defineComponent({
       type: String,
       default: "Upload up to 4 images",
     },
+    // New prop: an array of image URLs (or objects) that are already available (edit mode)
+    initialImages: {
+      type: Array as () => Array<{ url: string }>,
+      default: () => [],
+    },
   },
   emits: ["uploaded-images"],
-  setup(_, { emit }) {
+  setup(props, { emit }) {
     const fileInput = ref<HTMLInputElement | null>(null);
     const previewImages = ref<PreviewImage[]>([]);
 
@@ -90,6 +95,22 @@ export default defineComponent({
       }
     };
 
+    // When the component is mounted or the initialImages prop changes, populate previewImages
+    onMounted(() => {
+      if (props.initialImages.length > 0) {
+        previewImages.value = props.initialImages.map((img) => ({
+          url: img.url,
+        }));
+      }
+    });
+    watch(
+      () => props.initialImages,
+      (newVal) => {
+        previewImages.value = newVal.map((img) => ({ url: img.url }));
+      },
+      { immediate: true }
+    );
+
     return {
       fileInput,
       previewImages,
@@ -105,6 +126,7 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* (Styles remain the same as your original code) */
 .form-label {
   font-size: small;
 }

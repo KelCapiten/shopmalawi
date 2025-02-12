@@ -32,6 +32,7 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: "/sell",
+    name: "sell",
     component: SellDashboard,
     meta: { requiresAuth: true },
   },

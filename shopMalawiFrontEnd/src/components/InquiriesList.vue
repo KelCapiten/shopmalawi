@@ -1,4 +1,4 @@
-//\src\components\InquiriesList.vue
+//src/components/InquiriesList.vue
 <template>
   <div class="inquiries-container">
     <h5>Do you have any of these for sale?</h5>
@@ -33,7 +33,6 @@
               v-for="(image, index) in inquiry.images"
               :key="index"
             >
-              <!-- Replace plain <img> with FullScreenImage -->
               <FullScreenImage
                 :imageUrl="getImageUrl(image.image_path)"
                 :alt="`Image ${index + 1}`"

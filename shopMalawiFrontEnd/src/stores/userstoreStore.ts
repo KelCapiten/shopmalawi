@@ -1,19 +1,17 @@
-// src/stores/userstoreStore.ts
+//src/stores/userstoreStore.ts
 import { defineStore } from "pinia";
 import { getStore, addStore, updateStore } from "@/services/userstoreService";
 import type { Store, Product } from "@/types";
 import { useAuthStore } from "@/stores/authStore";
 import { useProducts } from "@/composables/useProducts";
+import { useProductsStore } from "@/stores/productsStore";
 
 export const useUserstoreStore = defineStore("userstoreStore", {
   state: () => ({
     store: null as Store | null,
-    // Note: The products returned from the API are grouped objects
-    // e.g., { id, name, products: Product[] }
     products: [] as any[],
     productsLoading: false,
     productsError: null as string | null,
-    // New state property for filtering products: "all", "active", or "inactive"
     productFilter: "all",
   }),
   getters: {
@@ -45,21 +43,16 @@ export const useUserstoreStore = defineStore("userstoreStore", {
       }
       try {
         const result = await getStore(query);
-        if (Array.isArray(result)) {
-          if (result.length) {
-            this.store = result[0];
-          } else {
-            this.store = this.getDefaultStore(authStore.user?.id);
-          }
-        } else {
-          this.store = result;
-        }
+        this.store = Array.isArray(result)
+          ? result.length
+            ? result[0]
+            : this.getDefaultStore(authStore.user?.id)
+          : result;
       } catch (error) {
         console.error("Error fetching store:", error);
         this.store = this.getDefaultStore(authStore.user?.id);
       }
     },
-
     async fetchUserProducts() {
       if (!this.store) {
         console.warn("No store available; cannot fetch products.");
@@ -71,12 +64,10 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         uploaded_by: this.store.owner_id,
         includeInactive: true,
       });
-      // Ensure products is always an array
       this.products = products.value || [];
       this.productsLoading = loading.value;
       this.productsError = error.value;
     },
-
     async createStore(newStore: Store) {
       try {
         const result = await addStore(newStore);
@@ -87,7 +78,6 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         throw error;
       }
     },
-
     async updateStoreRecord(updatedStore: Partial<Store>) {
       if (!this.store?.id) {
         throw new Error("No store available to update.");
@@ -100,12 +90,9 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         throw error;
       }
     },
-
-    // Action to update the product filter
     setProductFilter(filter: string) {
       this.productFilter = filter;
     },
-
     getDefaultStore(ownerId: number | undefined): Store {
       return {
         id: 0,
@@ -120,7 +107,6 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         updated_at: "",
       };
     },
-
     setBannerUrl(url: string) {
       if (this.store) {
         this.store.banner_url = url;
@@ -134,6 +120,27 @@ export const useUserstoreStore = defineStore("userstoreStore", {
     setTagline(tagline: string) {
       if (this.store) {
         this.store.tagline = tagline;
+      }
+    },
+    prefillProductForEdit(productId: number) {
+      let selectedProduct: any = null;
+      for (const group of this.products) {
+        selectedProduct = group.products.find((p: any) => p.id === productId);
+        if (selectedProduct) break;
+      }
+      const productsStore = useProductsStore();
+      if (selectedProduct) {
+        productsStore.product = {
+          id: selectedProduct.id,
+          name: selectedProduct.name,
+          description: selectedProduct.description,
+          price: parseFloat(selectedProduct.price),
+          categoryId: selectedProduct.subcategory_id,
+          stockQuantity: selectedProduct.stock_quantity,
+          images: selectedProduct.images || [],
+        };
+      } else {
+        productsStore.clearProduct();
       }
     },
   },

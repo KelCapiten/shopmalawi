@@ -47,9 +47,8 @@ export default {
 <style scoped>
 .thumbnail {
   cursor: pointer;
-  max-height: 130px; /* Adjust the height as needed */
+  max-height: 130px;
   width: auto;
-  /* Rounded corners removed */
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s;
 }
