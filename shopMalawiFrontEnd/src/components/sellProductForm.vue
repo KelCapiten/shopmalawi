@@ -1,8 +1,12 @@
 //src/components/sellProductForm.vue
-<!-- src/components/sellProductForm.vue -->
 <template>
   <div class="form-container">
-    <label class="form-label">{{ headingLabel }}</label>
+    <div class="form-header">
+      <label class="form-label">{{ headingLabel }}</label>
+      <ion-button class="close-button" fill="clear" @click="closeForm">
+        <ion-icon :icon="closeCircle" class="close-icon" />
+      </ion-button>
+    </div>
 
     <ImageUploader
       ref="imageUploaderRef"
@@ -106,6 +110,7 @@ import ImageUploader from "@/components/ImageUploader.vue";
 import SavingOverlay from "@/components/SavingOverlay.vue";
 import { useCategories } from "@/composables/useCategories";
 import { computeSubcategories, getImageUrl } from "@/utils/utilities";
+import { closeCircle } from "ionicons/icons";
 
 export default defineComponent({
   name: "SellItemForm",
@@ -123,7 +128,7 @@ export default defineComponent({
     ImageUploader,
     SavingOverlay,
   },
-  emits: ["product-saved"],
+  emits: ["product-saved", "close-form"],
   setup(_, { emit }) {
     const productStore = useProductsStore();
     const files = ref<File[]>([]);
@@ -141,6 +146,7 @@ export default defineComponent({
     const subcategories = computed(() =>
       computeSubcategories(categories.value)
     );
+
     onMounted(() => {
       fetchCategories();
     });
@@ -219,6 +225,10 @@ export default defineComponent({
       showToast.value = true;
     };
 
+    const closeForm = () => {
+      emit("close-form");
+    };
+
     return {
       productStore,
       showToast,
@@ -233,6 +243,8 @@ export default defineComponent({
       handleFilesSelected,
       submitItem,
       initialImages,
+      closeForm,
+      closeCircle,
     };
   },
 });
@@ -247,6 +259,11 @@ export default defineComponent({
   border-radius: 10px;
   background-color: #ffffff;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 .form-group {
   margin-bottom: 20px;
@@ -286,5 +303,13 @@ export default defineComponent({
   margin-top: 5px;
   color: red;
   font-size: 0.8rem;
+}
+.close-button {
+  --padding-start: 0;
+  --padding-end: 0;
+}
+.close-icon {
+  color: red;
+  font-size: 24px;
 }
 </style>

@@ -81,32 +81,33 @@
 
         <productDisplay
           v-if="visibleProductCardGridId === inquiry.id"
-          class="searchResultsDisplay"
           heading="Offer your products"
+          class="searchResultsDisplay"
           :products="searchedProducts"
           :emptyMessageEnabled="true"
+          :showCategoryName="false"
           emptyMessageButtonText="ADD NEW PRODUCT"
           emptyMessageSubText="You don't have this product in your account, would you like to add it?"
-          @productClicked="searchedProductClicked"
-          :showCategoryName="false"
           infoPosition="side"
           imageSize="small"
+          @productClicked="searchedProductClicked"
+          @emptyMessageButtonClicked="addProduct"
         />
 
         <productDisplay
           v-if="visibleProductCardGridId === inquiry.id"
+          heading="(Click to view) Offers made to this request"
           :products="offeredProducts"
           :emptyMessageEnabled="true"
-          emptyMessageText="No offers made to this request yet."
-          emptyMessageSubText="BE THE FIRST TO MAKE AN OFFER TO THIS BUYER!"
-          @productClicked="offeredProductClicked"
-          @removeOfferedProduct="removeOfferedProduct"
-          heading="(Click to view) Offers made to this request"
-          :showCategoryName="false"
-          infoPosition="side"
-          imageSize="small"
           :userId="userId"
           :showDeleteButton="true"
+          :showCategoryName="false"
+          emptyMessageText="No offers made to this request yet."
+          emptyMessageSubText="BE THE FIRST TO MAKE AN OFFER TO THIS BUYER!"
+          infoPosition="side"
+          imageSize="small"
+          @productClicked="offeredProductClicked"
+          @removeOfferedProduct="removeOfferedProduct"
         />
       </div>
     </div>
@@ -158,6 +159,7 @@ export default defineComponent({
     "removeOfferedProduct",
     "editInquiry",
     "deleteInquiry",
+    "addProduct", // Added event for when the empty message button is clicked.
   ],
   data() {
     return {
@@ -189,6 +191,10 @@ export default defineComponent({
         productId,
         inquiryId: this.visibleProductCardGridId,
       });
+    },
+    // This method will be triggered when the productDisplay emits emptyMessageButtonClicked.
+    addProduct() {
+      this.$emit("addProduct");
     },
   },
   watch: {

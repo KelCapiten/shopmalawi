@@ -1,10 +1,12 @@
+//src/views/LookingForPage.vue
 <template>
   <ion-page>
-    <appHeader :showCategorySegment="false" />
+    <appHeader class="appHeader" :showCategorySegment="false" />
 
     <ion-content class="ion-padding">
+      <!-- InquiriesList is displayed when neither form is open -->
       <InquiriesList
-        v-if="!showForm"
+        v-if="!showForm && !showSellProductForm"
         :inquiries="inquiries"
         :searchedProducts="results"
         :offeredProducts="products"
@@ -16,13 +18,27 @@
         @removeOfferedProduct="handleRemoveOfferedProduct"
         @editInquiry="handleEditInquiry"
         @deleteInquiry="handleDeleteInquiry"
+        @addProduct="toggleSellProductForm"
       />
 
+      <!-- InputForm Overlay (existing) -->
       <transition name="slideForm">
-        <div v-if="showForm" ref="formRef" class="form-container">
+        <div v-if="showForm" ref="formRef">
           <InputForm
             :inquiryToEdit="inquiryToEdit"
             @submit="handleFormSubmit"
+          />
+        </div>
+      </transition>
+
+      <!-- sellProductForm Overlay (new and independent) -->
+      <transition name="slideForm">
+        <div v-if="showSellProductForm" ref="sellFormRef">
+          <sellProductForm
+            submitButtonText="Add Product"
+            headingLabel="Add New Product"
+            @product-saved="handleSellProductFormSubmit"
+            @close-form="toggleSellProductForm"
           />
         </div>
       </transition>
@@ -37,7 +53,13 @@
 
       <SavingOverlay :isSaving="isSending || loading" />
 
-      <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+      <!-- FAB toggles the InputForm overlay -->
+      <ion-fab
+        vertical="bottom"
+        horizontal="end"
+        slot="fixed"
+        v-if="!showSellProductForm"
+      >
         <ion-fab-button @click="toggleForm" color="light">
           <ion-icon :icon="showForm ? close : search" />
         </ion-fab-button>
@@ -65,6 +87,7 @@ import appHeader from "@/components/appHeader.vue";
 import appFooter from "@/components/appFooter.vue";
 import InquiriesList from "@/components/InquiriesList.vue";
 import InputForm from "@/components/InputForm.vue";
+import sellProductForm from "@/components/sellProductForm.vue";
 import SavingOverlay from "@/components/SavingOverlay.vue";
 
 export default defineComponent({
@@ -74,6 +97,7 @@ export default defineComponent({
     appFooter,
     InquiriesList,
     InputForm,
+    sellProductForm,
     SavingOverlay,
   },
   setup() {
@@ -94,19 +118,28 @@ export default defineComponent({
 
     const { results, searchForProductsExcludingOffered } = useSearch();
 
+    // Controls for the two independent overlays
     const showForm = ref<boolean>(false);
+    const showSellProductForm = ref<boolean>(false);
     const showToast = ref<boolean>(false);
     const toastMessage = ref<string>("");
     const toastColor = ref<string>("success");
     const isSending = ref<boolean>(false);
     const formRef = ref<HTMLElement | null>(null);
+    const sellFormRef = ref<HTMLElement | null>(null);
     const inquiryToEdit = ref<any>(null);
 
+    // Toggle the InputForm overlay
     const toggleForm = (): void => {
       if (showForm.value) {
         inquiryToEdit.value = null;
       }
       showForm.value = !showForm.value;
+    };
+
+    // Toggle the sellProductForm overlay
+    const toggleSellProductForm = (): void => {
+      showSellProductForm.value = !showSellProductForm.value;
     };
 
     const handleFormSubmit = async (): Promise<void> => {
@@ -116,6 +149,15 @@ export default defineComponent({
       toastColor.value = "success";
       showToast.value = true;
       await fetchInquiries();
+    };
+
+    const handleSellProductFormSubmit = async (): Promise<void> => {
+      // Add your custom logic for handling the sellProductForm submission here.
+      showSellProductForm.value = false;
+      toastMessage.value = "Product added successfully";
+      toastColor.value = "success";
+      showToast.value = true;
+      // Optionally, refresh inquiries or products if needed.
     };
 
     const fetchProducOffers = async ({
@@ -254,7 +296,9 @@ export default defineComponent({
       results,
       products,
       showForm,
+      showSellProductForm,
       formRef,
+      sellFormRef,
       close,
       search,
       loading,
@@ -264,6 +308,7 @@ export default defineComponent({
       toastColor,
       isSending,
       toggleForm,
+      toggleSellProductForm,
       fetchProducOffers,
       debouncedSearch,
       handleSearchedProductClicked,
@@ -274,12 +319,15 @@ export default defineComponent({
       handleDeleteInquiry,
       inquiryToEdit,
       handleFormSubmit,
+      handleSellProductFormSubmit,
     };
   },
 });
 </script>
 
 <style scoped>
+.appHeader {
+}
 .slideForm-enter-active,
 .slideForm-leave-active {
   transition: all 0.3s ease;
@@ -293,8 +341,5 @@ export default defineComponent({
 .slideForm-leave-from {
   opacity: 1;
   transform: translateY(0);
-}
-.form-container {
-  margin-top: 1rem;
 }
 </style>

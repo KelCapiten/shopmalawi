@@ -556,9 +556,11 @@ p {
 }
 
 .fixed-height {
-  max-height: 150px;
+  max-height: 230px;
   overflow-y: auto;
   scrollbar-width: none;
+  border: 1px solid grey;
+  border-radius: 8px;
 }
 
 .fixed-height::-webkit-scrollbar {

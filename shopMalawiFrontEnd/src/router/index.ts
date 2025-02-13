@@ -11,7 +11,7 @@ import SearchResultsPage from "@/views/searchResultsPage.vue";
 import ProductPage from "@/views/productPage.vue";
 import PayPage from "@/views/PayPage.vue";
 import LookingForPage from "@/views/LookingForPage.vue";
-import StorePage from "@/components/StorePage.vue"; // New store page
+import StorePage from "@/views/StorePage.vue";
 import { useAuthStore } from "@/stores/authStore";
 
 const routes: Array<RouteRecordRaw> = [

@@ -1,26 +1,29 @@
-// src/components/HeroSection.vue
+//src/components/HeroSection.vue
 <template>
-  <div class="banner-container">
+  <div class="banner-container" v-if="userstore.store">
     <section class="banner-section">
       <img
-        :src="userstore.store?.banner_url"
+        :src="userstore.store.banner_url"
         alt="Store Banner"
         class="banner-image"
       />
-
-      <!-- Banner edit icon at top right -->
-      <div class="edit-banner-button" fill="clear" @click="editBannerPicture">
+      <div
+        v-if="isOwner"
+        class="edit-banner-button"
+        fill="clear"
+        @click="editBannerPicture"
+      >
         <IonIcon :icon="cameraOutline" class="banner-camera-icon" />
       </div>
-
       <div class="profile-wrapper">
         <div class="profile-picture">
           <img
-            :src="userstore.store?.profile_picture_url"
+            :src="userstore.store.profile_picture_url"
             alt="Profile Picture"
           />
         </div>
         <div
+          v-if="isOwner"
           class="edit-profile-button"
           fill="clear"
           @click="editProfilePicture"
@@ -29,16 +32,14 @@
         </div>
       </div>
     </section>
-
-    <!-- Register Store button: positioned 15px below the banner -->
-    <div class="register-store" v-if="userstore.store?.id === 0">
+    <div class="register-store" v-if="shouldShowRegisterButton">
       <IonButton class="register-button" fill="clear" @click="registerStore">
         Register Your Store
       </IonButton>
     </div>
   </div>
 
-  <div class="store-info">
+  <div class="store-info" v-if="userstore.store">
     <div class="store-brand-field">
       <div v-if="editingBrandName" class="edit-mode">
         <input
@@ -56,9 +57,10 @@
       </div>
       <div v-else class="display-mode">
         <div class="store-brand">
-          {{ userstore.store?.brand_name }}
+          {{ userstore.store.brand_name }}
         </div>
         <IonButton
+          v-if="isOwner"
           class="edit-button"
           fill="clear"
           @click="toggleEditBrandName"
@@ -85,9 +87,14 @@
       </div>
       <div v-else class="display-mode">
         <div class="store-tagline">
-          {{ userstore.store?.tagline }}
+          {{ userstore.store.tagline }}
         </div>
-        <IonButton class="edit-button" fill="clear" @click="toggleEditTagline">
+        <IonButton
+          v-if="isOwner"
+          class="edit-button"
+          fill="clear"
+          @click="toggleEditTagline"
+        >
           edit
         </IonButton>
       </div>
@@ -96,15 +103,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, onMounted } from "vue";
+import { defineComponent, ref, computed } from "vue";
 import { useUserstoreStore } from "@/stores/userstoreStore";
+import { useAuthStore } from "@/stores/authStore";
 import { IonButton, IonIcon } from "@ionic/vue";
-import {
-  createOutline,
-  checkmarkOutline,
-  closeOutline,
-  cameraOutline,
-} from "ionicons/icons";
+import { checkmarkOutline, closeOutline, cameraOutline } from "ionicons/icons";
 
 export default defineComponent({
   name: "HeroSection",
@@ -114,28 +117,25 @@ export default defineComponent({
   },
   setup() {
     const userstore = useUserstoreStore();
+    const authStore = useAuthStore();
+
+    const isOwner = computed(() => {
+      return userstore.store?.owner_id === authStore.user?.id;
+    });
+
+    const shouldShowRegisterButton = computed(() => {
+      if (!userstore.store) return false;
+      return userstore.store.id === 0;
+    });
 
     const editingBrandName = ref(false);
     const editingTagline = ref(false);
     const newBrandName = ref("");
     const newTagline = ref("");
 
-    onMounted(() => {
-      userstore.fetchStore();
-    });
-
-    watch(
-      () => userstore.store,
-      (storeData) => {
-        newBrandName.value = storeData?.brand_name ?? "";
-        newTagline.value = storeData?.tagline ?? "";
-      },
-      { immediate: true }
-    );
-
     const toggleEditBrandName = () => {
       editingBrandName.value = true;
-      newBrandName.value = userstore.store?.brand_name ?? "";
+      newBrandName.value = userstore.store?.brand_name || "";
     };
     const saveBrandName = async () => {
       if (userstore.store && newBrandName.value.trim() !== "") {
@@ -145,12 +145,12 @@ export default defineComponent({
     };
     const cancelEditBrandName = () => {
       editingBrandName.value = false;
-      newBrandName.value = userstore.store?.brand_name ?? "";
+      newBrandName.value = userstore.store?.brand_name || "";
     };
 
     const toggleEditTagline = () => {
       editingTagline.value = true;
-      newTagline.value = userstore.store?.tagline ?? "";
+      newTagline.value = userstore.store?.tagline || "";
     };
     const saveTagline = async () => {
       if (userstore.store) {
@@ -160,24 +160,24 @@ export default defineComponent({
     };
     const cancelEditTagline = () => {
       editingTagline.value = false;
-      newTagline.value = userstore.store?.tagline ?? "";
+      newTagline.value = userstore.store?.tagline || "";
     };
 
     const editProfilePicture = () => {
       console.log("Edit profile picture clicked");
     };
-
     const editBannerPicture = () => {
       console.log("Edit banner picture clicked");
     };
-
     const registerStore = () => {
       console.log("Register Store clicked");
-      // Add your store registration logic here (e.g., navigate to registration page)
     };
 
     return {
       userstore,
+      authStore,
+      isOwner,
+      shouldShowRegisterButton,
       editingBrandName,
       editingTagline,
       newBrandName,
@@ -191,7 +191,6 @@ export default defineComponent({
       editProfilePicture,
       editBannerPicture,
       registerStore,
-      createOutline,
       checkmarkOutline,
       closeOutline,
       cameraOutline,
@@ -314,13 +313,14 @@ export default defineComponent({
   font-size: 12px;
 }
 .store-brand {
-  color: grey;
+  color: rgb(73, 73, 73);
   font-size: xx-large;
   font-weight: bold;
 }
 .store-tagline {
   color: grey;
   font-size: large;
+  font-weight: 100;
 }
 .brand-input {
   color: grey;

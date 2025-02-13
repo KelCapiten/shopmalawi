@@ -20,20 +20,25 @@ CREATE TABLE IF NOT EXISTS roles (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- Users Table
+-- Users Table Schema
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
+    username VARCHAR(50) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) DEFAULT 'no-email@example.com', 
+    email VARCHAR(100) NOT NULL DEFAULT 'no-email@example.com',
     password_hash VARCHAR(255) NOT NULL,
     phone_number VARCHAR(20) NOT NULL,
-    location_id VARCHAR(100),
+    verified BOOLEAN DEFAULT FALSE,
+    location_id INT DEFAULT NULL,
     role_id INT DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (role_id) REFERENCES roles(id)
+    UNIQUE (username),
+    UNIQUE (email),
+    UNIQUE (phone_number),
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    FOREIGN KEY (location_id) REFERENCES locations(id)
 ) ENGINE=InnoDB;
 
 -- User Images Table (Storing Actual Images)

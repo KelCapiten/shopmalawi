@@ -1,4 +1,4 @@
-//\src\components\BuySegment.vue
+//src/components/BuySegment.vue
 <template>
   <div
     v-if="props.disclaimerText"
@@ -8,19 +8,20 @@
 
   <IonToolbar class="shop-actions-toolbar">
     <IonButtons v-if="props.showIcons" slot="start">
-      <IonButton fill="clear" shape="round" @click="onStoreClick">
-        <IonIcon slot="icon-only" :icon="storefrontOutline" />
+      <!-- Store Button -->
+      <IonButton @click="onStoreClick">
+        <div class="button-content">
+          <IonIcon :icon="storefrontOutline" class="big-icon" />
+          <IonLabel class="button-label">visit store</IonLabel>
+        </div>
       </IonButton>
-      <IonButton
-        fill="clear"
-        shape="round"
-        @click="onCartClick"
-        class="cart-button"
-      >
-        <IonIcon slot="start" :icon="cartOutline" />
-        <IonBadge slot="end" color="danger">
-          {{ props.cartCount }}
-        </IonBadge>
+
+      <!-- Cart Button (badge removed) -->
+      <IonButton @click="onCartClick" class="cart-button">
+        <div class="button-content">
+          <IonIcon :icon="cartOutline" class="big-icon" />
+          <IonLabel class="button-label">cart</IonLabel>
+        </div>
       </IonButton>
     </IonButtons>
 
@@ -48,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from "vue";
+import { defineProps, defineEmits } from "vue";
 import { useRouter } from "vue-router";
 import { storefrontOutline, cartOutline } from "ionicons/icons";
 
@@ -86,7 +87,7 @@ const emit = defineEmits([
 const router = useRouter();
 
 function onStoreClick(): void {
-  router.push("/store");
+  emit("store-click");
 }
 
 function onCartClick(): void {
@@ -118,6 +119,22 @@ function onRightButtonClick(): void {
   overflow-x: hidden;
   --ion-toolbar-background: #ffffff;
   --ion-color-danger: #dc0000;
+}
+
+.button-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Increase the icon size */
+.big-icon {
+  font-size: 30px;
+}
+
+.button-label {
+  font-size: 13px;
+  margin-top: 2px;
 }
 
 .cart-button {

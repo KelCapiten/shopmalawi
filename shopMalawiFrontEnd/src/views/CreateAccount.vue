@@ -210,7 +210,7 @@ export default defineComponent({
         });
 
         // Redirect the user to the dashboard
-        router.push("/home");
+        router.push("/shop");
 
         showToast("Account created successfully!", "success");
 

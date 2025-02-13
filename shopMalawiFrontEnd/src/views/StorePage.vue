@@ -1,4 +1,4 @@
-// src/components/StorePage.vue
+//src/views/StorePage.vue
 <template>
   <IonPage>
     <IonContent>
@@ -18,6 +18,7 @@
           </p>
         </IonCardContent>
         <IonButton
+          v-if="isStoreOwner"
           fill="clear"
           class="edit-brand-story"
           @click="editBrandStory"
@@ -87,24 +88,18 @@
       />
     </div>
 
-    <!-- Sell Product Form Overlay -->
+    <!-- Sell Product Form Overlay (close button removed) -->
     <transition name="slide-fade">
       <div
         v-if="showSellDashboard"
         ref="sellDashboardContainer"
         class="sell-dashboard-container"
       >
-        <IonButton
-          fill="clear"
-          class="close-sell-dashboard"
-          @click="closeSellDashboard"
-        >
-          <IonIcon :icon="closeOutline" style="color: red; font-size: 24px" />
-        </IonButton>
         <sellProductForm
           submitButtonText="Save Changes"
           headingLabel="Update Your Products Info"
           @product-saved="closeSellDashboard"
+          @close-form="closeSellDashboard"
         />
       </div>
     </transition>
@@ -113,10 +108,11 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, nextTick } from "vue";
-import ShareToolbar from "./ShareToolbar.vue";
-import HeroSection from "./HeroSection.vue";
+import { useRoute } from "vue-router";
+import ShareToolbar from "@/components/ShareToolbar.vue";
+import HeroSection from "@/components/HeroSection.vue";
 import ProductDisplay from "@/components/productDisplay.vue";
-import sellProductForm from "@/components/sellProductForm.vue"; // New form component
+import sellProductForm from "@/components/sellProductForm.vue";
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useProductsStore } from "@/stores/productsStore";
@@ -124,7 +120,7 @@ import {
   appsOutline,
   checkmarkCircleOutline,
   closeCircleOutline,
-  closeOutline, // The close icon
+  closeOutline,
 } from "ionicons/icons";
 
 export default defineComponent({
@@ -140,9 +136,19 @@ export default defineComponent({
     const authStore = useAuthStore();
     const productsStore = useProductsStore();
     const selectedSegment = ref("featured");
+    const route = useRoute();
+
+    // Computed property to determine if the current user is the store owner.
+    const isStoreOwner = computed(() => {
+      return userstore.store?.owner_id === authStore.user?.id;
+    });
+    const ownerIdFromQuery = route.query.ownerId
+      ? Number(route.query.ownerId)
+      : undefined;
 
     onMounted(() => {
-      userstore.fetchUserProducts();
+      userstore.fetchUserProducts({ ownerId: ownerIdFromQuery });
+      userstore.fetchStore({ owner_id: ownerIdFromQuery });
     });
 
     const featuredProducts = computed(() =>
@@ -165,6 +171,7 @@ export default defineComponent({
 
     const editBrandStory = () => {
       console.log("Edit brand story clicked");
+      // Add your edit logic here
     };
 
     async function handleDeactivateProduct(productId: number) {
@@ -217,7 +224,8 @@ export default defineComponent({
       showSellDashboard,
       sellDashboardContainer,
       closeSellDashboard,
-      closeOutline,
+      closeOutline, // still imported if needed elsewhere
+      isStoreOwner, // expose computed property to the template
     };
   },
 });
@@ -292,24 +300,10 @@ export default defineComponent({
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  margin: auto;
-  max-width: 500px;
-  background-color: #fff;
-  z-index: 11;
   overflow-y: auto;
-  padding: 60px 20px 20px;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-.close-sell-dashboard {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+  bottom: 0;
   z-index: 12;
-  background: transparent;
-  border: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 .slide-fade-enter-active,
 .slide-fade-leave-active {

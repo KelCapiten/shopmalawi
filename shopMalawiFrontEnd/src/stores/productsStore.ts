@@ -21,7 +21,7 @@ export const useProductsStore = defineStore("productsStore", {
       description: "",
       price: 0,
       categoryId: "",
-      stockQuantity: 0,
+      stockQuantity: 1,
       images: [] as File[],
     } as NewProduct,
     isSaving: false,

@@ -1,6 +1,7 @@
 //src/stores/userstoreStore.ts
 import { defineStore } from "pinia";
 import { getStore, addStore, updateStore } from "@/services/userstoreService";
+import { getUserInfoService } from "@/services/userService";
 import type { Store, Product } from "@/types";
 import { useAuthStore } from "@/stores/authStore";
 import { useProducts } from "@/composables/useProducts";
@@ -46,14 +47,24 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         this.store = Array.isArray(result)
           ? result.length
             ? result[0]
-            : this.getDefaultStore(authStore.user?.id)
+            : this.getDefaultStore()
           : result;
       } catch (error) {
         console.error("Error fetching store:", error);
-        this.store = this.getDefaultStore(authStore.user?.id);
+        this.store = this.getDefaultStore();
+      }
+      if (query.owner_id && this.store.id === 0) {
+        try {
+          const userInfo = await getUserInfoService({ id: query.owner_id });
+          this.store.brand_name = userInfo.firstName;
+          this.store.tagline = userInfo.lastName;
+        } catch (error) {
+          console.error("Error fetching user info:", error);
+        }
       }
     },
-    async fetchUserProducts() {
+    async fetchUserProducts({ ownerId }: { ownerId?: number } = {}) {
+      const authStore = useAuthStore();
       if (!this.store) {
         console.warn("No store available; cannot fetch products.");
         return;
@@ -61,7 +72,7 @@ export const useUserstoreStore = defineStore("userstoreStore", {
       const { fetchProducts, products, loading, error } = useProducts();
       await fetchProducts({
         groupBy: "subcategory",
-        uploaded_by: this.store.owner_id,
+        uploaded_by: ownerId ?? authStore.user?.id,
         includeInactive: true,
       });
       this.products = products.value || [];
@@ -93,10 +104,10 @@ export const useUserstoreStore = defineStore("userstoreStore", {
     setProductFilter(filter: string) {
       this.productFilter = filter;
     },
-    getDefaultStore(ownerId: number | undefined): Store {
+    getDefaultStore(): Store {
       return {
         id: 0,
-        owner_id: ownerId ?? 0,
+        owner_id: 0,
         brand_name: "ShopMalawi",
         tagline: "Segulani Shop Fada",
         description: "",

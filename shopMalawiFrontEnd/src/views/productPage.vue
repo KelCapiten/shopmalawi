@@ -53,13 +53,14 @@
     </ion-content>
 
     <div class="buy-segment-wrapper">
-      <BuySegment />
+      <BuySegment @store-click="navigateToStore" />
     </div>
   </ion-page>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch } from "vue";
+import { useRouter } from "vue-router";
 import { Swiper, SwiperSlide } from "swiper/vue";
 import "swiper/swiper-bundle.css";
 import PriceDisplay from "@/components/PriceDisplay.vue";
@@ -83,6 +84,7 @@ export default defineComponent({
     const zoomFactor = ref(1);
     const selectedImageIndex = ref(0);
     const swiperRef = ref<any>(null);
+    const router = useRouter();
 
     function onSwiperInit(swiperInstance: any) {
       swiperRef.value = swiperInstance;
@@ -107,6 +109,15 @@ export default defineComponent({
       }
     });
 
+    function navigateToStore() {
+      if (product.value && product.value.uploaded_by_userID) {
+        router.push({
+          name: "Store",
+          query: { ownerId: product.value.uploaded_by_userID },
+        });
+      }
+    }
+
     function handleScroll(event: CustomEvent) {
       const factor = 0.0005;
       zoomFactor.value = 1 + event.detail.scrollTop * factor;
@@ -117,6 +128,7 @@ export default defineComponent({
       zoomFactor,
       selectedImageIndex,
       swiperRef,
+      navigateToStore,
       onSwiperInit,
       onSlideChange,
       getImageUrl,
