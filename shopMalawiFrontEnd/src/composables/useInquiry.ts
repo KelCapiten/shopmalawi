@@ -87,15 +87,11 @@ export function useInquiries() {
     }
   };
 
-  const getProductsLinkedToInquiryAndUser = async (
-    inquiries_id: number,
-    uploaded_by: number
-  ) => {
+  const getProductsLinkedToInquiryAndUser = async (inquiries_id: number) => {
     loading.value = true;
     try {
       products.value = await inquiriesService.getProductsByInquiryAndUser(
-        inquiries_id,
-        uploaded_by
+        inquiries_id
       );
     } catch (err) {
       error.value = "Failed to fetch products";

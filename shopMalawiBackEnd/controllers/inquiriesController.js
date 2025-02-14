@@ -350,7 +350,7 @@ export const disassociateInquiryFromProduct = async (req, res) => {
 };
 
 // endpoint to get Products Associated with an Inquiry and User
-export const getProductsByInquiryAndUser = async (req, res) => {
+export const getProductsByInquiryAndUserBU = async (req, res) => {
   const { inquiries_id, uploaded_by } = req.query;
 
   if (!inquiries_id || !uploaded_by) {
@@ -439,6 +439,101 @@ export const getProductsByInquiryAndUser = async (req, res) => {
     res.status(200).json([groupedByOffers]);
   } catch (error) {
     console.error("Error fetching products by inquiry and user:", error);
+    res.status(500).json({ message: "Failed to fetch products." });
+  } finally {
+    connection.release();
+  }
+};
+
+// endpoint to get Products Associated with an Inquiry
+export const getProductsByInquiryAndUser = async (req, res) => {
+  const { inquiries_id } = req.query;
+
+  if (!inquiries_id) {
+    return res.status(400).json({
+      message: "inquiries_id is a required parameter.",
+    });
+  }
+
+  const connection = await db.getConnection();
+  try {
+    const query = `
+      SELECT 
+        p.id, 
+        p.name, 
+        p.description, 
+        p.price, 
+        p.mark_up_amount, 
+        p.subcategory_id, 
+        p.subcategory_name, 
+        p.maincategory_id, 
+        p.maincategory_name, 
+        p.stock_quantity, 
+        p.uploaded_by AS uploaded_by_userID, 
+        u.username AS uploaded_by,
+        i.image_path, 
+        i.alt_text, 
+        i.is_primary,
+        po.created_at AS association_date
+      FROM product_offers po
+      JOIN products p ON po.product_id = p.id
+      LEFT JOIN images i ON p.id = i.imageable_id AND i.imageable_type = 'products'
+      LEFT JOIN users u ON p.uploaded_by = u.id
+      WHERE po.inquiries_id = ?
+      ORDER BY po.created_at ASC
+    `;
+
+    const [products] = await connection.query(query, [
+      parseInt(inquiries_id, 10),
+    ]);
+
+    const productsWithImages = products.reduce((acc, product) => {
+      const existingProduct = acc.find((p) => p.id === product.id);
+      if (existingProduct) {
+        if (product.image_path) {
+          existingProduct.images.push({
+            image_path: product.image_path,
+            alt_text: product.alt_text,
+            is_primary: product.is_primary,
+          });
+        }
+      } else {
+        acc.push({
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          mark_up_amount: product.mark_up_amount,
+          subcategory_id: product.subcategory_id,
+          subcategory_name: product.subcategory_name,
+          maincategory_id: product.maincategory_id,
+          maincategory_name: product.maincategory_name,
+          stock_quantity: product.stock_quantity,
+          uploaded_by_userID: product.uploaded_by_userID,
+          uploaded_by: product.uploaded_by,
+          association_date: product.association_date,
+          images: product.image_path
+            ? [
+                {
+                  image_path: product.image_path,
+                  alt_text: product.alt_text,
+                  is_primary: product.is_primary,
+                },
+              ]
+            : [],
+        });
+      }
+      return acc;
+    }, []);
+
+    const groupedByOffers = {
+      subcategory_name: "Offers",
+      products: productsWithImages,
+    };
+
+    res.status(200).json([groupedByOffers]);
+  } catch (error) {
+    console.error("Error fetching products by inquiry:", error);
     res.status(500).json({ message: "Failed to fetch products." });
   } finally {
     connection.release();

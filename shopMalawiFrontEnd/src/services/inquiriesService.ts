@@ -39,11 +39,11 @@ const inquiriesService = {
     );
     return res.data;
   },
-  async getProductsByInquiryAndUser(inquiries_id: number, uploaded_by: number) {
+  async getProductsByInquiryAndUser(inquiries_id: number) {
     const res = await apiClient.get(
       "/api/inquiries/getProductsByInquiryAndUser",
       {
-        params: { inquiries_id, uploaded_by },
+        params: { inquiries_id },
       }
     );
     return res.data;

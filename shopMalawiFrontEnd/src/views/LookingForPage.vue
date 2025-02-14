@@ -106,11 +106,11 @@ export default defineComponent({
 
     const {
       inquiries,
-      fetchInquiries,
-      deleteInquiry,
+      products,
       loading,
       error,
-      products,
+      fetchInquiries,
+      deleteInquiry,
       linkProductToInquiry,
       unlinkProductFromInquiry,
       getProductsLinkedToInquiryAndUser,
@@ -166,7 +166,7 @@ export default defineComponent({
       inquiryId: number | null;
     }): Promise<void> => {
       if (inquiryId !== null) {
-        await getProductsLinkedToInquiryAndUser(inquiryId, userId.value);
+        await getProductsLinkedToInquiryAndUser(inquiryId);
         await searchForProductsExcludingOffered({
           inquiries_id: inquiryId,
           uploaded_by: userId.value,
@@ -216,7 +216,7 @@ export default defineComponent({
             query: lastSearchQuery.value,
           });
         }
-        await getProductsLinkedToInquiryAndUser(inquiryId, userId.value);
+        await getProductsLinkedToInquiryAndUser(inquiryId);
       }
     };
 
@@ -230,7 +230,7 @@ export default defineComponent({
         toastMessage.value = "Offer removed successfully";
         toastColor.value = "success";
         showToast.value = true;
-        await getProductsLinkedToInquiryAndUser(inquiryId, userId.value);
+        await getProductsLinkedToInquiryAndUser(inquiryId);
         if (lastSearchInquiryId.value === inquiryId) {
           await handleSearch({
             inquiries_id: lastSearchInquiryId.value,

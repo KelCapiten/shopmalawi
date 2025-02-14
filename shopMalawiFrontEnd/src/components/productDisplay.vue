@@ -93,18 +93,23 @@
             <div class="item-details">
               <div class="price-container">
                 <p class="price">MWK {{ product.price }}</p>
-                <template
-                  v-if="
-                    infoPosition !== 'bottom' &&
-                    product.uploaded_by_userID === userId &&
-                    showDeleteButton
-                  "
-                >
-                  <IonIcon
-                    :icon="trashOutline"
-                    class="delete-icon"
-                    @click.stop="$emit('removeOfferedProduct', product.id)"
-                  />
+                <template v-if="infoPosition !== 'bottom' && showDeleteButton">
+                  <div class="owner-delete-container">
+                    <span class="owner-label">offered by:</span>
+                    <span class="owner-text">
+                      {{
+                        product.uploaded_by_userID === userId
+                          ? "You"
+                          : product.uploaded_by
+                      }}
+                    </span>
+                    <IonIcon
+                      v-if="product.uploaded_by_userID === userId"
+                      :icon="trashOutline"
+                      class="delete-icon"
+                      @click.stop="$emit('removeOfferedProduct', product.id)"
+                    />
+                  </div>
                 </template>
               </div>
               <label class="product-name">{{ product.name }}</label>
@@ -391,10 +396,31 @@ p {
   margin: 0;
 }
 
+.owner-delete-container {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.owner-label {
+  font-size: 0.8rem;
+  color: #333;
+}
+
+.owner-text {
+  background-color: #f3f3f3;
+  border: 1px solid #494949;
+  color: #252525;
+  padding: 2px 4px;
+  font-size: 0.6rem;
+  border-radius: 3px;
+}
+
 .delete-icon {
   cursor: pointer;
   color: #8b1111;
   font-size: 1.3rem;
+  margin-left: 2px;
 }
 
 .stock-info {
