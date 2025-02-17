@@ -1,8 +1,12 @@
 //src/components/ImageUploader.vue
 <template>
   <div class="form-group">
-    <label class="form-label">{{ label }}</label>
-    <div class="upload-area" @click="triggerFileInput">
+    <label v-if="showLabel" class="form-label">{{ label }}</label>
+    <div
+      class="upload-area"
+      :class="{ circular: circular }"
+      @click="triggerFileInput"
+    >
       <input
         type="file"
         accept="image/jpeg, image/png, image/gif"
@@ -15,10 +19,15 @@
         <ion-icon :icon="cloudUploadOutline" class="upload-icon"></ion-icon>
         <p>{{ placeholderMessage }}</p>
       </div>
-      <div v-else class="image-preview">
+      <div v-else class="image-preview" :class="{ circular: circular }">
         <swiper :pagination="paginationOptions" :modules="[Pagination]">
           <swiper-slide v-for="(image, index) in previewImages" :key="index">
-            <img :src="image.url" alt="Uploaded Image" class="uploaded-image" />
+            <img
+              :src="image.url"
+              alt="Uploaded Image"
+              class="uploaded-image"
+              :class="{ circular: circular }"
+            />
           </swiper-slide>
         </swiper>
       </div>
@@ -36,7 +45,7 @@ import "swiper/css/pagination";
 
 interface PreviewImage {
   url: string;
-  file?: File; // Optional if preexisting images don't have a File object
+  file?: File;
 }
 
 export default defineComponent({
@@ -50,14 +59,21 @@ export default defineComponent({
       type: String,
       default: "Product Images",
     },
+    showLabel: {
+      type: Boolean,
+      default: true,
+    },
     placeholderMessage: {
       type: String,
       default: "Upload up to 4 images",
     },
-    // New prop: an array of image URLs (or objects) that are already available (edit mode)
     initialImages: {
       type: Array as () => Array<{ url: string }>,
       default: () => [],
+    },
+    circular: {
+      type: Boolean,
+      default: false,
     },
   },
   emits: ["uploaded-images"],
@@ -95,7 +111,6 @@ export default defineComponent({
       }
     };
 
-    // When the component is mounted or the initialImages prop changes, populate previewImages
     onMounted(() => {
       if (props.initialImages.length > 0) {
         previewImages.value = props.initialImages.map((img) => ({
@@ -126,7 +141,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* (Styles remain the same as your original code) */
 .form-label {
   font-size: small;
 }
@@ -134,14 +148,19 @@ export default defineComponent({
   display: flex;
   justify-content: center;
   align-items: center;
+  height: 100%;
   border: 2px dashed #ccc;
   border-radius: 8px;
-  height: 250px;
   text-align: center;
   cursor: pointer;
   background-color: #f9f9f9;
   position: relative;
   overflow: hidden;
+}
+.upload-area.circular {
+  border-radius: 50%;
+  width: 110px;
+  height: 110px;
 }
 .upload-placeholder {
   color: #777;
@@ -151,13 +170,17 @@ export default defineComponent({
   margin-bottom: 10px;
 }
 .image-preview {
-  height: 250px;
   width: 100%;
   border-radius: 8px;
   overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
+}
+.image-preview.circular {
+  border-radius: 50%;
+  width: 250px;
+  height: 250px;
 }
 .swiper {
   height: 100%;
@@ -173,6 +196,9 @@ export default defineComponent({
   max-height: 100%;
   object-fit: contain;
   border-radius: 8px;
+}
+.uploaded-image.circular {
+  border-radius: 50%;
 }
 .swiper-pagination-bullet {
   background-color: #000;

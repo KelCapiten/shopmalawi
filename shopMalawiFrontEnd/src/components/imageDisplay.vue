@@ -1,9 +1,12 @@
-//\src\components\imageDisplay.vue
+// src/components/imageDisplay.vue
 <template>
   <div class="full-screen-image-container">
-    <!-- Thumbnail Image -->
-    <img :src="imageUrl" :alt="alt" class="thumbnail" @click="openModal" />
-    <!-- Teleport the modal overlay to the document body -->
+    <img
+      :src="imageUrl"
+      :alt="alt"
+      :class="fullView ? 'full-view' : 'thumbnail'"
+      @click="openModal"
+    />
     <teleport to="body">
       <div v-if="modalVisible" class="modal-overlay" @click.self="closeModal">
         <div class="modal-content">
@@ -17,7 +20,7 @@
 
 <script>
 export default {
-  name: "FullScreenImage",
+  name: "imageDisplay",
   props: {
     imageUrl: {
       type: String,
@@ -26,6 +29,10 @@ export default {
     alt: {
       type: String,
       default: "Image",
+    },
+    fullView: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {
@@ -54,6 +61,11 @@ export default {
 }
 .thumbnail:hover {
   transform: scale(1.05);
+}
+.full-view {
+  width: 100%;
+  height: 56vh;
+  object-fit: cover;
 }
 .modal-overlay {
   position: fixed;

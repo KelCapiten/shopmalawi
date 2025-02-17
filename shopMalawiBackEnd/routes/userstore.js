@@ -5,7 +5,10 @@ import {
   addStore,
   getStore,
   updateStore,
+  deleteStore,
+  addProductToStore,
 } from "../controllers/userstoreController.js";
+import { upload } from "../middleware/uploadUserStoreImagesMiddleware.js";
 
 const router = express.Router();
 
@@ -15,7 +18,21 @@ router.get("/getStore", getStore);
 // Add a store
 router.post("/addStore", authenticateUser, addStore);
 
-// Update a store
-router.put("/updateStore/:id", authenticateUser, updateStore);
+// Update a store (allow up to 2 images: banner and profile)
+router.put(
+  "/updateStore/:id",
+  authenticateUser,
+  upload.fields([
+    { name: "banner", maxCount: 1 },
+    { name: "profile", maxCount: 1 },
+  ]),
+  updateStore
+);
+
+// Delete a store
+router.delete("/deleteStore/:id", authenticateUser, deleteStore);
+
+// Add a product to a store
+router.post("/addProductToStore", authenticateUser, addProductToStore);
 
 export default router;

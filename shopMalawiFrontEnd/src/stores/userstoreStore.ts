@@ -6,14 +6,24 @@ import type { Store, Product } from "@/types";
 import { useAuthStore } from "@/stores/authStore";
 import { useProducts } from "@/composables/useProducts";
 import { useProductsStore } from "@/stores/productsStore";
+import { updateImageUrl } from "@/utils/utilities";
 
 export const useUserstoreStore = defineStore("userstoreStore", {
   state: () => ({
-    store: null as Store | null,
+    stores: [] as Store[],
+    selectedStore: null as Store | null,
+    newStoreForm: {
+      brand_name: "",
+      tagline: "",
+      description: "",
+      category_id: undefined as number | undefined,
+    },
     products: [] as any[],
     productsLoading: false,
     productsError: null as string | null,
     productFilter: "all",
+    uploadedBannerImages: [] as File[],
+    uploadedProfileImages: [] as File[],
   }),
   getters: {
     filteredProducts(state): any[] {
@@ -44,20 +54,29 @@ export const useUserstoreStore = defineStore("userstoreStore", {
       }
       try {
         const result = await getStore(query);
-        this.store = Array.isArray(result)
-          ? result.length
-            ? result[0]
-            : this.getDefaultStore()
-          : result;
+        this.stores = Array.isArray(result) ? result : [];
+        this.selectedStore = this.stores.length
+          ? this.stores[0]
+          : this.getDefaultStore(query.owner_id);
+        // Only update image URLs if the store's id is not 0
+        if (this.selectedStore && this.selectedStore.id !== 0) {
+          this.selectedStore.banner_url = updateImageUrl(
+            this.selectedStore.banner_url || ""
+          );
+          this.selectedStore.profile_picture_url = updateImageUrl(
+            this.selectedStore.profile_picture_url || ""
+          );
+        }
       } catch (error) {
         console.error("Error fetching store:", error);
-        this.store = this.getDefaultStore();
+        this.selectedStore = this.getDefaultStore(query.owner_id);
+        this.stores = [this.selectedStore];
       }
-      if (query.owner_id && this.store.id === 0) {
+      if (query.owner_id && this.selectedStore && this.selectedStore.id === 0) {
         try {
           const userInfo = await getUserInfoService({ id: query.owner_id });
-          this.store.brand_name = userInfo.firstName;
-          this.store.tagline = userInfo.lastName;
+          this.selectedStore.brand_name = userInfo.firstName;
+          this.selectedStore.tagline = userInfo.lastName;
         } catch (error) {
           console.error("Error fetching user info:", error);
         }
@@ -65,7 +84,7 @@ export const useUserstoreStore = defineStore("userstoreStore", {
     },
     async fetchUserProducts({ ownerId }: { ownerId?: number } = {}) {
       const authStore = useAuthStore();
-      if (!this.store) {
+      if (!this.selectedStore) {
         console.warn("No store available; cannot fetch products.");
         return;
       }
@@ -82,20 +101,84 @@ export const useUserstoreStore = defineStore("userstoreStore", {
     async createStore(newStore: Store) {
       try {
         const result = await addStore(newStore);
-        this.store = result;
+        this.stores.push(result);
+        this.selectedStore = result;
+        // Update image URLs if store id is not 0
+        if (this.selectedStore && this.selectedStore.id !== 0) {
+          this.selectedStore.banner_url = updateImageUrl(
+            this.selectedStore.banner_url || ""
+          );
+          this.selectedStore.profile_picture_url = updateImageUrl(
+            this.selectedStore.profile_picture_url || ""
+          );
+        }
         return result;
       } catch (error) {
         console.error("Error creating store:", error);
         throw error;
       }
     },
+    async registerStore() {
+      const authStore = useAuthStore();
+      const fullStore: Store = {
+        ...this.getDefaultStore(authStore.user?.id),
+        brand_name: this.newStoreForm.brand_name,
+        tagline: this.newStoreForm.tagline,
+        description: this.newStoreForm.description,
+        category_id: this.newStoreForm.category_id ?? undefined,
+      };
+      try {
+        const result = await addStore(fullStore);
+        this.stores.push(result);
+        this.selectedStore = result;
+        // Update image URLs if store id is not 0
+        if (this.selectedStore && this.selectedStore.id !== 0) {
+          this.selectedStore.banner_url = updateImageUrl(
+            this.selectedStore.banner_url || ""
+          );
+          this.selectedStore.profile_picture_url = updateImageUrl(
+            this.selectedStore.profile_picture_url || ""
+          );
+        }
+        this.newStoreForm.brand_name = "";
+        this.newStoreForm.tagline = "";
+        this.newStoreForm.description = "";
+        this.newStoreForm.category_id = undefined;
+        return result;
+      } catch (error) {
+        console.error("Error registering store:", error);
+        throw error;
+      }
+    },
     async updateStoreRecord(updatedStore: Partial<Store>) {
-      if (!this.store?.id) {
+      if (!this.selectedStore?.id) {
         throw new Error("No store available to update.");
       }
+      const mergedData = { ...this.selectedStore, ...updatedStore };
+      const formData = new FormData();
+      Object.keys(mergedData).forEach((key) => {
+        const value = (mergedData as any)[key];
+        if (value !== undefined && value !== null) {
+          formData.append(key, value);
+        }
+      });
+      if (this.uploadedBannerImages.length > 0) {
+        formData.append("banner", this.uploadedBannerImages[0]);
+      }
+      if (this.uploadedProfileImages.length > 0) {
+        formData.append("profile", this.uploadedProfileImages[0]);
+      }
       try {
-        await updateStore(this.store.id, updatedStore);
-        this.store = { ...this.store, ...updatedStore };
+        const response = await updateStore(this.selectedStore.id, formData);
+        this.selectedStore = response.store;
+        const index = this.stores.findIndex(
+          (store) => store.id === this.selectedStore!.id
+        );
+        if (index !== -1) {
+          this.stores.splice(index, 1, this.selectedStore);
+        }
+        this.uploadedBannerImages = [];
+        this.uploadedProfileImages = [];
       } catch (error) {
         console.error("Error updating store:", error);
         throw error;
@@ -104,33 +187,34 @@ export const useUserstoreStore = defineStore("userstoreStore", {
     setProductFilter(filter: string) {
       this.productFilter = filter;
     },
-    getDefaultStore(): Store {
+    getDefaultStore(ownerId: number | undefined): Store {
       return {
         id: 0,
-        owner_id: 0,
+        owner_id: ownerId ?? 0,
         brand_name: "ShopMalawi",
         tagline: "Segulani Shop Fada",
         description: "",
-        banner_url: "/assets/shopmalawi.jpg",
+        banner_url: "/assets/blendBoard.jpg",
         profile_picture_url: "/assets/theLogo.jpg",
         is_active: true,
         created_at: "",
         updated_at: "",
+        category_id: undefined,
       };
     },
     setBannerUrl(url: string) {
-      if (this.store) {
-        this.store.banner_url = url;
+      if (this.selectedStore) {
+        this.selectedStore.banner_url = url;
       }
     },
     setBrandName(name: string) {
-      if (this.store) {
-        this.store.brand_name = name;
+      if (this.selectedStore) {
+        this.selectedStore.brand_name = name;
       }
     },
     setTagline(tagline: string) {
-      if (this.store) {
-        this.store.tagline = tagline;
+      if (this.selectedStore) {
+        this.selectedStore.tagline = tagline;
       }
     },
     prefillProductForEdit(productId: number) {

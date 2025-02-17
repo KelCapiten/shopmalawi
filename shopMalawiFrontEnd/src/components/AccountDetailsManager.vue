@@ -5,6 +5,9 @@
       <div v-if="loading" class="loading-message">
         Loading account details...
       </div>
+      <div v-if="heading" class="loading-message">
+        {{ heading }}
+      </div>
       <div v-if="error" class="error-message">{{ error }}</div>
       <div v-if="!loading && bankDetails.length > 0" class="account-list">
         <div
@@ -132,6 +135,10 @@ export default defineComponent({
     },
     payment_method_id: {
       type: [Number, String],
+      default: null,
+    },
+    heading: {
+      type: [String],
       default: null,
     },
   },

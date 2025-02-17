@@ -109,7 +109,7 @@ import { useProductsStore } from "@/stores/productsStore";
 import ImageUploader from "@/components/ImageUploader.vue";
 import SavingOverlay from "@/components/SavingOverlay.vue";
 import { useCategories } from "@/composables/useCategories";
-import { computeSubcategories, getImageUrl } from "@/utils/utilities";
+import { computeSubcategories, updateImageUrl } from "@/utils/utilities";
 import { closeCircle } from "ionicons/icons";
 
 export default defineComponent({
@@ -157,7 +157,7 @@ export default defineComponent({
         productStore.product.images.length > 0
       ) {
         return productStore.product.images.map((img: any) => ({
-          url: getImageUrl(img.image_path),
+          url: updateImageUrl(img.image_path),
         }));
       }
       return [];

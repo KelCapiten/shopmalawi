@@ -63,4 +63,5 @@ export interface Store {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  category_id?: number;
 }

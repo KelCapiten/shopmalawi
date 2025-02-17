@@ -2,29 +2,41 @@
 <template>
   <IonPage>
     <IonContent>
+      <!-- Hero Section -->
       <HeroSection />
 
+      <!-- If there are multiple stores, allow the user to select the active store -->
+      <div v-if="userstore.stores.length > 1" class="store-selector">
+        <select v-model="selectedStoreId" @change="onStoreChange">
+          <option
+            v-for="store in userstore.stores"
+            :key="store.id"
+            :value="store.id"
+          >
+            {{ store.brand_name }}
+          </option>
+        </select>
+      </div>
+
       <!-- Brand Story Card -->
-      <IonCard class="brand-story-card">
+      <IonCard class="brand-story-card" v-if="enableStoryCard || enableEdit">
         <IonCardHeader>
-          <IonCardTitle>About Our Store</IonCardTitle>
+          <IonCardTitle v-if="enableStoryCard">
+            Showcase Your Brand
+          </IonCardTitle>
+          <IonCardTitle v-if="enableEdit">About Our Store</IonCardTitle>
         </IonCardHeader>
         <IonCardContent>
-          <p>
-            {{
-              userstore.store?.description ||
-              "Tell your customers what you sell, and what makes your brand special."
-            }}
-          </p>
+          <!-- Display mode for description only -->
+          <div class="display-mode">
+            <p>
+              {{
+                userstore.selectedStore?.description ||
+                "Your store deserves to be seen! Register your store now and grow your business, showcase your unique brand to thousands of customers, connect with your loyal shoppers, and stand out in the marketplace."
+              }}
+            </p>
+          </div>
         </IonCardContent>
-        <IonButton
-          v-if="isStoreOwner"
-          fill="clear"
-          class="edit-brand-story"
-          @click="editBrandStory"
-        >
-          edit
-        </IonButton>
       </IonCard>
 
       <!-- Segment -->
@@ -107,7 +119,14 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted, nextTick } from "vue";
+import {
+  defineComponent,
+  ref,
+  computed,
+  onMounted,
+  nextTick,
+  watch,
+} from "vue";
 import { useRoute } from "vue-router";
 import ShareToolbar from "@/components/ShareToolbar.vue";
 import HeroSection from "@/components/HeroSection.vue";
@@ -120,7 +139,6 @@ import {
   appsOutline,
   checkmarkCircleOutline,
   closeCircleOutline,
-  closeOutline,
 } from "ionicons/icons";
 
 export default defineComponent({
@@ -138,17 +156,26 @@ export default defineComponent({
     const selectedSegment = ref("featured");
     const route = useRoute();
 
-    // Computed property to determine if the current user is the store owner.
-    const isStoreOwner = computed(() => {
-      return userstore.store?.owner_id === authStore.user?.id;
-    });
     const ownerIdFromQuery = route.query.ownerId
       ? Number(route.query.ownerId)
       : undefined;
 
+    const enableEdit = computed(() => {
+      return (
+        userstore.selectedStore?.owner_id === authStore.user?.id &&
+        userstore.selectedStore?.id !== 0
+      );
+    });
+    const enableStoryCard = computed(() => {
+      return (
+        userstore.selectedStore?.owner_id === authStore.user?.id &&
+        userstore.selectedStore?.id === 0
+      );
+    });
+
     onMounted(() => {
-      userstore.fetchUserProducts({ ownerId: ownerIdFromQuery });
       userstore.fetchStore({ owner_id: ownerIdFromQuery });
+      userstore.fetchUserProducts({ ownerId: ownerIdFromQuery });
     });
 
     const featuredProducts = computed(() =>
@@ -168,11 +195,6 @@ export default defineComponent({
         icon: closeCircleOutline,
       },
     ];
-
-    const editBrandStory = () => {
-      console.log("Edit brand story clicked");
-      // Add your edit logic here
-    };
 
     async function handleDeactivateProduct(productId: number) {
       try {
@@ -200,16 +222,34 @@ export default defineComponent({
       });
     }
 
-    // Flag to control the visibility of the overlay
     const showSellDashboard = ref(false);
-    // Ref for the overlay container to enable scrolling it into view
     const sellDashboardContainer = ref<HTMLElement | null>(null);
 
     function closeSellDashboard() {
       showSellDashboard.value = false;
-      // Optionally, clear the product form when closing
       productsStore.clearProduct();
     }
+
+    // For multiple store selection:
+    const selectedStoreId = ref<number | null>(
+      userstore.selectedStore ? userstore.selectedStore.id : null
+    );
+    const onStoreChange = () => {
+      const store = userstore.stores.find(
+        (s) => s.id === selectedStoreId.value
+      );
+      if (store) {
+        userstore.selectedStore = store;
+      }
+    };
+
+    watch(
+      () => userstore.selectedStore,
+      (newStore) => {
+        selectedStoreId.value = newStore ? newStore.id : null;
+      },
+      { immediate: true }
+    );
 
     return {
       userstore,
@@ -217,15 +257,16 @@ export default defineComponent({
       selectedSegment,
       featuredProducts,
       filters,
-      editBrandStory,
+      enableEdit,
+      enableStoryCard,
+      showSellDashboard,
+      sellDashboardContainer,
       handleDeactivateProduct,
       handleActivateProduct,
       handleEditProduct,
-      showSellDashboard,
-      sellDashboardContainer,
       closeSellDashboard,
-      closeOutline, // still imported if needed elsewhere
-      isStoreOwner, // expose computed property to the template
+      selectedStoreId,
+      onStoreChange,
     };
   },
 });
@@ -237,13 +278,10 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
 }
-.edit-brand-story {
-  margin-top: auto;
-  align-self: flex-end;
-  font-size: 0.8rem;
-  color: rgb(6, 141, 231);
+.display-mode p {
+  margin: 0;
+  font-size: 1rem;
 }
-
 .store-segment {
   margin: 1rem;
 }
@@ -284,11 +322,9 @@ export default defineComponent({
 .filter-icon {
   font-size: 1.1rem;
 }
-
 .ProductDisplay {
-  padding: 0px 15px;
+  padding: 0 15px;
 }
-
 .floating-share-toolbar {
   position: fixed;
   bottom: 16px;
@@ -313,5 +349,20 @@ export default defineComponent({
 .slide-fade-leave-to {
   opacity: 0;
   transform: translateY(20px);
+}
+.store-selector {
+  margin: 1rem 16px;
+}
+.store-selector select {
+  width: 100%;
+  padding: 8px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+::v-deep ion-button,
+::v-deep ion-icon {
+  padding: 0 !important;
+  margin: 0 !important;
 }
 </style>

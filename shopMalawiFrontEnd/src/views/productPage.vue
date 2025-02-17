@@ -17,8 +17,9 @@
             :pagination="{ clickable: true }"
           >
             <swiper-slide v-for="(image, index) in product.images" :key="index">
-              <img
-                :src="getImageUrl(image.image_path)"
+              <imageDisplay
+                :fullView="true"
+                :imageUrl="updateImageUrl(image.image_path)"
                 :alt="image.alt_text || 'Product Image'"
               />
             </swiper-slide>
@@ -39,6 +40,31 @@
               :stock="product.stock_quantity"
             />
 
+            <!-- Product Description -->
+            <div class="product-description">
+              <h3>Description</h3>
+              <p>{{ product.description }}</p>
+            </div>
+            <!-- Product Description -->
+            <div class="product-description">
+              <h3>Description</h3>
+              <p>{{ product.description }}</p>
+            </div>
+            <!-- Product Description -->
+            <div class="product-description">
+              <h3>Description</h3>
+              <p>{{ product.description }}</p>
+            </div>
+            <!-- Product Description -->
+            <div class="product-description">
+              <h3>Description</h3>
+              <p>{{ product.description }}</p>
+            </div>
+            <!-- Product Description -->
+            <div class="product-description">
+              <h3>Description</h3>
+              <p>{{ product.description }}</p>
+            </div>
             <!-- Product Description -->
             <div class="product-description">
               <h3>Description</h3>
@@ -67,7 +93,11 @@ import PriceDisplay from "@/components/PriceDisplay.vue";
 import BuySegment from "@/components/BuySegment.vue";
 import ShareToolbar from "@/components/ShareToolbar.vue";
 import ProductImagesRow from "@/components/ProductImagesRow.vue";
-import { loadProductFromSessionStorage, getImageUrl } from "@/utils/utilities";
+import imageDisplay from "@/components/imageDisplay.vue";
+import {
+  loadProductFromSessionStorage,
+  updateImageUrl,
+} from "@/utils/utilities";
 
 export default defineComponent({
   name: "ProductPage",
@@ -78,6 +108,7 @@ export default defineComponent({
     BuySegment,
     ShareToolbar,
     ProductImagesRow,
+    imageDisplay,
   },
   setup() {
     const product = ref<any>(null);
@@ -131,7 +162,7 @@ export default defineComponent({
       navigateToStore,
       onSwiperInit,
       onSlideChange,
-      getImageUrl,
+      updateImageUrl,
       handleScroll,
     };
   },
@@ -148,7 +179,6 @@ export default defineComponent({
 }
 
 .swiper-container {
-  height: 50vh;
   position: fixed;
   top: 0;
   left: 0;
@@ -156,6 +186,13 @@ export default defineComponent({
   z-index: 1;
   overflow: hidden;
   transition: transform 0.5s ease-out;
+}
+
+/* You can adjust the image display styling as needed */
+.swiper-slide img {
+  height: 56vh;
+  width: 100%;
+  object-fit: cover;
 }
 
 .scrollable-content {

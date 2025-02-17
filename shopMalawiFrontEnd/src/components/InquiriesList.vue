@@ -34,7 +34,7 @@
               :key="index"
             >
               <FullScreenImage
-                :imageUrl="getImageUrl(image.image_path)"
+                :imageUrl="updateImageUrl(image.image_path)"
                 :alt="`Image ${index + 1}`"
               />
             </div>
@@ -120,7 +120,7 @@
 import { defineComponent, PropType } from "vue";
 import productDisplay from "@/components/productDisplay.vue";
 import FullScreenImage from "@/components/imageDisplay.vue";
-import { getImageUrl, formatDate } from "@/utils/utilities";
+import { updateImageUrl, formatDate } from "@/utils/utilities";
 import { createOutline, trashOutline } from "ionicons/icons";
 
 export default defineComponent({
@@ -170,7 +170,7 @@ export default defineComponent({
     };
   },
   methods: {
-    getImageUrl,
+    updateImageUrl,
     formatDate,
     makeAnOffer(inquiryId: number) {
       this.visibleProductCardGridId =

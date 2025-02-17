@@ -134,7 +134,7 @@
                 class="image-wrapper"
               >
                 <img
-                  :src="getImageUrl(item.images[0].image_path)"
+                  :src="updateImageUrl(item.images[0].image_path)"
                   :alt="item.images[0].alt_text || 'Product Image'"
                   class="product-image"
                 />
@@ -183,7 +183,7 @@
                 <!-- Use the FullScreenImage component here -->
                 <imageDisplay
                   :imageUrl="
-                    getImageUrl(order.payment.payment_screenshot.image_path)
+                    updateImageUrl(order.payment.payment_screenshot.image_path)
                   "
                   :alt="order.payment.payment_screenshot.alt_text"
                 />
@@ -255,7 +255,9 @@
                   <div v-if="order.refund && order.refund.refund_screenshot">
                     <imageDisplay
                       :imageUrl="
-                        getImageUrl(order.refund.refund_screenshot.image_path)
+                        updateImageUrl(
+                          order.refund.refund_screenshot.image_path
+                        )
                       "
                       :alt="
                         order.refund.refund_screenshot.alt_text ||
@@ -281,7 +283,9 @@
                   <div v-if="order.refund && order.refund.refund_screenshot">
                     <imageDisplay
                       :imageUrl="
-                        getImageUrl(order.refund.refund_screenshot.image_path)
+                        updateImageUrl(
+                          order.refund.refund_screenshot.image_path
+                        )
                       "
                       :alt="
                         order.refund.refund_screenshot.alt_text ||
@@ -375,7 +379,9 @@
                   <div v-if="order.refund && order.refund.refund_screenshot">
                     <imageDisplay
                       :imageUrl="
-                        getImageUrl(order.refund.refund_screenshot.image_path)
+                        updateImageUrl(
+                          order.refund.refund_screenshot.image_path
+                        )
                       "
                       :alt="
                         order.refund.refund_screenshot.alt_text ||
@@ -389,7 +395,9 @@
                   <div v-if="order.refund && order.refund.refund_screenshot">
                     <imageDisplay
                       :imageUrl="
-                        getImageUrl(order.refund.refund_screenshot.image_path)
+                        updateImageUrl(
+                          order.refund.refund_screenshot.image_path
+                        )
                       "
                       :alt="
                         order.refund.refund_screenshot.alt_text ||
@@ -461,7 +469,7 @@ import {
   chevronDownOutline,
   chatbubblesOutline,
 } from "ionicons/icons";
-import { getImageUrl } from "@/utils/utilities";
+import { updateImageUrl } from "@/utils/utilities";
 import ImageUploader from "@/components/ImageUploader.vue";
 import imageDisplay from "@/components/imageDisplay.vue";
 
@@ -590,7 +598,7 @@ export default defineComponent({
       chevronUpOutline,
       chevronDownOutline,
       chatIcon: chatbubblesOutline,
-      getImageUrl,
+      updateImageUrl,
       formatDateOnly,
       isRefundStatus,
     };

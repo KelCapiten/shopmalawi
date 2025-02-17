@@ -95,8 +95,11 @@
                 <p class="price">MWK {{ product.price }}</p>
                 <template v-if="infoPosition !== 'bottom' && showDeleteButton">
                   <div class="owner-delete-container">
-                    <span class="owner-label">offered by:</span>
-                    <span class="owner-text">
+                    <span class="owner-label">by:</span>
+                    <span
+                      class="owner-text"
+                      @click.stop="navigateToStore(product.uploaded_by_userID)"
+                    >
                       {{
                         product.uploaded_by_userID === userId
                           ? "You"
@@ -152,6 +155,7 @@ import { Product } from "@/types";
 import { getPrimaryImage } from "@/utils/utilities";
 import { IonIcon } from "@ionic/vue";
 import { trashOutline, brushOutline, refreshOutline } from "ionicons/icons";
+import router from "@/router";
 
 export default defineComponent({
   name: "ProductDisplay",
@@ -268,6 +272,12 @@ export default defineComponent({
   },
   methods: {
     getPrimaryImage,
+    navigateToStore(uploaded_by_userID: number) {
+      router.push({
+        name: "Store",
+        query: { ownerId: uploaded_by_userID },
+      });
+    },
   },
 });
 </script>
@@ -409,7 +419,7 @@ p {
 
 .owner-text {
   background-color: #f3f3f3;
-  border: 1px solid #494949;
+  border: 1px solid #00994d;
   color: #252525;
   padding: 2px 4px;
   font-size: 0.6rem;

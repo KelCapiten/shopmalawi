@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS products (
     maincategory_name VARCHAR(100),
     stock_quantity INT NOT NULL DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
-    uploaded_by INT NOT NULL, -- References users table
+    uploaded_by INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FULLTEXT (name, description),
@@ -166,15 +166,28 @@ CREATE TABLE IF NOT EXISTS stores (
     brand_name VARCHAR(255) NOT NULL,
     tagline VARCHAR(255),
     description TEXT,
+    category_id INT DEFAULT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     banner_url VARCHAR(255),
     profile_picture_url VARCHAR(255),
-    owner_id INT NOT NULL, -- References users table
+    owner_id INT NOT NULL, 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FULLTEXT (brand_name, tagline, description),
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX (owner_id)
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+    INDEX (owner_id),
+    INDEX (category_id)
+) ENGINE=InnoDB;
+
+-- Many-to-many relationship between products and stores
+CREATE TABLE IF NOT EXISTS product_stores (
+    product_id INT NOT NULL,
+    store_id INT NOT NULL,
+    PRIMARY KEY (product_id, store_id),
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE,
+    INDEX (store_id)
 ) ENGINE=InnoDB;
 
 -- System Images Table 

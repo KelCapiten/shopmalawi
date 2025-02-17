@@ -1,16 +1,37 @@
 //src/components/HeroSection.vue
 <template>
-  <div class="banner-container" v-if="userstore.store">
+  <teleport to="body">
+    <StoreRegistrationForm
+      v-if="showRegistrationForm"
+      :showUploaders="storeFormProps.showUploaders"
+      :showFormFields="storeFormProps.showFormFields"
+      @close="showRegistrationForm = false"
+    />
+  </teleport>
+
+  <!-- If user has multiple stores, show a simple selector to change the active store -->
+  <div v-if="userstore.stores.length > 1" class="store-selector">
+    <select v-model="selectedStoreId" @change="onStoreChange">
+      <option
+        v-for="store in userstore.stores"
+        :key="store.id"
+        :value="store.id"
+      >
+        {{ store.brand_name }}
+      </option>
+    </select>
+  </div>
+
+  <div class="banner-container" v-if="userstore.selectedStore">
     <section class="banner-section">
       <img
-        :src="userstore.store.banner_url"
+        :src="userstore.selectedStore.banner_url"
         alt="Store Banner"
         class="banner-image"
       />
       <div
-        v-if="isOwner"
+        v-if="enableEdit"
         class="edit-banner-button"
-        fill="clear"
         @click="editBannerPicture"
       >
         <IonIcon :icon="cameraOutline" class="banner-camera-icon" />
@@ -18,182 +39,142 @@
       <div class="profile-wrapper">
         <div class="profile-picture">
           <img
-            :src="userstore.store.profile_picture_url"
+            :src="userstore.selectedStore.profile_picture_url"
             alt="Profile Picture"
           />
         </div>
         <div
-          v-if="isOwner"
+          v-if="enableEdit"
           class="edit-profile-button"
-          fill="clear"
           @click="editProfilePicture"
         >
           <IonIcon :icon="cameraOutline" class="camera-icon" />
         </div>
       </div>
     </section>
-    <div class="register-store" v-if="shouldShowRegisterButton">
-      <IonButton class="register-button" fill="clear" @click="registerStore">
-        Register Your Store
-      </IonButton>
+    <div class="register-store" v-if="userstore.selectedStore">
+      <button class="register-button" @click="registerStore">
+        {{ registrationLabel }}
+      </button>
     </div>
   </div>
 
-  <div class="store-info" v-if="userstore.store">
+  <div class="store-info" v-if="userstore.selectedStore">
     <div class="store-brand-field">
-      <div v-if="editingBrandName" class="edit-mode">
-        <input
-          v-model="newBrandName"
-          type="text"
-          placeholder="Enter brand name"
-          class="brand-input"
-        />
-        <IonButton fill="clear" @click="saveBrandName">
-          <IonIcon :icon="checkmarkOutline" color="dark" />
-        </IonButton>
-        <IonButton fill="clear" @click="cancelEditBrandName">
-          <IonIcon :icon="closeOutline" color="dark" />
-        </IonButton>
-      </div>
-      <div v-else class="display-mode">
+      <div class="display-mode">
         <div class="store-brand">
-          {{ userstore.store.brand_name }}
+          {{ userstore.selectedStore.brand_name }}
         </div>
-        <IonButton
-          v-if="isOwner"
-          class="edit-button"
-          fill="clear"
-          @click="toggleEditBrandName"
-        >
-          edit
-        </IonButton>
       </div>
     </div>
 
     <div class="store-tagline-field">
-      <div v-if="editingTagline" class="edit-mode">
-        <input
-          v-model="newTagline"
-          type="text"
-          placeholder="Enter tagline"
-          class="tagline-input"
-        />
-        <IonButton fill="clear" @click="saveTagline">
-          <IonIcon :icon="checkmarkOutline" color="dark" />
-        </IonButton>
-        <IonButton fill="clear" @click="cancelEditTagline">
-          <IonIcon :icon="closeOutline" color="dark" />
-        </IonButton>
-      </div>
-      <div v-else class="display-mode">
+      <div class="display-mode">
         <div class="store-tagline">
-          {{ userstore.store.tagline }}
+          {{ userstore.selectedStore.tagline }}
         </div>
-        <IonButton
-          v-if="isOwner"
-          class="edit-button"
-          fill="clear"
-          @click="toggleEditTagline"
-        >
-          edit
-        </IonButton>
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed } from "vue";
+import { defineComponent, ref, reactive, computed, watch } from "vue";
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import { useAuthStore } from "@/stores/authStore";
-import { IonButton, IonIcon } from "@ionic/vue";
-import { checkmarkOutline, closeOutline, cameraOutline } from "ionicons/icons";
+import { IonIcon } from "@ionic/vue";
+import { cameraOutline } from "ionicons/icons";
+import StoreRegistrationForm from "@/components/StoreRegistrationForm.vue";
 
 export default defineComponent({
   name: "HeroSection",
   components: {
-    IonButton,
     IonIcon,
+    StoreRegistrationForm,
   },
   setup() {
     const userstore = useUserstoreStore();
     const authStore = useAuthStore();
+    const showRegistrationForm = ref(false);
 
-    const isOwner = computed(() => {
-      return userstore.store?.owner_id === authStore.user?.id;
+    // Reactive object to control StoreRegistrationForm props
+    const storeFormProps = reactive({
+      showUploaders: false,
+      showFormFields: false,
     });
 
-    const shouldShowRegisterButton = computed(() => {
-      if (!userstore.store) return false;
-      return userstore.store.id === 0;
+    // When there are multiple stores, allow selection.
+    const selectedStoreId = ref<number | null>(
+      userstore.selectedStore ? userstore.selectedStore.id : null
+    );
+
+    // Update selected store if the user changes the selection.
+    const onStoreChange = () => {
+      const store = userstore.stores.find(
+        (s) => s.id === selectedStoreId.value
+      );
+      if (store) {
+        userstore.selectedStore = store;
+      }
+    };
+
+    // Enable editing if the current store belongs to the logged-in user.
+    const enableEdit = computed(() => {
+      return (
+        userstore.selectedStore?.owner_id === authStore.user?.id &&
+        userstore.selectedStore?.id !== 0
+      );
     });
 
-    const editingBrandName = ref(false);
-    const editingTagline = ref(false);
-    const newBrandName = ref("");
-    const newTagline = ref("");
+    // Compute button label based on whether the store is registered.
+    const registrationLabel = computed(() => {
+      if (!userstore.selectedStore) return "";
+      return userstore.selectedStore.id === 0
+        ? "Register Your Store"
+        : "Edit Store";
+    });
 
-    const toggleEditBrandName = () => {
-      editingBrandName.value = true;
-      newBrandName.value = userstore.store?.brand_name || "";
-    };
-    const saveBrandName = async () => {
-      if (userstore.store && newBrandName.value.trim() !== "") {
-        await userstore.updateStoreRecord({ brand_name: newBrandName.value });
-      }
-      editingBrandName.value = false;
-    };
-    const cancelEditBrandName = () => {
-      editingBrandName.value = false;
-      newBrandName.value = userstore.store?.brand_name || "";
+    // When registering a new store, we want the form fields only.
+    const registerStore = () => {
+      storeFormProps.showUploaders = false;
+      storeFormProps.showFormFields = true;
+      showRegistrationForm.value = true;
     };
 
-    const toggleEditTagline = () => {
-      editingTagline.value = true;
-      newTagline.value = userstore.store?.tagline || "";
-    };
-    const saveTagline = async () => {
-      if (userstore.store) {
-        await userstore.updateStoreRecord({ tagline: newTagline.value });
-      }
-      editingTagline.value = false;
-    };
-    const cancelEditTagline = () => {
-      editingTagline.value = false;
-      newTagline.value = userstore.store?.tagline || "";
-    };
-
+    // When editing banner or profile picture, we want the uploader only.
     const editProfilePicture = () => {
-      console.log("Edit profile picture clicked");
+      storeFormProps.showUploaders = true;
+      storeFormProps.showFormFields = false;
+      showRegistrationForm.value = true;
     };
     const editBannerPicture = () => {
-      console.log("Edit banner picture clicked");
+      storeFormProps.showUploaders = true;
+      storeFormProps.showFormFields = false;
+      showRegistrationForm.value = true;
     };
-    const registerStore = () => {
-      console.log("Register Store clicked");
-    };
+
+    // Watch for changes in selectedStore to update the store selector value.
+    watch(
+      () => userstore.selectedStore,
+      (newStore) => {
+        selectedStoreId.value = newStore ? newStore.id : null;
+      },
+      { immediate: true }
+    );
 
     return {
       userstore,
       authStore,
-      isOwner,
-      shouldShowRegisterButton,
-      editingBrandName,
-      editingTagline,
-      newBrandName,
-      newTagline,
-      toggleEditBrandName,
-      saveBrandName,
-      cancelEditBrandName,
-      toggleEditTagline,
-      saveTagline,
-      cancelEditTagline,
+      showRegistrationForm,
+      selectedStoreId,
+      onStoreChange,
+      enableEdit,
+      registrationLabel,
       editProfilePicture,
       editBannerPicture,
       registerStore,
-      checkmarkOutline,
-      closeOutline,
       cameraOutline,
+      storeFormProps,
     };
   },
 });
@@ -227,7 +208,6 @@ export default defineComponent({
   background: #ffffff;
   border-radius: 50%;
   border: 2px solid #498115;
-  --ion-color-base: transparent;
 }
 .banner-camera-icon {
   color: #498115;
@@ -264,7 +244,6 @@ export default defineComponent({
   background: #ffffff;
   border-radius: 50%;
   border: 2px solid #498115;
-  --ion-color-base: transparent;
   transform: translate(50%, 50%);
 }
 .camera-icon {
@@ -281,6 +260,19 @@ export default defineComponent({
   font-weight: bold;
   background-color: aliceblue;
   border-radius: 20px;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.store-selector {
+  margin: 1rem 16px;
+}
+.store-selector select {
+  width: 100%;
+  padding: 8px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 .store-info {
   padding: 0 16px;
@@ -292,26 +284,6 @@ export default defineComponent({
   justify-content: space-between;
   align-items: center;
 }
-.edit-mode {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: nowrap;
-}
-.edit-mode input {
-  flex: 1 1 auto;
-  min-width: 0;
-  border-radius: 4px;
-  border: 2px solid grey;
-  background: transparent;
-}
-.edit-mode ion-button {
-  flex-shrink: 0;
-}
-.edit-button {
-  color: rgb(6, 141, 231);
-  font-size: 12px;
-}
 .store-brand {
   color: rgb(73, 73, 73);
   font-size: xx-large;
@@ -322,16 +294,6 @@ export default defineComponent({
   font-size: large;
   font-weight: 100;
 }
-.brand-input {
-  color: grey;
-  font-size: xx-large;
-  font-weight: bold;
-}
-.tagline-input {
-  color: grey;
-  font-size: large;
-}
-::v-deep ion-button,
 ::v-deep ion-icon {
   padding: 0 !important;
   margin: 0 !important;
