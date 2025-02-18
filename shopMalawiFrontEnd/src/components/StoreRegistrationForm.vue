@@ -137,8 +137,12 @@ export default defineComponent({
       type: Boolean,
       default: true,
     },
+    isEditing: {
+      type: Boolean,
+      default: false,
+    },
   },
-  setup(_, { emit }) {
+  setup(props, { emit }) {
     const userstore = useUserstoreStore();
     const { categories, fetchCategories } = useCategories();
     const formContainerRef = ref<HTMLElement | null>(null);
@@ -163,7 +167,11 @@ export default defineComponent({
 
     onMounted(() => {
       fetchCategories();
-      if (userstore.selectedStore && userstore.selectedStore.id !== 0) {
+      if (
+        props.isEditing &&
+        userstore.selectedStore &&
+        userstore.selectedStore.id !== 0
+      ) {
         userstore.newStoreForm.brand_name = userstore.selectedStore.brand_name;
         userstore.newStoreForm.tagline = userstore.selectedStore.tagline || "";
         userstore.newStoreForm.description =
@@ -206,7 +214,7 @@ export default defineComponent({
 
     const submitForm = async () => {
       try {
-        if (userstore.selectedStore && userstore.selectedStore.id !== 0) {
+        if (props.isEditing) {
           await userstore.updateStoreRecord({ ...userstore.newStoreForm });
         } else {
           await userstore.registerStore();

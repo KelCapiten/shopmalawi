@@ -1,4 +1,4 @@
-//\src\stores\authStore.ts
+//src/stores/authStore.ts
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { useRouter } from "vue-router";

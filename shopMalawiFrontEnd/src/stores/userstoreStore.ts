@@ -24,6 +24,7 @@ export const useUserstoreStore = defineStore("userstoreStore", {
     productFilter: "all",
     uploadedBannerImages: [] as File[],
     uploadedProfileImages: [] as File[],
+    originalId: undefined as number | undefined,
   }),
   getters: {
     filteredProducts(state): any[] {
@@ -45,20 +46,34 @@ export const useUserstoreStore = defineStore("userstoreStore", {
       }
       return state.products;
     },
+    registrationLabel(state): string {
+      if (!state.selectedStore) return "";
+      return state.selectedStore.id === 0
+        ? "Register Your Store"
+        : "Edit Store";
+    },
+    enableEdit(state): boolean {
+      const authStore = useAuthStore();
+      return (
+        state.selectedStore?.owner_id === authStore.user?.id &&
+        state.selectedStore?.id !== 0
+      );
+    },
   },
   actions: {
     async fetchStore(query: { id?: number; owner_id?: number } = {}) {
       const authStore = useAuthStore();
       if (!query.id && !query.owner_id && authStore.user) {
+        this.originalId = query.owner_id;
         query.owner_id = authStore.user.id;
       }
+      this.selectedStore = this.getDefaultStore(query.owner_id);
       try {
         const result = await getStore(query);
         this.stores = Array.isArray(result) ? result : [];
         this.selectedStore = this.stores.length
           ? this.stores[0]
           : this.getDefaultStore(query.owner_id);
-        // Only update image URLs if the store's id is not 0
         if (this.selectedStore && this.selectedStore.id !== 0) {
           this.selectedStore.banner_url = updateImageUrl(
             this.selectedStore.banner_url || ""
@@ -72,7 +87,12 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         this.selectedStore = this.getDefaultStore(query.owner_id);
         this.stores = [this.selectedStore];
       }
-      if (query.owner_id && this.selectedStore && this.selectedStore.id === 0) {
+      if (
+        query.owner_id &&
+        this.originalId &&
+        this.selectedStore &&
+        this.selectedStore.id === 0
+      ) {
         try {
           const userInfo = await getUserInfoService({ id: query.owner_id });
           this.selectedStore.brand_name = userInfo.firstName;
@@ -103,7 +123,6 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         const result = await addStore(newStore);
         this.stores.push(result);
         this.selectedStore = result;
-        // Update image URLs if store id is not 0
         if (this.selectedStore && this.selectedStore.id !== 0) {
           this.selectedStore.banner_url = updateImageUrl(
             this.selectedStore.banner_url || ""
@@ -131,15 +150,6 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         const result = await addStore(fullStore);
         this.stores.push(result);
         this.selectedStore = result;
-        // Update image URLs if store id is not 0
-        if (this.selectedStore && this.selectedStore.id !== 0) {
-          this.selectedStore.banner_url = updateImageUrl(
-            this.selectedStore.banner_url || ""
-          );
-          this.selectedStore.profile_picture_url = updateImageUrl(
-            this.selectedStore.profile_picture_url || ""
-          );
-        }
         this.newStoreForm.brand_name = "";
         this.newStoreForm.tagline = "";
         this.newStoreForm.description = "";
@@ -154,7 +164,27 @@ export const useUserstoreStore = defineStore("userstoreStore", {
       if (!this.selectedStore?.id) {
         throw new Error("No store available to update.");
       }
+      const stripBaseUrl = (url: string): string => {
+        const base =
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:1994";
+        return url.startsWith(base) ? url.replace(base, "") : url;
+      };
+
+      const prevBanner = this.selectedStore.banner_url
+        ? stripBaseUrl(this.selectedStore.banner_url)
+        : "";
+      const prevProfile = this.selectedStore.profile_picture_url
+        ? stripBaseUrl(this.selectedStore.profile_picture_url)
+        : "";
+
       const mergedData = { ...this.selectedStore, ...updatedStore };
+      mergedData.banner_url = mergedData.banner_url
+        ? stripBaseUrl(mergedData.banner_url)
+        : prevBanner;
+      mergedData.profile_picture_url = mergedData.profile_picture_url
+        ? stripBaseUrl(mergedData.profile_picture_url)
+        : prevProfile;
+
       const formData = new FormData();
       Object.keys(mergedData).forEach((key) => {
         const value = (mergedData as any)[key];
@@ -170,7 +200,19 @@ export const useUserstoreStore = defineStore("userstoreStore", {
       }
       try {
         const response = await updateStore(this.selectedStore.id, formData);
-        this.selectedStore = response.store;
+        const updated = response.store;
+        if (updated.banner_url && !updated.banner_url.includes("/assets/")) {
+          updated.banner_url = updateImageUrl(updated.banner_url ?? "");
+        }
+        if (
+          updated.profile_picture_url &&
+          !updated.profile_picture_url.includes("/assets/")
+        ) {
+          updated.profile_picture_url = updateImageUrl(
+            updated.profile_picture_url ?? ""
+          );
+        }
+        this.selectedStore = updated;
         const index = this.stores.findIndex(
           (store) => store.id === this.selectedStore!.id
         );
@@ -186,6 +228,12 @@ export const useUserstoreStore = defineStore("userstoreStore", {
     },
     setProductFilter(filter: string) {
       this.productFilter = filter;
+    },
+    selectStore(storeId: number) {
+      const store = this.stores.find((s) => s.id === storeId);
+      if (store) {
+        this.selectedStore = store;
+      }
     },
     getDefaultStore(ownerId: number | undefined): Store {
       return {
@@ -239,5 +287,4 @@ export const useUserstoreStore = defineStore("userstoreStore", {
       }
     },
   },
-  persist: true,
 });

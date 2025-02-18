@@ -5,22 +5,10 @@
       v-if="showRegistrationForm"
       :showUploaders="storeFormProps.showUploaders"
       :showFormFields="storeFormProps.showFormFields"
+      :isEditing="isEditing"
       @close="showRegistrationForm = false"
     />
   </teleport>
-
-  <!-- If user has multiple stores, show a simple selector to change the active store -->
-  <div v-if="userstore.stores.length > 1" class="store-selector">
-    <select v-model="selectedStoreId" @change="onStoreChange">
-      <option
-        v-for="store in userstore.stores"
-        :key="store.id"
-        :value="store.id"
-      >
-        {{ store.brand_name }}
-      </option>
-    </select>
-  </div>
 
   <div class="banner-container" v-if="userstore.selectedStore">
     <section class="banner-section">
@@ -30,7 +18,7 @@
         class="banner-image"
       />
       <div
-        v-if="enableEdit"
+        v-if="userstore.enableEdit"
         class="edit-banner-button"
         @click="editBannerPicture"
       >
@@ -44,7 +32,7 @@
           />
         </div>
         <div
-          v-if="enableEdit"
+          v-if="userstore.enableEdit"
           class="edit-profile-button"
           @click="editProfilePicture"
         >
@@ -52,10 +40,14 @@
         </div>
       </div>
     </section>
-    <div class="register-store" v-if="userstore.selectedStore">
-      <button class="register-button" @click="registerStore">
-        {{ registrationLabel }}
+    <div
+      class="register-store"
+      v-if="userstore.selectedStore.owner_id === authStore.user?.id"
+    >
+      <button class="register-button" @click="registerEditStore">
+        {{ userstore.registrationLabel }}
       </button>
+      <ProfileMenu @addStore="registerStore" />
     </div>
   </div>
 
@@ -79,102 +71,74 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, reactive, computed, watch } from "vue";
+import { defineComponent, ref, reactive } from "vue";
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import { useAuthStore } from "@/stores/authStore";
 import { IonIcon } from "@ionic/vue";
 import { cameraOutline } from "ionicons/icons";
 import StoreRegistrationForm from "@/components/StoreRegistrationForm.vue";
+import ProfileMenu from "@/components/ProfileMenu.vue";
 
 export default defineComponent({
   name: "HeroSection",
   components: {
     IonIcon,
     StoreRegistrationForm,
+    ProfileMenu,
   },
   setup() {
     const userstore = useUserstoreStore();
     const authStore = useAuthStore();
     const showRegistrationForm = ref(false);
-
-    // Reactive object to control StoreRegistrationForm props
+    const isEditing = ref(false);
     const storeFormProps = reactive({
       showUploaders: false,
       showFormFields: false,
     });
-
-    // When there are multiple stores, allow selection.
-    const selectedStoreId = ref<number | null>(
-      userstore.selectedStore ? userstore.selectedStore.id : null
-    );
-
-    // Update selected store if the user changes the selection.
-    const onStoreChange = () => {
-      const store = userstore.stores.find(
-        (s) => s.id === selectedStoreId.value
-      );
-      if (store) {
-        userstore.selectedStore = store;
-      }
-    };
-
-    // Enable editing if the current store belongs to the logged-in user.
-    const enableEdit = computed(() => {
-      return (
-        userstore.selectedStore?.owner_id === authStore.user?.id &&
-        userstore.selectedStore?.id !== 0
-      );
-    });
-
-    // Compute button label based on whether the store is registered.
-    const registrationLabel = computed(() => {
-      if (!userstore.selectedStore) return "";
-      return userstore.selectedStore.id === 0
-        ? "Register Your Store"
-        : "Edit Store";
-    });
-
-    // When registering a new store, we want the form fields only.
     const registerStore = () => {
       storeFormProps.showUploaders = false;
       storeFormProps.showFormFields = true;
+      isEditing.value = false;
       showRegistrationForm.value = true;
     };
-
-    // When editing banner or profile picture, we want the uploader only.
+    const editStore = () => {
+      storeFormProps.showUploaders = false;
+      storeFormProps.showFormFields = true;
+      isEditing.value = true;
+      showRegistrationForm.value = true;
+    };
+    const registerEditStore = () => {
+      if (!userstore.selectedStore) return "";
+      if (userstore.selectedStore.id === 0) {
+        registerStore();
+      } else {
+        editStore();
+      }
+    };
     const editProfilePicture = () => {
       storeFormProps.showUploaders = true;
       storeFormProps.showFormFields = false;
+      isEditing.value = true;
       showRegistrationForm.value = true;
     };
     const editBannerPicture = () => {
       storeFormProps.showUploaders = true;
       storeFormProps.showFormFields = false;
+      isEditing.value = true;
       showRegistrationForm.value = true;
     };
-
-    // Watch for changes in selectedStore to update the store selector value.
-    watch(
-      () => userstore.selectedStore,
-      (newStore) => {
-        selectedStoreId.value = newStore ? newStore.id : null;
-      },
-      { immediate: true }
-    );
 
     return {
       userstore,
       authStore,
+      isEditing,
       showRegistrationForm,
-      selectedStoreId,
-      onStoreChange,
-      enableEdit,
-      registrationLabel,
-      editProfilePicture,
-      editBannerPicture,
-      registerStore,
       cameraOutline,
       storeFormProps,
+      registerStore,
+      editProfilePicture,
+      editBannerPicture,
+      registerEditStore,
     };
   },
 });
@@ -207,10 +171,11 @@ export default defineComponent({
   align-items: center;
   background: #ffffff;
   border-radius: 50%;
-  border: 2px solid #498115;
+  border: 2px solid orange;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 .banner-camera-icon {
-  color: #498115;
+  color: orange;
 }
 .profile-wrapper {
   position: absolute;
@@ -243,36 +208,30 @@ export default defineComponent({
   height: 30px;
   background: #ffffff;
   border-radius: 50%;
-  border: 2px solid #498115;
+  border: 2px solid orange;
   transform: translate(50%, 50%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 .camera-icon {
-  color: #498115;
+  color: orange;
 }
 .register-store {
   position: absolute;
-  top: calc(180px + 15px);
+  top: 190px;
   right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .register-button {
   color: rgb(6, 141, 231);
-  font-size: 14px;
-  font-weight: bold;
+  font-size: 1rem;
+  font-weight: 500;
   background-color: aliceblue;
   border-radius: 20px;
   border: none;
-  padding: 4px 8px;
+  padding: 10px 15px;
   cursor: pointer;
-}
-.store-selector {
-  margin: 1rem 16px;
-}
-.store-selector select {
-  width: 100%;
-  padding: 8px;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
 }
 .store-info {
   padding: 0 16px;
