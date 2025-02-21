@@ -54,8 +54,19 @@
             :class="itemClasses"
             @click="$emit('productClicked', product)"
           >
-            <!-- For bottom infoPosition, show the delete and edit icons at the top -->
             <template v-if="infoPosition === 'bottom'">
+              <IonIcon
+                v-if="product.uploaded_by_userID === userId && showDeleteButton"
+                :icon="storefrontOutline"
+                class="top-storefront-icon"
+                @click.stop="$emit('storefrontClicked', product.id)"
+              />
+              <IonIcon
+                v-if="product.uploaded_by_userID === userId && showDeleteButton"
+                :icon="reorderFourOutline"
+                class="top-edit-icon"
+                @click.stop="$emit('editProduct', product.id)"
+              />
               <IonIcon
                 v-if="
                   product.uploaded_by_userID === userId &&
@@ -75,12 +86,6 @@
                 :icon="refreshOutline"
                 class="top-delete-icon"
                 @click.stop="$emit('activateProduct', product.id)"
-              />
-              <IonIcon
-                v-if="product.uploaded_by_userID === userId && showDeleteButton"
-                :icon="reorderFourOutline"
-                class="top-edit-icon"
-                @click.stop="$emit('editProduct', product.id)"
               />
             </template>
             <div class="image-container">
@@ -158,6 +163,7 @@ import {
   trashOutline,
   reorderFourOutline,
   refreshOutline,
+  storefrontOutline,
 } from "ionicons/icons";
 import router from "@/router";
 
@@ -236,6 +242,7 @@ export default defineComponent({
     "emptyMessageButtonClicked",
     "deactivateProduct",
     "activateProduct",
+    "storefrontClicked",
   ],
   data() {
     return {
@@ -253,6 +260,7 @@ export default defineComponent({
       trashOutline,
       reorderFourOutline,
       refreshOutline,
+      storefrontOutline,
       hasProducts,
     };
   },
@@ -344,7 +352,7 @@ p {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.top-delete-icon {
+.top-storefront-icon {
   position: absolute;
   border: 2px solid white;
   background-color: rgba(255, 255, 255, 0.7);
@@ -352,7 +360,7 @@ p {
   top: 15px;
   right: 15px;
   cursor: pointer;
-  color: #8b1111;
+  color: #000;
   font-size: 1.3rem;
   z-index: 1;
 }
@@ -366,6 +374,19 @@ p {
   right: 15px;
   cursor: pointer;
   color: #087705;
+  font-size: 1.3rem;
+  z-index: 1;
+}
+
+.top-delete-icon {
+  position: absolute;
+  border: 2px solid white;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  top: 105px;
+  right: 15px;
+  cursor: pointer;
+  color: #8b1111;
   font-size: 1.3rem;
   z-index: 1;
 }

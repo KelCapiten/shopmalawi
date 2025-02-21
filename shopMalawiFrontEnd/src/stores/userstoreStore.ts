@@ -105,6 +105,7 @@ export const useUserstoreStore = defineStore("userstoreStore", {
       }
     },
     async fetchUserProducts() {
+      console.log(this.productsCache);
       const authStore = useAuthStore();
       if (!this.selectedStore) {
         console.warn("No store available; cannot fetch products.");
@@ -340,6 +341,26 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         console.error("Error deleting store:", error);
         throw error;
       }
+    },
+    updateProductInCache(productId: number, updatedFields: Partial<Product>) {
+      const authStore = useAuthStore();
+      const effectiveOwnerId = this.ownerIdFromQuery ?? authStore.user?.id;
+      const cacheKey = `${this.selectedStore?.id}_${effectiveOwnerId}`;
+      if (this.productsCache[cacheKey]) {
+        this.productsCache[cacheKey].data.forEach((group: any) => {
+          group.products = group.products.map((product: any) =>
+            product.id === productId
+              ? { ...product, ...updatedFields }
+              : product
+          );
+        });
+      }
+      this.products = this.products.map((group: any) => ({
+        ...group,
+        products: group.products.map((product: any) =>
+          product.id === productId ? { ...product, ...updatedFields } : product
+        ),
+      }));
     },
   },
 });

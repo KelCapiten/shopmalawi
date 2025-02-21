@@ -215,6 +215,7 @@ export default defineComponent({
     async function handleDeactivateProduct(productId: number) {
       try {
         await productsStore.deactivateProduct(productId);
+        userstore.updateProductInCache(productId, { is_active: false });
         await userstore.fetchUserProducts();
       } catch (error) {
         console.error("Failed to deactivate product", error);
@@ -224,6 +225,7 @@ export default defineComponent({
     async function handleActivateProduct(productId: number) {
       try {
         await productsStore.activateProduct(productId);
+        userstore.updateProductInCache(productId, { is_active: true });
         await userstore.fetchUserProducts();
       } catch (error) {
         console.error("Failed to activate product", error);
