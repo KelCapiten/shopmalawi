@@ -106,10 +106,11 @@ export const getAllProducts = async (req, res) => {
       groupBy,
       uploaded_by,
       includeInactive,
+      store_id, // new query parameter
     } = req.query;
 
-    // Base SQL query: note we join on `images i` instead of `product_images pi`
-    // Also filter by i.imageable_type = 'products'
+    // Base SQL query: note we join on `images i` for product images.
+    // When store_id is provided, we add an INNER JOIN on product_stores.
     let query = `
       SELECT 
         p.id, 
@@ -136,7 +137,12 @@ export const getAllProducts = async (req, res) => {
         AND i.imageable_type = 'products'
     `;
 
+    // If store_id is provided, join with product_stores to filter by store.
     const queryParams = [];
+    if (store_id) {
+      query += ` INNER JOIN product_stores ps ON p.id = ps.product_id `;
+    }
+
     const whereConditions = [];
 
     // Determine if category_id is a main category or subcategory
@@ -151,6 +157,12 @@ export const getAllProducts = async (req, res) => {
         isMainCategory = category[0].parent_id === null;
         categoryName = category[0].name;
       }
+    }
+
+    // Filter by store_id if provided.
+    if (store_id) {
+      whereConditions.push(`ps.store_id = ?`);
+      queryParams.push(parseInt(store_id, 10));
     }
 
     // Filter by category_id

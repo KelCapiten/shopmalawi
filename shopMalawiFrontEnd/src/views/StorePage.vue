@@ -2,50 +2,49 @@
 <template>
   <IonPage>
     <IonContent>
-      <!-- Hero Section -->
-      <HeroSection />
+      <!-- Hero Section with infoClicked event -->
+      <HeroSection
+        :ownerIdFromQuery="userstore.ownerIdFromQuery"
+        @infoClicked="toggleBrandStory"
+      />
 
-      <!-- If there are multiple stores, allow the user to select the active store -->
-      <div v-if="userstore.stores.length > 1" class="store-selector">
-        <select v-model="selectedStoreId" @change="onStoreChange">
-          <option
-            v-for="store in userstore.stores"
-            :key="store.id"
-            :value="store.id"
-          >
-            {{ store.brand_name }}
-          </option>
-        </select>
-      </div>
+      <!-- Brand Story Card with expand/collapse transition -->
+      <transition name="expand">
+        <IonCard class="brand-story-card" v-if="showBrandStory">
+          <IonCardHeader>
+            <IonCardTitle v-if="enableStoryCard">
+              Showcase Your Brand
+            </IonCardTitle>
+            <IonCardTitle v-if="enableEdit">About Our Store</IonCardTitle>
+          </IonCardHeader>
+          <IonCardContent>
+            <div class="display-mode">
+              <p>
+                {{
+                  userstore.selectedStore?.description ||
+                  "Your store deserves to be seen! Register your store now and grow your business, showcase your unique brand to thousands of customers, connect with your loyal shoppers, and stand out in the marketplace."
+                }}
+              </p>
+            </div>
+          </IonCardContent>
+        </IonCard>
+      </transition>
 
-      <!-- Brand Story Card -->
-      <IonCard class="brand-story-card" v-if="enableStoryCard || enableEdit">
-        <IonCardHeader>
-          <IonCardTitle v-if="enableStoryCard">
-            Showcase Your Brand
-          </IonCardTitle>
-          <IonCardTitle v-if="enableEdit">About Our Store</IonCardTitle>
-        </IonCardHeader>
-        <IonCardContent>
-          <!-- Display mode for description only -->
-          <div class="display-mode">
-            <p>
-              {{
-                userstore.selectedStore?.description ||
-                "Your store deserves to be seen! Register your store now and grow your business, showcase your unique brand to thousands of customers, connect with your loyal shoppers, and stand out in the marketplace."
-              }}
-            </p>
-          </div>
-        </IonCardContent>
-      </IonCard>
+      <!-- Store Selector -->
+      <StoreSelector
+        v-if="userstore.stores.length > 1"
+        :stores="userstore.stores"
+        :selectedStoreId="selectedStoreId"
+        @storeSelected="handleStoreSelected"
+      />
 
       <!-- Segment -->
       <IonSegment v-model="selectedSegment" class="store-segment">
-        <IonSegmentButton value="featured">
-          <IonLabel>TOP Picks</IonLabel>
-        </IonSegmentButton>
         <IonSegmentButton value="all">
           <IonLabel>All Products</IonLabel>
+        </IonSegmentButton>
+        <IonSegmentButton value="orders">
+          <IonLabel>Orders</IonLabel>
         </IonSegmentButton>
       </IonSegment>
 
@@ -65,11 +64,12 @@
         </button>
       </div>
 
-      <!-- ProductDisplay for each segment -->
-      <div class="ProductDisplay">
-        <div v-if="selectedSegment === 'featured'">
+      <!-- Product Display -->
+      <div class="ProductDisplay" v-if="selectedSegment === 'all'">
+        <!-- Featured products (Top Picks) displayed above -->
+        <div v-if="featuredProducts.length">
           <ProductDisplay
-            heading="TOP Picks"
+            heading="Hand Picked By Seller For You"
             :showDeleteButton="true"
             :products="featuredProducts"
             :userId="authStore.user?.id || 0"
@@ -78,7 +78,8 @@
             @editProduct="handleEditProduct"
           />
         </div>
-        <div v-else-if="selectedSegment === 'all'">
+        <!-- All Products Display -->
+        <div>
           <ProductDisplay
             heading="All Products"
             :showDeleteButton="true"
@@ -90,9 +91,14 @@
           />
         </div>
       </div>
+      <div class="ProductDisplay" v-else-if="selectedSegment === 'orders'">
+        <div class="orders-placeholder">
+          <p>No orders to display.</p>
+        </div>
+      </div>
     </IonContent>
 
-    <!-- Floating Share Toolbar (hidden when overlay is visible) -->
+    <!-- Floating Share Toolbar -->
     <div class="floating-share-toolbar" v-if="!showSellDashboard">
       <ShareToolbar
         :enableNavigationToolbar="true"
@@ -100,7 +106,7 @@
       />
     </div>
 
-    <!-- Sell Product Form Overlay (close button removed) -->
+    <!-- Sell Product Form Overlay -->
     <transition name="slide-fade">
       <div
         v-if="showSellDashboard"
@@ -132,6 +138,7 @@ import ShareToolbar from "@/components/ShareToolbar.vue";
 import HeroSection from "@/components/HeroSection.vue";
 import ProductDisplay from "@/components/productDisplay.vue";
 import sellProductForm from "@/components/sellProductForm.vue";
+import StoreSelector from "@/components/storeSelector.vue";
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useProductsStore } from "@/stores/productsStore";
@@ -148,17 +155,19 @@ export default defineComponent({
     HeroSection,
     ProductDisplay,
     sellProductForm,
+    StoreSelector,
   },
   setup() {
     const userstore = useUserstoreStore();
     const authStore = useAuthStore();
     const productsStore = useProductsStore();
-    const selectedSegment = ref("featured");
+    const selectedSegment = ref("all");
     const route = useRoute();
 
-    const ownerIdFromQuery = route.query.ownerId
+    const queryOwnerId = route.query.ownerId
       ? Number(route.query.ownerId)
       : undefined;
+    userstore.setOwnerIdFromQuery(queryOwnerId);
 
     const enableEdit = computed(() => {
       return (
@@ -173,9 +182,16 @@ export default defineComponent({
       );
     });
 
-    onMounted(() => {
-      userstore.fetchStore({ owner_id: ownerIdFromQuery });
-      userstore.fetchUserProducts({ ownerId: ownerIdFromQuery });
+    // Brand Story Toggle
+    const showBrandStory = ref(false);
+    function toggleBrandStory() {
+      showBrandStory.value = !showBrandStory.value;
+    }
+
+    onMounted(async () => {
+      await userstore.fetchStore();
+      await userstore.selectStore(0);
+      await userstore.fetchUserProducts();
     });
 
     const featuredProducts = computed(() =>
@@ -230,18 +246,17 @@ export default defineComponent({
       productsStore.clearProduct();
     }
 
-    // For multiple store selection:
     const selectedStoreId = ref<number | null>(
       userstore.selectedStore ? userstore.selectedStore.id : null
     );
-    const onStoreChange = () => {
-      const store = userstore.stores.find(
-        (s) => s.id === selectedStoreId.value
-      );
-      if (store) {
-        userstore.selectedStore = store;
-      }
-    };
+
+    async function handleStoreSelected(storeId: number) {
+      await userstore.selectStore(storeId);
+      selectedStoreId.value = userstore.selectedStore
+        ? userstore.selectedStore.id
+        : null;
+      await userstore.fetchUserProducts();
+    }
 
     watch(
       () => userstore.selectedStore,
@@ -266,7 +281,9 @@ export default defineComponent({
       handleEditProduct,
       closeSellDashboard,
       selectedStoreId,
-      onStoreChange,
+      handleStoreSelected,
+      toggleBrandStory,
+      showBrandStory,
     };
   },
 });
@@ -275,8 +292,22 @@ export default defineComponent({
 <style scoped>
 .brand-story-card {
   margin: 1rem;
-  display: flex;
-  flex-direction: column;
+  overflow: hidden;
+}
+/* Transition for expand/collapse */
+.expand-enter-active,
+.expand-leave-active {
+  transition: max-height 0.5s ease, opacity 0.5s ease;
+}
+.expand-enter-from,
+.expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+.expand-enter-to,
+.expand-leave-from {
+  max-height: 600px;
+  opacity: 1;
 }
 .display-mode p {
   margin: 0;
@@ -350,19 +381,35 @@ export default defineComponent({
   opacity: 0;
   transform: translateY(20px);
 }
-.store-selector {
-  margin: 1rem 16px;
-}
-.store-selector select {
+.store-brand-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
-  padding: 8px;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
 }
-::v-deep ion-button,
+.store-brand {
+  color: rgb(73, 73, 73);
+  font-size: xx-large;
+  font-weight: bold;
+}
+.info-icon {
+  font-size: 1.5rem;
+  color: #007aff;
+  cursor: pointer;
+}
+.store-tagline {
+  color: grey;
+  font-size: large;
+  font-weight: 100;
+}
 ::v-deep ion-icon {
   padding: 0 !important;
   margin: 0 !important;
+}
+.orders-placeholder {
+  text-align: center;
+  padding: 2rem;
+  color: grey;
+  font-size: 1.1rem;
 }
 </style>

@@ -1,6 +1,11 @@
-//src/stores/userstoreStore.ts
+// src/stores/userstoreStore.ts
 import { defineStore } from "pinia";
-import { getStore, addStore, updateStore } from "@/services/userstoreService";
+import {
+  getStore,
+  addStore,
+  updateStore,
+  deleteStore,
+} from "@/services/userstoreService";
 import { getUserInfoService } from "@/services/userService";
 import type { Store, Product } from "@/types";
 import { useAuthStore } from "@/stores/authStore";
@@ -25,6 +30,8 @@ export const useUserstoreStore = defineStore("userstoreStore", {
     uploadedBannerImages: [] as File[],
     uploadedProfileImages: [] as File[],
     originalId: undefined as number | undefined,
+    productsCache: {} as { [key: string]: { data: any; fetchedAt: number } },
+    ownerIdFromQuery: undefined as number | undefined,
   }),
   getters: {
     filteredProducts(state): any[] {
@@ -61,19 +68,19 @@ export const useUserstoreStore = defineStore("userstoreStore", {
     },
   },
   actions: {
-    async fetchStore(query: { id?: number; owner_id?: number } = {}) {
+    setOwnerIdFromQuery(ownerId: number | undefined) {
+      this.ownerIdFromQuery = ownerId;
+    },
+    async fetchStore() {
       const authStore = useAuthStore();
-      if (!query.id && !query.owner_id && authStore.user) {
-        this.originalId = query.owner_id;
-        query.owner_id = authStore.user.id;
-      }
-      this.selectedStore = this.getDefaultStore(query.owner_id);
+      const ownerId = this.ownerIdFromQuery || authStore.user?.id;
+      this.originalId = ownerId;
       try {
-        const result = await getStore(query);
+        const result = await getStore({ owner_id: ownerId });
         this.stores = Array.isArray(result) ? result : [];
         this.selectedStore = this.stores.length
           ? this.stores[0]
-          : this.getDefaultStore(query.owner_id);
+          : this.getDefaultStore(ownerId);
         if (this.selectedStore && this.selectedStore.id !== 0) {
           this.selectedStore.banner_url = updateImageUrl(
             this.selectedStore.banner_url || ""
@@ -84,17 +91,12 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         }
       } catch (error) {
         console.error("Error fetching store:", error);
-        this.selectedStore = this.getDefaultStore(query.owner_id);
+        this.selectedStore = this.getDefaultStore(ownerId);
         this.stores = [this.selectedStore];
       }
-      if (
-        query.owner_id &&
-        this.originalId &&
-        this.selectedStore &&
-        this.selectedStore.id === 0
-      ) {
+      if (ownerId && this.selectedStore && this.selectedStore.id === 0) {
         try {
-          const userInfo = await getUserInfoService({ id: query.owner_id });
+          const userInfo = await getUserInfoService({ id: ownerId });
           this.selectedStore.brand_name = userInfo.firstName;
           this.selectedStore.tagline = userInfo.lastName;
         } catch (error) {
@@ -102,21 +104,42 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         }
       }
     },
-    async fetchUserProducts({ ownerId }: { ownerId?: number } = {}) {
+    async fetchUserProducts() {
       const authStore = useAuthStore();
       if (!this.selectedStore) {
         console.warn("No store available; cannot fetch products.");
         return;
       }
+      const storeId = this.selectedStore.id;
+      const effectiveOwnerId = this.ownerIdFromQuery ?? authStore.user?.id;
+      const cacheKey = `${storeId}_${effectiveOwnerId}`;
+      const now = Date.now();
+      const time = 600000;
+
+      if (
+        this.productsCache[cacheKey] &&
+        now - this.productsCache[cacheKey].fetchedAt < time
+      ) {
+        this.products = this.productsCache[cacheKey].data;
+        return;
+      }
       const { fetchProducts, products, loading, error } = useProducts();
-      await fetchProducts({
+      const params: any = {
         groupBy: "subcategory",
-        uploaded_by: ownerId ?? authStore.user?.id,
+        uploaded_by: effectiveOwnerId,
         includeInactive: true,
-      });
+      };
+      if (storeId !== 0) {
+        params.store_id = storeId;
+      }
+      await fetchProducts(params);
       this.products = products.value || [];
       this.productsLoading = loading.value;
       this.productsError = error.value;
+      this.productsCache[cacheKey] = {
+        data: this.products,
+        fetchedAt: now,
+      };
     },
     async createStore(newStore: Store) {
       try {
@@ -229,10 +252,23 @@ export const useUserstoreStore = defineStore("userstoreStore", {
     setProductFilter(filter: string) {
       this.productFilter = filter;
     },
-    selectStore(storeId: number) {
-      const store = this.stores.find((s) => s.id === storeId);
-      if (store) {
-        this.selectedStore = store;
+    async selectStore(storeId: number) {
+      const authStore = useAuthStore();
+      if (storeId === 0) {
+        const ownerId = this.ownerIdFromQuery ?? authStore.user?.id;
+        this.selectedStore = this.getDefaultStore(ownerId);
+        try {
+          const userInfo = await getUserInfoService({ id: ownerId });
+          this.selectedStore.brand_name = userInfo.firstName;
+          this.selectedStore.tagline = userInfo.lastName;
+        } catch (error) {
+          console.error("Error fetching user info:", error);
+        }
+      } else {
+        const store = this.stores.find((s) => s.id === storeId);
+        if (store) {
+          this.selectedStore = store;
+        }
       }
     },
     getDefaultStore(ownerId: number | undefined): Store {
@@ -284,6 +320,25 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         };
       } else {
         productsStore.clearProduct();
+      }
+    },
+    async removeStore() {
+      if (!this.selectedStore) return;
+      try {
+        await deleteStore(this.selectedStore.id);
+        this.stores = this.stores.filter(
+          (store) => store.id !== this.selectedStore!.id
+        );
+        if (this.stores.length > 0) {
+          this.selectedStore = this.stores[0];
+        } else {
+          const authStore = useAuthStore();
+          this.selectedStore = this.getDefaultStore(authStore.user?.id);
+          this.stores = [this.selectedStore];
+        }
+      } catch (error) {
+        console.error("Error deleting store:", error);
+        throw error;
       }
     },
   },

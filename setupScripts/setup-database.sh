@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Set MySQL credentials
 DB_NAME="shopMalawi"
 DB_USER="root"

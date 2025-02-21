@@ -78,7 +78,7 @@
               />
               <IonIcon
                 v-if="product.uploaded_by_userID === userId && showDeleteButton"
-                :icon="brushOutline"
+                :icon="reorderFourOutline"
                 class="top-edit-icon"
                 @click.stop="$emit('editProduct', product.id)"
               />
@@ -154,7 +154,11 @@ import { defineComponent, PropType, computed } from "vue";
 import { Product } from "@/types";
 import { getPrimaryImage } from "@/utils/utilities";
 import { IonIcon } from "@ionic/vue";
-import { trashOutline, brushOutline, refreshOutline } from "ionicons/icons";
+import {
+  trashOutline,
+  reorderFourOutline,
+  refreshOutline,
+} from "ionicons/icons";
 import router from "@/router";
 
 export default defineComponent({
@@ -247,7 +251,7 @@ export default defineComponent({
     );
     return {
       trashOutline,
-      brushOutline,
+      reorderFourOutline,
       refreshOutline,
       hasProducts,
     };
@@ -307,9 +311,8 @@ p {
 
 .section-heading {
   font-weight: bold;
-  font-size: 1rem;
+  font-size: 1.5rem;
   color: #222;
-  margin-bottom: 10px;
 }
 
 .products-grid {
@@ -320,7 +323,7 @@ p {
 }
 
 .default-mode .products-grid {
-  grid-template-columns: repeat(auto-fit, minmax(200px, auto));
+  grid-template-columns: repeat(auto-fit, minmax(160px, auto));
   justify-content: start;
 }
 
@@ -345,7 +348,6 @@ p {
   position: absolute;
   border: 2px solid white;
   background-color: rgba(255, 255, 255, 0.7);
-  padding: 5px;
   border-radius: 50%;
   top: 15px;
   right: 15px;
@@ -359,7 +361,6 @@ p {
   position: absolute;
   border: 2px solid white;
   background-color: rgba(255, 255, 255, 0.7);
-  padding: 5px;
   border-radius: 50%;
   top: 60px;
   right: 15px;

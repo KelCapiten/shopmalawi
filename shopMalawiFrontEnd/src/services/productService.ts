@@ -28,6 +28,7 @@ interface GetProductsFilters {
   groupBy?: string;
   uploaded_by?: number;
   includeInactive?: boolean;
+  store_id?: number;
 }
 
 interface AddProductResponse {

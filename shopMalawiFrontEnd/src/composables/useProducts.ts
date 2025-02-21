@@ -21,6 +21,7 @@ export function useProducts() {
     groupBy?: string;
     uploaded_by?: number;
     includeInactive?: boolean;
+    store_id?: number;
   }) {
     loading.value = true;
     error.value = null;

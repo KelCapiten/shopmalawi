@@ -10,6 +10,15 @@
     />
   </teleport>
 
+  <!-- Delete Confirmation Popup -->
+  <IonAlert
+    v-model:isOpen="showDeleteAlert"
+    header="Delete Store"
+    message="Are you sure you want to delete your store? This action cannot be undone."
+    :buttons="alertButtons"
+    @didDismiss="onAlertDismiss"
+  />
+
   <div class="banner-container" v-if="userstore.selectedStore">
     <section class="banner-section">
       <img
@@ -40,23 +49,45 @@
         </div>
       </div>
     </section>
+
+    <!-- Registration/Edit Controls -->
     <div
       class="register-store"
       v-if="userstore.selectedStore.owner_id === authStore.user?.id"
     >
-      <button class="register-button" @click="registerEditStore">
-        {{ userstore.registrationLabel }}
-      </button>
+      <!-- Show delete icon and register/edit button if either no store exists OR a store is registered (id !== 0) -->
+      <template
+        v-if="userstore.stores.length === 0 || userstore.selectedStore.id !== 0"
+      >
+        <div
+          v-if="userstore.selectedStore.id !== 0"
+          class="delete-store"
+          :class="{ animate: startDeleteAnimation }"
+          @click="confirmDelete"
+        >
+          <span class="delete-text">delete</span>
+          <IonIcon :icon="removeCircle" class="remove-circle-icon" />
+        </div>
+        <button class="register-button" @click="registerEditStore">
+          {{ userstore.registrationLabel }}
+        </button>
+      </template>
+      <!-- ProfileMenu always displayed for the owner -->
       <ProfileMenu @addStore="registerStore" />
     </div>
   </div>
 
   <div class="store-info" v-if="userstore.selectedStore">
     <div class="store-brand-field">
-      <div class="display-mode">
+      <div class="display-mode store-brand-wrapper">
         <div class="store-brand">
           {{ userstore.selectedStore.brand_name }}
         </div>
+        <IonIcon
+          :icon="informationCircleOutline"
+          class="info-icon"
+          @click="infoIconClicked"
+        />
       </div>
     </div>
 
@@ -71,42 +102,59 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, reactive } from "vue";
+import { defineComponent, ref, reactive, onMounted } from "vue";
+import { IonIcon, IonAlert } from "@ionic/vue";
+import {
+  cameraOutline,
+  removeCircle,
+  informationCircleOutline,
+} from "ionicons/icons";
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import { useAuthStore } from "@/stores/authStore";
-import { IonIcon } from "@ionic/vue";
-import { cameraOutline } from "ionicons/icons";
 import StoreRegistrationForm from "@/components/StoreRegistrationForm.vue";
 import ProfileMenu from "@/components/ProfileMenu.vue";
 
 export default defineComponent({
   name: "HeroSection",
+  props: {
+    ownerIdFromQuery: {
+      type: Number,
+      default: undefined,
+    },
+  },
+  emits: ["infoClicked"],
   components: {
     IonIcon,
+    IonAlert,
     StoreRegistrationForm,
     ProfileMenu,
   },
-  setup() {
+  setup(props, { emit }) {
     const userstore = useUserstoreStore();
     const authStore = useAuthStore();
     const showRegistrationForm = ref(false);
     const isEditing = ref(false);
+    const startDeleteAnimation = ref(false);
+    const showDeleteAlert = ref(false);
     const storeFormProps = reactive({
       showUploaders: false,
       showFormFields: false,
     });
+
     const registerStore = () => {
       storeFormProps.showUploaders = false;
       storeFormProps.showFormFields = true;
       isEditing.value = false;
       showRegistrationForm.value = true;
     };
+
     const editStore = () => {
       storeFormProps.showUploaders = false;
       storeFormProps.showFormFields = true;
       isEditing.value = true;
       showRegistrationForm.value = true;
     };
+
     const registerEditStore = () => {
       if (!userstore.selectedStore) return "";
       if (userstore.selectedStore.id === 0) {
@@ -115,12 +163,14 @@ export default defineComponent({
         editStore();
       }
     };
+
     const editProfilePicture = () => {
       storeFormProps.showUploaders = true;
       storeFormProps.showFormFields = false;
       isEditing.value = true;
       showRegistrationForm.value = true;
     };
+
     const editBannerPicture = () => {
       storeFormProps.showUploaders = true;
       storeFormProps.showFormFields = false;
@@ -128,17 +178,57 @@ export default defineComponent({
       showRegistrationForm.value = true;
     };
 
+    const handleDeleteStore = async () => {
+      try {
+        await userstore.removeStore();
+      } catch (error) {
+        console.error("Error deleting store", error);
+      }
+    };
+
+    const confirmDelete = () => {
+      showDeleteAlert.value = true;
+    };
+
+    const onAlertDismiss = () => {
+      showDeleteAlert.value = false;
+    };
+
+    const alertButtons = [
+      { text: "Cancel", role: "cancel", cssClass: "secondary" },
+      { text: "Delete", handler: () => handleDeleteStore() },
+    ];
+
+    const infoIconClicked = () => {
+      emit("infoClicked");
+    };
+
+    onMounted(() => {
+      setTimeout(() => {
+        startDeleteAnimation.value = true;
+      }, 1000);
+    });
+
     return {
       userstore,
       authStore,
       isEditing,
       showRegistrationForm,
       cameraOutline,
+      removeCircle,
+      informationCircleOutline,
       storeFormProps,
       registerStore,
       editProfilePicture,
       editBannerPicture,
       registerEditStore,
+      confirmDelete,
+      handleDeleteStore,
+      startDeleteAnimation,
+      showDeleteAlert,
+      alertButtons,
+      onAlertDismiss,
+      infoIconClicked,
     };
   },
 });
@@ -223,6 +313,48 @@ export default defineComponent({
   align-items: center;
   gap: 10px;
 }
+.delete-store {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #d9534f;
+  gap: 4px;
+}
+.delete-text {
+  font-size: 1rem;
+  color: #d9534f;
+  white-space: nowrap;
+  transition: transform 1s ease, opacity 1s ease;
+}
+.remove-circle-icon {
+  font-size: 1.2rem;
+  color: #d9534f;
+  transition: transform 1s ease;
+}
+.delete-store.animate .delete-text {
+  animation: slideOutText 1s forwards;
+}
+@keyframes slideOutText {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+}
+.delete-store.animate .remove-circle-icon {
+  animation: growIcon 1s forwards;
+}
+@keyframes growIcon {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.6);
+  }
+}
 .register-button {
   color: rgb(6, 141, 231);
   font-size: 1rem;
@@ -232,9 +364,12 @@ export default defineComponent({
   border: none;
   padding: 10px 15px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .store-info {
-  padding: 0 16px;
+  padding: 0 27px;
   display: flex;
   flex-direction: column;
 }
@@ -243,10 +378,21 @@ export default defineComponent({
   justify-content: space-between;
   align-items: center;
 }
+.store-brand-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
 .store-brand {
   color: rgb(73, 73, 73);
   font-size: xx-large;
   font-weight: bold;
+}
+.info-icon {
+  font-size: 1.5rem;
+  color: #007aff;
+  cursor: pointer;
 }
 .store-tagline {
   color: grey;

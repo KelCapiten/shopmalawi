@@ -13,7 +13,7 @@
       >
         Add Another Store
       </div>
-      <div class="dropdown-item" @click="goToOrders">Orders</div>
+      <div class="dropdown-item" @click="goToOrders">Your Orders</div>
       <div class="dropdown-item" @click="goToProfile">Profile</div>
       <div class="dropdown-item" @click="logout">Logout</div>
     </div>
