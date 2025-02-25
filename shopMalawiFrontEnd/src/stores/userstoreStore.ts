@@ -5,6 +5,8 @@ import {
   addStore,
   updateStore,
   deleteStore,
+  addProductToStore,
+  removeProductFromStore,
 } from "@/services/userstoreService";
 import { getUserInfoService } from "@/services/userService";
 import type { Store, Product } from "@/types";
@@ -66,6 +68,24 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         state.selectedStore?.id !== 0
       );
     },
+    showAddToStoreIcon(state): boolean {
+      const authStore = useAuthStore();
+      return (
+        !!state.selectedStore &&
+        state.selectedStore.id === 0 &&
+        !!authStore.user &&
+        authStore.user.id === state.selectedStore.owner_id
+      );
+    },
+    showRemoveFromStoreIcon(state): boolean {
+      const authStore = useAuthStore();
+      return (
+        !!state.selectedStore &&
+        state.selectedStore.id !== 0 &&
+        !!authStore.user &&
+        authStore.user.id === state.selectedStore.owner_id
+      );
+    },
   },
   actions: {
     setOwnerIdFromQuery(ownerId: number | undefined) {
@@ -104,16 +124,15 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         }
       }
     },
-    async fetchUserProducts() {
-      console.log(this.productsCache);
+    async fetchSelectedStoreProducts(storeId?: number) {
       const authStore = useAuthStore();
-      if (!this.selectedStore) {
+      if (!this.selectedStore && storeId === undefined) {
         console.warn("No store available; cannot fetch products.");
         return;
       }
-      const storeId = this.selectedStore.id;
+      const effectiveStoreId = storeId ?? this.selectedStore!.id;
       const effectiveOwnerId = this.ownerIdFromQuery ?? authStore.user?.id;
-      const cacheKey = `${storeId}_${effectiveOwnerId}`;
+      const cacheKey = `${effectiveStoreId}_${effectiveOwnerId}`;
       const now = Date.now();
       const time = 600000;
 
@@ -130,8 +149,8 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         uploaded_by: effectiveOwnerId,
         includeInactive: true,
       };
-      if (storeId !== 0) {
-        params.store_id = storeId;
+      if (effectiveStoreId !== 0) {
+        params.store_id = effectiveStoreId;
       }
       await fetchProducts(params);
       this.products = products.value || [];
@@ -141,6 +160,11 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         data: this.products,
         fetchedAt: now,
       };
+    },
+    async getAllStoreProducts() {
+      for (const store of this.stores) {
+        await this.fetchSelectedStoreProducts(store.id);
+      }
     },
     async createStore(newStore: Store) {
       try {
@@ -361,6 +385,68 @@ export const useUserstoreStore = defineStore("userstoreStore", {
           product.id === productId ? { ...product, ...updatedFields } : product
         ),
       }));
+    },
+    async addThisProductToStore(storeId: number, productId: number) {
+      try {
+        const response = await addProductToStore(storeId, productId);
+        const resp = response as any;
+        console.log("resp", resp);
+        if (resp.updatedProducts) {
+          const authStore = useAuthStore();
+          const effectiveOwnerId = this.ownerIdFromQuery ?? authStore.user?.id;
+          const cacheKey = `${storeId}_${effectiveOwnerId}`;
+          this.productsCache[cacheKey] = {
+            data: resp.updatedProducts,
+            fetchedAt: Date.now(),
+          };
+          this.products = resp.updatedProducts;
+          console.log("products", this.products);
+        }
+        return response;
+      } catch (error) {
+        console.error("Error adding product to store:", error);
+        throw error;
+      }
+    },
+    async removeThisProductFromStore(productId: number) {
+      if (!this.selectedStore) {
+        throw new Error("No store selected.");
+      }
+      try {
+        const storeId = this.selectedStore.id;
+        const response = await removeProductFromStore(storeId, productId);
+        const resp = response as any;
+        if (resp.updatedProducts) {
+          const authStore = useAuthStore();
+          const effectiveOwnerId = this.ownerIdFromQuery ?? authStore.user?.id;
+          const cacheKey = `${storeId}_${effectiveOwnerId}`;
+          this.productsCache[cacheKey] = {
+            data: resp.updatedProducts,
+            fetchedAt: Date.now(),
+          };
+          this.products = resp.updatedProducts;
+        }
+      } catch (error) {
+        console.error("Error removing product from store:", error);
+        throw error;
+      }
+    },
+    isProductInStoreProductsCache(productId: number): boolean {
+      for (const cacheKey in this.productsCache) {
+        // Skip cache keys that include "0"
+        if (cacheKey.includes("0")) continue;
+        const cachedData = this.productsCache[cacheKey].data;
+        for (const group of cachedData) {
+          if (group.products && Array.isArray(group.products)) {
+            if (
+              group.products.some((product: any) => product.id === productId)
+            ) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
     },
   },
 });

@@ -53,3 +53,14 @@ export async function addProductToStore(
   );
   return data;
 }
+
+export async function removeProductFromStore(
+  store_id: number,
+  product_id: number
+): Promise<{ message: string }> {
+  const { data } = await apiClient.post<{ message: string }>(
+    "/api/userstores/removeProductFromStore",
+    { store_id, product_id }
+  );
+  return data;
+}

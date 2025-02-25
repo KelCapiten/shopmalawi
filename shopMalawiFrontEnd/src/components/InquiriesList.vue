@@ -33,7 +33,7 @@
               v-for="(image, index) in inquiry.images"
               :key="index"
             >
-              <FullScreenImage
+              <imageDisplay
                 :imageUrl="updateImageUrl(image.image_path)"
                 :alt="`Image ${index + 1}`"
               />
@@ -119,7 +119,7 @@
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
 import productDisplay from "@/components/productDisplay.vue";
-import FullScreenImage from "@/components/imageDisplay.vue";
+import imageDisplay from "@/components/imageDisplay.vue";
 import { updateImageUrl, formatDate } from "@/utils/utilities";
 import { createOutline, trashOutline } from "ionicons/icons";
 
@@ -127,7 +127,7 @@ export default defineComponent({
   name: "InquiriesList",
   components: {
     productDisplay,
-    FullScreenImage,
+    imageDisplay,
   },
   props: {
     inquiries: {

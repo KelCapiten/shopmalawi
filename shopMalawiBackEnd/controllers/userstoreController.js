@@ -1,5 +1,6 @@
 // controllers/userstoreController.js
 import db from "../config/db.js";
+import { getAllProducts } from "./productController.js";
 
 // Endpoint to add a store
 export const addStore = async (req, res) => {
@@ -125,12 +126,10 @@ export const updateStore = async (req, res) => {
     );
 
     await connection.commit();
-    res
-      .status(200)
-      .json({
-        message: "Store updated successfully",
-        store: updatedStoreRows[0],
-      });
+    res.status(200).json({
+      message: "Store updated successfully",
+      store: updatedStoreRows[0],
+    });
   } catch (error) {
     console.error("Error updating store:", error);
     await connection.rollback();
@@ -209,20 +208,104 @@ export const addProductToStore = async (req, res) => {
     }
     // Verify the product exists
     const [productRows] = await db.query(
-      "SELECT id FROM products WHERE id = ?",
+      "SELECT id, uploaded_by FROM products WHERE id = ?",
       [product_id]
     );
     if (productRows.length === 0) {
       return res.status(404).json({ message: "Product not found" });
     }
-    // Insert into the join table (assumes a many-to-many relationship)
+    // Insert into the join table
     await db.query(
       "INSERT INTO product_stores (product_id, store_id) VALUES (?, ?)",
       [product_id, store_id]
     );
-    res.status(201).json({ message: "Product added to store successfully" });
+
+    const uploaderId = productRows[0].uploaded_by;
+    const fakeReq = {
+      query: {
+        groupBy: "subcategory",
+        includeInactive: "true",
+        uploaded_by: uploaderId,
+        store_id: store_id,
+      },
+    };
+
+    const updatedProducts = await new Promise((resolve) => {
+      getAllProducts(fakeReq, {
+        status(code) {
+          this.code = code;
+          return this;
+        },
+        json(data) {
+          resolve(data);
+        },
+      });
+    });
+
+    res.status(201).json({
+      message: "Product added to store successfully",
+      product_id,
+      store_id,
+      updatedProducts,
+    });
   } catch (error) {
     console.error("Error adding product to store:", error);
     res.status(500).json({ message: "Failed to add product to store" });
+  }
+};
+
+// Endpoint to remove a product from a store
+export const removeProductFromStore = async (req, res) => {
+  const { store_id, product_id } = req.body;
+  if (!store_id || !product_id) {
+    return res
+      .status(400)
+      .json({ message: "store_id and product_id are required" });
+  }
+  try {
+    await db.query(
+      "DELETE FROM product_stores WHERE store_id = ? AND product_id = ?",
+      [store_id, product_id]
+    );
+
+    // Query the product to get uploaded_by
+    const [productRows] = await db.query(
+      "SELECT id, uploaded_by FROM products WHERE id = ?",
+      [product_id]
+    );
+    if (productRows.length === 0) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    const uploaderId = productRows[0].uploaded_by;
+    const fakeReq = {
+      query: {
+        groupBy: "subcategory",
+        includeInactive: "true",
+        uploaded_by: uploaderId,
+        store_id: store_id,
+      },
+    };
+    // Wrap getAllProducts in a promise so we capture its result
+    const updatedProducts = await new Promise((resolve) => {
+      getAllProducts(fakeReq, {
+        status(code) {
+          this.code = code;
+          return this;
+        },
+        json(data) {
+          resolve(data);
+        },
+      });
+    });
+
+    res.status(200).json({
+      message: "Product removed from store successfully",
+      product_id,
+      store_id,
+      updatedProducts,
+    });
+  } catch (error) {
+    console.error("Error removing product from store:", error);
+    res.status(500).json({ message: "Failed to remove product from store" });
   }
 };

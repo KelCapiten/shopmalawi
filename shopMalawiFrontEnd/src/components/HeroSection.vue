@@ -206,7 +206,7 @@ export default defineComponent({
     onMounted(() => {
       setTimeout(() => {
         startDeleteAnimation.value = true;
-      }, 1000);
+      }, 3000);
     });
 
     return {

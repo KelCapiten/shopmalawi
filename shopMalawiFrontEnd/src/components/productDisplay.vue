@@ -56,10 +56,26 @@
           >
             <template v-if="infoPosition === 'bottom'">
               <IonIcon
-                v-if="product.uploaded_by_userID === userId && showDeleteButton"
+                v-if="
+                  product.uploaded_by_userID === userId &&
+                  showDeleteButton &&
+                  !userstore.isProductInStoreProductsCache(product.id) &&
+                  userstore.showAddToStoreIcon
+                "
                 :icon="storefrontOutline"
                 class="top-storefront-icon"
-                @click.stop="$emit('storefrontClicked', product.id)"
+                @click.stop="$emit('addProductToStore', product)"
+              />
+              <IonIcon
+                v-else-if="
+                  product.uploaded_by_userID === userId &&
+                  showDeleteButton &&
+                  userstore.isProductInStoreProductsCache(product.id) &&
+                  userstore.showRemoveFromStoreIcon
+                "
+                :icon="removeCircleOutline"
+                class="top-storefront-icon"
+                @click.stop="$emit('removeProductFromStore', product.id)"
               />
               <IonIcon
                 v-if="product.uploaded_by_userID === userId && showDeleteButton"
@@ -164,7 +180,9 @@ import {
   reorderFourOutline,
   refreshOutline,
   storefrontOutline,
+  removeCircleOutline,
 } from "ionicons/icons";
+import { useUserstoreStore } from "@/stores/userstoreStore";
 import router from "@/router";
 
 export default defineComponent({
@@ -243,6 +261,8 @@ export default defineComponent({
     "deactivateProduct",
     "activateProduct",
     "storefrontClicked",
+    "addProductToStore",
+    "removeProductFromStore",
   ],
   data() {
     return {
@@ -250,6 +270,7 @@ export default defineComponent({
     };
   },
   setup(props) {
+    const userstore = useUserstoreStore();
     const hasProducts = computed(() =>
       props.products.some(
         (subcategory: any) =>
@@ -261,7 +282,9 @@ export default defineComponent({
       reorderFourOutline,
       refreshOutline,
       storefrontOutline,
+      removeCircleOutline,
       hasProducts,
+      userstore,
     };
   },
   computed: {
@@ -331,7 +354,7 @@ p {
 }
 
 .default-mode .products-grid {
-  grid-template-columns: repeat(auto-fit, minmax(160px, auto));
+  grid-template-columns: repeat(auto-fit, minmax(180px, auto));
   justify-content: start;
 }
 

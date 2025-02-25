@@ -7,6 +7,7 @@ import {
   updateStore,
   deleteStore,
   addProductToStore,
+  removeProductFromStore,
 } from "../controllers/userstoreController.js";
 import { upload } from "../middleware/uploadUserStoreImagesMiddleware.js";
 
@@ -34,5 +35,12 @@ router.delete("/deleteStore/:id", authenticateUser, deleteStore);
 
 // Add a product to a store
 router.post("/addProductToStore", authenticateUser, addProductToStore);
+
+// Remove a product from a store
+router.post(
+  "/removeProductFromStore",
+  authenticateUser,
+  removeProductFromStore
+);
 
 export default router;

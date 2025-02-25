@@ -3,6 +3,7 @@
   <div class="store-selector-tiles">
     <!-- New "All Products" Card -->
     <div
+      v-if="showAllProductsCard"
       class="store-tile all-products"
       :class="{ selected: selectedStoreId === null || selectedStoreId === 0 }"
       @click="$emit('storeSelected', 0)"
@@ -45,6 +46,10 @@ export default defineComponent({
       type: Number as PropType<number | null>,
       default: null,
     },
+    showAllProductsCard: {
+      type: Boolean,
+      default: true,
+    },
   },
   emits: ["storeSelected"],
 });
@@ -57,8 +62,13 @@ export default defineComponent({
   overflow-x: auto;
   padding: 1rem 2rem;
   margin: 0;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
 }
 
+.store-selector-tiles::-webkit-scrollbar {
+  display: none;
+}
 .store-tile {
   position: relative;
   min-width: 140px;

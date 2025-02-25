@@ -2,13 +2,13 @@
 <template>
   <IonPage>
     <IonContent>
-      <!-- Hero Section with infoClicked event -->
+      <!-- Hero Section -->
       <HeroSection
         :ownerIdFromQuery="userstore.ownerIdFromQuery"
         @infoClicked="toggleBrandStory"
       />
 
-      <!-- Brand Story Card with expand/collapse transition -->
+      <!-- Brand Story Card with Expand/Collapse -->
       <transition name="expand">
         <IonCard class="brand-story-card" v-if="showBrandStory">
           <IonCardHeader>
@@ -38,7 +38,7 @@
         @storeSelected="handleStoreSelected"
       />
 
-      <!-- Segment -->
+      <!-- Segment Buttons -->
       <IonSegment v-model="selectedSegment" class="store-segment">
         <IonSegmentButton value="all">
           <IonLabel>All Products</IonLabel>
@@ -48,7 +48,7 @@
         </IonSegmentButton>
       </IonSegment>
 
-      <!-- Filters Bar for "all" segment -->
+      <!-- Filters Bar (for 'all' segment) -->
       <div v-if="selectedSegment === 'all'" class="filter-bar">
         <button
           v-for="filter in filters"
@@ -66,18 +66,21 @@
 
       <!-- Product Display -->
       <div class="ProductDisplay" v-if="selectedSegment === 'all'">
-        <!-- Featured products (Top Picks) displayed above -->
-        <div v-if="featuredProducts.length">
-          <ProductDisplay
-            heading="Hand Picked By Seller For You"
-            :showDeleteButton="true"
-            :products="featuredProducts"
-            :userId="authStore.user?.id || 0"
-            @deactivateProduct="handleDeactivateProduct"
-            @activateProduct="handleActivateProduct"
-            @editProduct="handleEditProduct"
-          />
-        </div>
+        <!-- Featured Products with Collapse/Expand Animation -->
+        <transition name="collapse-expand">
+          <div v-if="featuredProducts.length">
+            <ProductDisplay
+              heading="Recommended By This Seller"
+              :showDeleteButton="true"
+              :products="featuredProducts"
+              :userId="authStore.user?.id || 0"
+              @deactivateProduct="handleDeactivateProduct"
+              @activateProduct="handleActivateProduct"
+              @editProduct="handleEditProduct"
+              @storefrontClicked="handleStorefrontClicked"
+            />
+          </div>
+        </transition>
         <!-- All Products Display -->
         <div>
           <ProductDisplay
@@ -88,6 +91,8 @@
             @deactivateProduct="handleDeactivateProduct"
             @activateProduct="handleActivateProduct"
             @editProduct="handleEditProduct"
+            @addProductToStore="handleStorefrontClicked"
+            @removeProductFromStore="handleRemoveProductFromStore"
           />
         </div>
       </div>
@@ -121,6 +126,20 @@
         />
       </div>
     </transition>
+
+    <!-- Add Product Popup Modal -->
+    <div
+      class="popup-modal"
+      v-if="showAddProductPopup"
+      @click.self="closeAddProductPopup"
+    >
+      <div class="modal-content">
+        <AddProductToStore
+          :product="selectedProduct"
+          @close="closeAddProductPopup"
+        />
+      </div>
+    </div>
   </IonPage>
 </template>
 
@@ -139,6 +158,7 @@ import HeroSection from "@/components/HeroSection.vue";
 import ProductDisplay from "@/components/productDisplay.vue";
 import sellProductForm from "@/components/sellProductForm.vue";
 import StoreSelector from "@/components/storeSelector.vue";
+import AddProductToStore from "@/components/AddProductToStore.vue";
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useProductsStore } from "@/stores/productsStore";
@@ -156,6 +176,7 @@ export default defineComponent({
     ProductDisplay,
     sellProductForm,
     StoreSelector,
+    AddProductToStore,
   },
   setup() {
     const userstore = useUserstoreStore();
@@ -182,7 +203,6 @@ export default defineComponent({
       );
     });
 
-    // Brand Story Toggle
     const showBrandStory = ref(false);
     function toggleBrandStory() {
       showBrandStory.value = !showBrandStory.value;
@@ -190,13 +210,16 @@ export default defineComponent({
 
     onMounted(async () => {
       await userstore.fetchStore();
+      await userstore.getAllStoreProducts();
       await userstore.selectStore(0);
-      await userstore.fetchUserProducts();
+      await userstore.fetchSelectedStoreProducts();
+      console.log("mounted cache", userstore.productsCache);
     });
 
-    const featuredProducts = computed(() =>
-      userstore.products.filter((group: any) => group.id % 2)
-    );
+    const featuredProducts = computed(() => {
+      if (userstore.productFilter !== "all") return [];
+      return userstore.products.filter((group: any) => group.id % 2);
+    });
 
     const filters = [
       { label: "All", value: "all", icon: appsOutline },
@@ -216,7 +239,7 @@ export default defineComponent({
       try {
         await productsStore.deactivateProduct(productId);
         userstore.updateProductInCache(productId, { is_active: false });
-        await userstore.fetchUserProducts();
+        await userstore.fetchSelectedStoreProducts();
       } catch (error) {
         console.error("Failed to deactivate product", error);
       }
@@ -226,7 +249,7 @@ export default defineComponent({
       try {
         await productsStore.activateProduct(productId);
         userstore.updateProductInCache(productId, { is_active: true });
-        await userstore.fetchUserProducts();
+        await userstore.fetchSelectedStoreProducts();
       } catch (error) {
         console.error("Failed to activate product", error);
       }
@@ -240,9 +263,20 @@ export default defineComponent({
       });
     }
 
+    // When a storefront image is clicked, open the AddProductToStore popup.
+    const selectedProduct = ref<any>(null);
+    const showAddProductPopup = ref(false);
+    function handleStorefrontClicked(product: any) {
+      selectedProduct.value = product;
+      showAddProductPopup.value = true;
+    }
+    function closeAddProductPopup() {
+      showAddProductPopup.value = false;
+      selectedProduct.value = null;
+    }
+
     const showSellDashboard = ref(false);
     const sellDashboardContainer = ref<HTMLElement | null>(null);
-
     function closeSellDashboard() {
       showSellDashboard.value = false;
       productsStore.clearProduct();
@@ -251,13 +285,20 @@ export default defineComponent({
     const selectedStoreId = ref<number | null>(
       userstore.selectedStore ? userstore.selectedStore.id : null
     );
-
     async function handleStoreSelected(storeId: number) {
       await userstore.selectStore(storeId);
       selectedStoreId.value = userstore.selectedStore
         ? userstore.selectedStore.id
         : null;
-      await userstore.fetchUserProducts();
+      await userstore.fetchSelectedStoreProducts();
+    }
+
+    async function handleRemoveProductFromStore(productId: number) {
+      try {
+        await userstore.removeThisProductFromStore(productId);
+      } catch (error) {
+        console.error("Failed to remove product from store", error);
+      }
     }
 
     watch(
@@ -286,6 +327,11 @@ export default defineComponent({
       handleStoreSelected,
       toggleBrandStory,
       showBrandStory,
+      handleStorefrontClicked,
+      selectedProduct,
+      showAddProductPopup,
+      closeAddProductPopup,
+      handleRemoveProductFromStore,
     };
   },
 });
@@ -295,21 +341,6 @@ export default defineComponent({
 .brand-story-card {
   margin: 1rem;
   overflow: hidden;
-}
-/* Transition for expand/collapse */
-.expand-enter-active,
-.expand-leave-active {
-  transition: max-height 0.5s ease, opacity 0.5s ease;
-}
-.expand-enter-from,
-.expand-leave-to {
-  max-height: 0;
-  opacity: 0;
-}
-.expand-enter-to,
-.expand-leave-from {
-  max-height: 600px;
-  opacity: 1;
 }
 .display-mode p {
   margin: 0;
@@ -361,7 +392,7 @@ export default defineComponent({
 .floating-share-toolbar {
   position: fixed;
   bottom: 16px;
-  right: 0px;
+  right: 0;
   z-index: 10;
 }
 .sell-dashboard-container {
@@ -369,8 +400,8 @@ export default defineComponent({
   top: 0;
   left: 0;
   right: 0;
-  overflow-y: auto;
   bottom: 0;
+  overflow-y: auto;
   z-index: 12;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
@@ -383,35 +414,43 @@ export default defineComponent({
   opacity: 0;
   transform: translateY(20px);
 }
-.store-brand-wrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
+.collapse-expand-enter-active,
+.collapse-expand-leave-active {
+  transition: max-height 0.5s ease, opacity 0.5s ease;
 }
-.store-brand {
-  color: rgb(73, 73, 73);
-  font-size: xx-large;
-  font-weight: bold;
+.collapse-expand-enter-from,
+.collapse-expand-leave-to {
+  max-height: 0;
+  opacity: 0;
 }
-.info-icon {
-  font-size: 1.5rem;
-  color: #007aff;
-  cursor: pointer;
-}
-.store-tagline {
-  color: grey;
-  font-size: large;
-  font-weight: 100;
-}
-::v-deep ion-icon {
-  padding: 0 !important;
-  margin: 0 !important;
+.collapse-expand-enter-to,
+.collapse-expand-leave-from {
+  max-height: 300px;
+  opacity: 1;
 }
 .orders-placeholder {
   text-align: center;
   padding: 2rem;
   color: grey;
   font-size: 1.1rem;
+}
+/* Popup Modal Styles */
+.popup-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.modal-content {
+  position: relative;
+  width: 100%;
+  height: 80%;
+  border-radius: 4px;
 }
 </style>
