@@ -64,3 +64,15 @@ export async function removeProductFromStore(
   );
   return data;
 }
+
+export async function updateIsSellerPickStatus(
+  store_id: number,
+  product_id: number,
+  isSellerPick: boolean
+): Promise<{ message: string }> {
+  const { data } = await apiClient.post<{ message: string }>(
+    "/api/userstores/updateIsSellerPickStatus",
+    { store_id, product_id, isSellerPick }
+  );
+  return data;
+}

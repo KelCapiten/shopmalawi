@@ -183,6 +183,7 @@ CREATE TABLE IF NOT EXISTS stores (
 CREATE TABLE IF NOT EXISTS product_stores (
     product_id INT NOT NULL,
     store_id INT NOT NULL,
+    isSellerPick BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (product_id, store_id),
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
     FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE,

@@ -128,6 +128,7 @@ export const getAllProducts = async (req, res) => {
         i.image_path, 
         i.alt_text, 
         i.is_primary,
+        ${store_id ? "ps.isSellerPick as isSellerPick," : ""}
         p.created_at
       FROM products p
       LEFT JOIN users u
@@ -228,7 +229,7 @@ export const getAllProducts = async (req, res) => {
           });
         }
       } else {
-        acc.push({
+        const newProduct = {
           id: product.id,
           name: product.name,
           description: product.description,
@@ -241,6 +242,7 @@ export const getAllProducts = async (req, res) => {
           is_active: product.is_active,
           uploaded_by_userID: product.uploaded_by_userID,
           uploaded_by: product.uploaded_by,
+          created_at: product.created_at,
           images: product.image_path
             ? [
                 {
@@ -250,7 +252,11 @@ export const getAllProducts = async (req, res) => {
                 },
               ]
             : [],
-        });
+        };
+        if (store_id) {
+          newProduct.isSellerPick = product.isSellerPick;
+        }
+        acc.push(newProduct);
       }
       return acc;
     }, []);

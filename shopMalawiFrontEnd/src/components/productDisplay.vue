@@ -1,4 +1,4 @@
-// src/components/productDisplay.vue
+//src/components/productDisplay.vue
 <template>
   <div>
     <label v-if="hasProducts" class="section-heading">{{ heading }}</label>
@@ -55,54 +55,64 @@
             @click="$emit('productClicked', product)"
           >
             <template v-if="infoPosition === 'bottom'">
-              <IonIcon
-                v-if="
-                  product.uploaded_by_userID === userId &&
-                  showDeleteButton &&
-                  !userstore.isProductInStoreProductsCache(product.id) &&
-                  userstore.showAddToStoreIcon
-                "
-                :icon="storefrontOutline"
-                class="top-storefront-icon"
-                @click.stop="$emit('addProductToStore', product)"
-              />
-              <IonIcon
-                v-else-if="
-                  product.uploaded_by_userID === userId &&
-                  showDeleteButton &&
-                  userstore.isProductInStoreProductsCache(product.id) &&
-                  userstore.showRemoveFromStoreIcon
-                "
-                :icon="removeCircleOutline"
-                class="top-storefront-icon"
-                @click.stop="$emit('removeProductFromStore', product.id)"
-              />
-              <IonIcon
-                v-if="product.uploaded_by_userID === userId && showDeleteButton"
-                :icon="reorderFourOutline"
-                class="top-edit-icon"
-                @click.stop="$emit('editProduct', product.id)"
-              />
-              <IonIcon
-                v-if="
-                  product.uploaded_by_userID === userId &&
-                  showDeleteButton &&
-                  product.is_active
-                "
-                :icon="trashOutline"
-                class="top-delete-icon"
-                @click.stop="$emit('deactivateProduct', product.id)"
-              />
-              <IonIcon
-                v-else-if="
-                  product.uploaded_by_userID === userId &&
-                  showDeleteButton &&
-                  !product.is_active
-                "
-                :icon="refreshOutline"
-                class="top-delete-icon"
-                @click.stop="$emit('activateProduct', product.id)"
-              />
+              <div class="icons-container">
+                <IonIcon
+                  v-if="
+                    product.uploaded_by_userID === userId &&
+                    showDeleteButton &&
+                    !userstore.isProductInStoreProductsCache(product.id) &&
+                    userstore.showAddToStoreIcon
+                  "
+                  :icon="storefrontOutline"
+                  class="action-icon storefront-icon"
+                  @click.stop="$emit('addProductToStore', product)"
+                />
+                <IonIcon
+                  v-else-if="
+                    product.uploaded_by_userID === userId &&
+                    showDeleteButton &&
+                    userstore.isProductInStoreProductsCache(product.id) &&
+                    userstore.showRemoveFromStoreIcon
+                  "
+                  :icon="removeCircleOutline"
+                  class="action-icon remove-icon"
+                  @click.stop="$emit('removeProductFromStore', product.id)"
+                />
+                <IonIcon
+                  v-if="
+                    product.uploaded_by_userID === userId && showDeleteButton
+                  "
+                  :icon="reorderFourOutline"
+                  class="action-icon edit-icon"
+                  @click.stop="$emit('editProduct', product.id)"
+                />
+                <IonIcon
+                  v-if="
+                    product.uploaded_by_userID === userId &&
+                    showDeleteButton &&
+                    product.is_active
+                  "
+                  :icon="trashOutline"
+                  class="action-icon delete-icon"
+                  @click.stop="$emit('deactivateProduct', product.id)"
+                />
+                <IonIcon
+                  v-else-if="
+                    product.uploaded_by_userID === userId &&
+                    showDeleteButton &&
+                    !product.is_active
+                  "
+                  :icon="refreshOutline"
+                  class="action-icon refresh-icon"
+                  @click.stop="$emit('activateProduct', product.id)"
+                />
+                <img
+                  v-if="userstore.showRemoveFromStoreIcon"
+                  :src="stylizedStarPath"
+                  class="action-icon star-icon"
+                  @click.stop="$emit('sellersPick', product.id)"
+                />
+              </div>
             </template>
             <div class="image-container">
               <img
@@ -263,10 +273,12 @@ export default defineComponent({
     "storefrontClicked",
     "addProductToStore",
     "removeProductFromStore",
+    "sellersPick",
   ],
   data() {
     return {
       searchQuery: "",
+      stylizedStarPath: "/assets/icons/stylizedStar.svg", // Path to the custom SVG
     };
   },
   setup(props) {
@@ -375,43 +387,55 @@ p {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.top-storefront-icon {
+.icons-container {
   position: absolute;
-  border: 2px solid white;
-  background-color: rgba(255, 255, 255, 0.7);
-  border-radius: 50%;
   top: 15px;
   right: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1;
+}
+
+.action-icon {
+  border: 2px solid white;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
   cursor: pointer;
+  font-size: 1.3rem;
+  padding: 4px;
+}
+
+.storefront-icon {
   color: #000;
-  font-size: 1.3rem;
-  z-index: 1;
 }
 
-.top-edit-icon {
-  position: absolute;
-  border: 2px solid white;
-  background-color: rgba(255, 255, 255, 0.7);
-  border-radius: 50%;
-  top: 60px;
-  right: 15px;
-  cursor: pointer;
-  color: #087705;
-  font-size: 1.3rem;
-  z-index: 1;
+.remove-icon {
+  color: #000;
 }
 
-.top-delete-icon {
-  position: absolute;
-  border: 2px solid white;
-  background-color: rgba(255, 255, 255, 0.7);
-  border-radius: 50%;
-  top: 105px;
-  right: 15px;
-  cursor: pointer;
+.edit-icon {
+  color: black;
+}
+
+.delete-icon,
+.refresh-icon {
   color: #8b1111;
-  font-size: 1.3rem;
-  z-index: 1;
+}
+
+.star-icon {
+  width: 23px;
+  height: 23px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid white;
+  box-sizing: content-box;
+  transition: transform 0.2s;
+}
+
+.star-icon:hover {
+  transform: scale(1.1);
 }
 
 .image-container {
@@ -473,7 +497,7 @@ p {
 
 .delete-icon {
   cursor: pointer;
-  color: #8b1111;
+  color: black;
   font-size: 1.3rem;
   margin-left: 2px;
 }

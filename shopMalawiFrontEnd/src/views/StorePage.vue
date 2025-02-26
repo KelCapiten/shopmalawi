@@ -68,16 +68,17 @@
       <div class="ProductDisplay" v-if="selectedSegment === 'all'">
         <!-- Featured Products with Collapse/Expand Animation -->
         <transition name="collapse-expand">
-          <div v-if="featuredProducts.length">
+          <div v-if="sellersPicks.length">
             <ProductDisplay
               heading="Recommended By This Seller"
               :showDeleteButton="true"
-              :products="featuredProducts"
+              :products="sellersPicks"
               :userId="authStore.user?.id || 0"
               @deactivateProduct="handleDeactivateProduct"
               @activateProduct="handleActivateProduct"
               @editProduct="handleEditProduct"
               @storefrontClicked="handleStorefrontClicked"
+              @sellersPick="handleSellerPick"
             />
           </div>
         </transition>
@@ -93,6 +94,7 @@
             @editProduct="handleEditProduct"
             @addProductToStore="handleStorefrontClicked"
             @removeProductFromStore="handleRemoveProductFromStore"
+            @sellersPick="handleSellerPick"
           />
         </div>
       </div>
@@ -213,12 +215,14 @@ export default defineComponent({
       await userstore.getAllStoreProducts();
       await userstore.selectStore(0);
       await userstore.fetchSelectedStoreProducts();
-      console.log("mounted cache", userstore.productsCache);
     });
 
-    const featuredProducts = computed(() => {
-      if (userstore.productFilter !== "all") return [];
-      return userstore.products.filter((group: any) => group.id % 2);
+    const sellersPicks = computed(() => {
+      return userstore.products.filter(
+        (group: any) =>
+          group.products &&
+          group.products.some((product: any) => product.isSellerPick)
+      );
     });
 
     const filters = [
@@ -301,6 +305,10 @@ export default defineComponent({
       }
     }
 
+    const handleSellerPick = async (productId: number) => {
+      await userstore.toggleSellerPick(productId);
+    };
+
     watch(
       () => userstore.selectedStore,
       (newStore) => {
@@ -313,7 +321,7 @@ export default defineComponent({
       userstore,
       authStore,
       selectedSegment,
-      featuredProducts,
+      sellersPicks,
       filters,
       enableEdit,
       enableStoryCard,
@@ -332,6 +340,7 @@ export default defineComponent({
       showAddProductPopup,
       closeAddProductPopup,
       handleRemoveProductFromStore,
+      handleSellerPick,
     };
   },
 });

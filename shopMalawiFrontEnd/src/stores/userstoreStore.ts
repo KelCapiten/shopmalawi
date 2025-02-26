@@ -7,6 +7,7 @@ import {
   deleteStore,
   addProductToStore,
   removeProductFromStore,
+  updateIsSellerPickStatus,
 } from "@/services/userstoreService";
 import { getUserInfoService } from "@/services/userService";
 import type { Store, Product } from "@/types";
@@ -70,6 +71,7 @@ export const useUserstoreStore = defineStore("userstoreStore", {
     },
     showAddToStoreIcon(state): boolean {
       const authStore = useAuthStore();
+      if (!state.stores || state.stores.length === 0) return false;
       return (
         !!state.selectedStore &&
         state.selectedStore.id === 0 &&
@@ -79,6 +81,7 @@ export const useUserstoreStore = defineStore("userstoreStore", {
     },
     showRemoveFromStoreIcon(state): boolean {
       const authStore = useAuthStore();
+      if (!state.stores || state.stores.length === 0) return false;
       return (
         !!state.selectedStore &&
         state.selectedStore.id !== 0 &&
@@ -447,6 +450,24 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         }
       }
       return false;
+    },
+    async toggleSellerPick(productId: number) {
+      if (!this.selectedStore) return;
+      let product: any;
+      for (const group of this.products) {
+        group.products?.forEach((p: any) => {
+          if (p.id === productId) product = p;
+        });
+        if (product) break;
+      }
+      if (!product) return;
+      const newStatus = !product.isSellerPick;
+      await updateIsSellerPickStatus(
+        this.selectedStore.id,
+        productId,
+        newStatus
+      );
+      this.updateProductInCache(productId, { isSellerPick: newStatus });
     },
   },
 });

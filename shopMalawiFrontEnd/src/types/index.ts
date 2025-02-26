@@ -20,6 +20,7 @@ export interface Product {
   uploaded_by: string;
   images: Image[];
   created_at: string;
+  isSellerPick: boolean;
 }
 
 export interface Category {

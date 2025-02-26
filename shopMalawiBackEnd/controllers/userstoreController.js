@@ -309,3 +309,32 @@ export const removeProductFromStore = async (req, res) => {
     res.status(500).json({ message: "Failed to remove product from store" });
   }
 };
+
+// NEW ENDPOINT: Update isSellerPick status for a product-store pair
+export const updateIsSellerPickStatus = async (req, res) => {
+  const { store_id, product_id, isSellerPick } = req.body;
+  if (
+    store_id === undefined ||
+    product_id === undefined ||
+    isSellerPick === undefined
+  ) {
+    return res
+      .status(400)
+      .json({ message: "store_id, product_id, and isSellerPick are required" });
+  }
+  try {
+    const [result] = await db.query(
+      "UPDATE product_stores SET isSellerPick = ? WHERE store_id = ? AND product_id = ?",
+      [isSellerPick, store_id, product_id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Product-store pair not found." });
+    }
+    res
+      .status(200)
+      .json({ message: "isSellerPick status updated successfully." });
+  } catch (error) {
+    console.error("Error updating isSellerPick status:", error);
+    res.status(500).json({ message: "Failed to update isSellerPick status." });
+  }
+};

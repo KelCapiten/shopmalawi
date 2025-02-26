@@ -8,6 +8,7 @@ import {
   deleteStore,
   addProductToStore,
   removeProductFromStore,
+  updateIsSellerPickStatus, // imported new endpoint
 } from "../controllers/userstoreController.js";
 import { upload } from "../middleware/uploadUserStoreImagesMiddleware.js";
 
@@ -41,6 +42,13 @@ router.post(
   "/removeProductFromStore",
   authenticateUser,
   removeProductFromStore
+);
+
+//Update isSellerPick status for a product-store pair
+router.post(
+  "/updateIsSellerPickStatus",
+  authenticateUser,
+  updateIsSellerPickStatus
 );
 
 export default router;
