@@ -435,6 +435,7 @@ export const useUserstoreStore = defineStore("userstoreStore", {
       }
     },
     isProductInStoreProductsCache(productId: number): boolean {
+      if (this.selectedStore?.id === 0) return false;
       for (const cacheKey in this.productsCache) {
         // Skip cache keys that include "0"
         if (cacheKey.includes("0")) continue;
@@ -468,6 +469,31 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         newStatus
       );
       this.updateProductInCache(productId, { isSellerPick: newStatus });
+    },
+    getStoresForProduct(productId: number): {
+      inStore: boolean;
+      storeIds: number[];
+    } {
+      const foundStoreIds: number[] = [];
+      for (const cacheKey in this.productsCache) {
+        // Skip default store (id === 0)
+        if (cacheKey.includes("0")) continue;
+        const cachedData = this.productsCache[cacheKey].data;
+        if (
+          cachedData.some(
+            (group: any) =>
+              group.products &&
+              group.products.some((prod: any) => prod.id === productId)
+          )
+        ) {
+          // Extract store id from the cache key formatted as "storeId_ownerId"
+          const storeId = Number(cacheKey.split("_")[0]);
+          if (!foundStoreIds.includes(storeId)) {
+            foundStoreIds.push(storeId);
+          }
+        }
+      }
+      return { inStore: foundStoreIds.length > 0, storeIds: foundStoreIds };
     },
   },
 });

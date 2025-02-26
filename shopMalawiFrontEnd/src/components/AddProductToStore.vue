@@ -17,13 +17,13 @@
       </div>
     </div>
   </div>
-  <!-- Render the StoreSelector below the add-to-store container -->
 
   <div class="store-selector">
     <label class="heading">Add This Product To </label>
     <StoreSelector
       :stores="stores"
       :showAllProductsCard="false"
+      :selectedProductId="product.id"
       :selectedStoreId="selectedStoreId"
       @storeSelected="handleStoreSelected"
     />

@@ -12,9 +12,9 @@
         <h3>All Products</h3>
       </div>
     </div>
-    <!-- Existing Store Cards -->
+    <!-- Existing Store Cards filtered by product association -->
     <div
-      v-for="store in stores"
+      v-for="store in filteredStores"
       :key="store.id"
       :class="['store-tile', { selected: store.id === selectedStoreId }]"
       @click="$emit('storeSelected', store.id)"
@@ -33,7 +33,8 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from "vue";
+import { defineComponent, computed, PropType } from "vue";
+import { useUserstoreStore } from "@/stores/userstoreStore";
 
 export default defineComponent({
   name: "StoreSelector",
@@ -46,12 +47,28 @@ export default defineComponent({
       type: Number as PropType<number | null>,
       default: null,
     },
+    selectedProductId: {
+      type: Number as PropType<number | null>,
+      default: null,
+    },
     showAllProductsCard: {
       type: Boolean,
       default: true,
     },
   },
   emits: ["storeSelected"],
+  computed: {
+    filteredStores(): any[] {
+      if (this.selectedProductId !== null) {
+        const userstoreStore = useUserstoreStore();
+        const { storeIds } = userstoreStore.getStoresForProduct(
+          this.selectedProductId
+        );
+        return this.stores.filter((store: any) => !storeIds.includes(store.id));
+      }
+      return this.stores;
+    },
+  },
 });
 </script>
 
