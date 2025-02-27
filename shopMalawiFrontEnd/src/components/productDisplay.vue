@@ -27,6 +27,32 @@
       </div>
     </div>
 
+    <!-- New "No Products" Message -->
+    <div
+      v-if="!emptyMessageEnabled && !hasProducts && !isLoading && !error"
+      class="no-products-container"
+    >
+      <div class="no-products-card">
+        <IonIcon :icon="archiveOutline" class="no-products-icon" />
+        <!-- Update button click event -->
+        <button class="sell-something-button" @click="navigateToSell">
+          Sell Something 🤑
+        </button>
+        <label class="no-products-heading"> No Products Available </label>
+        <p class="no-products-text">
+          No products to display. Please check back later or explore other
+          categories.
+        </p>
+        <button
+          v-if="emptyMessageButtonText"
+          class="no-products-button"
+          @click="$emit('emptyMessageButtonClicked')"
+        >
+          {{ emptyMessageButtonText }}
+        </button>
+      </div>
+    </div>
+
     <div
       v-if="hasProducts"
       :class="[
@@ -107,7 +133,7 @@
                   @click.stop="$emit('activateProduct', product.id)"
                 />
                 <img
-                  v-if="userstore.showRemoveFromStoreIcon"
+                  v-if="userstore.showRemoveFromStoreIcon && showDeleteButton"
                   :src="stylizedStarPath"
                   class="action-icon star-icon"
                   @click.stop="$emit('sellersPick', product.id)"
@@ -191,6 +217,7 @@ import {
   refreshOutline,
   storefrontOutline,
   removeCircleOutline,
+  archiveOutline,
 } from "ionicons/icons";
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import router from "@/router";
@@ -274,6 +301,7 @@ export default defineComponent({
     "addProductToStore",
     "removeProductFromStore",
     "sellersPick",
+    "sellSomething",
   ],
   data() {
     return {
@@ -295,6 +323,7 @@ export default defineComponent({
       refreshOutline,
       storefrontOutline,
       removeCircleOutline,
+      archiveOutline,
       hasProducts,
       userstore,
     };
@@ -324,6 +353,9 @@ export default defineComponent({
         name: "Store",
         query: { ownerId: uploaded_by_userID },
       });
+    },
+    navigateToSell() {
+      router.push({ name: "sell" });
     },
   },
 });
@@ -670,5 +702,91 @@ p {
 
 .fixed-height::-webkit-scrollbar {
   display: none;
+}
+
+.no-products-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  min-height: 400px;
+}
+
+.no-products-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30px;
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 100%;
+  max-width: 400px;
+}
+
+.no-products-icon {
+  font-size: 3rem;
+  color: #777;
+  margin-bottom: 15px;
+}
+
+.no-products-heading {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.no-products-text {
+  color: #555;
+  font-size: 1rem;
+  margin-bottom: 20px;
+}
+
+.no-products-button {
+  background-color: #007bff; /* Example button color */
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s;
+}
+
+.no-products-button:hover {
+  background-color: #0056b3;
+}
+
+.sell-something-button {
+  background-color: #28a745;
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.3s;
+  animation: levitate 2s infinite ease-in-out;
+}
+
+.sell-something-button:hover {
+  background-color: #218838;
+}
+
+/* Add levitate keyframes */
+@keyframes levitate {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(0);
+  }
 }
 </style>

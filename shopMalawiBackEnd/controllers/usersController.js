@@ -16,16 +16,12 @@ export const registerUser = async (req, res) => {
     phoneNumber,
     locationId,
   } = req.body;
-  if (
-    !username ||
-    !firstName ||
-    !lastName ||
-    !email ||
-    !password ||
-    !phoneNumber
-  ) {
+  // Remove email from required fields; generate dummy if missing
+  if (!username || !firstName || !lastName || !password || !phoneNumber) {
     return res.status(400).json({ error: "All required fields are missing" });
   }
+  // Generate a unique dummy email when not provided: no-email_(firstname)@example.com
+  const finalEmail = email ? email : `no-email_${firstName}@example.com`;
   try {
     const [roles] = await db.query("SELECT id FROM roles WHERE role_name = ?", [
       "customer",
@@ -43,7 +39,7 @@ export const registerUser = async (req, res) => {
         username,
         firstName,
         lastName,
-        email,
+        finalEmail,
         hashedPassword,
         phoneNumber,
         false,
@@ -61,7 +57,7 @@ export const registerUser = async (req, res) => {
       username,
       firstName,
       lastName,
-      email,
+      email: finalEmail,
       phoneNumber,
       verified: false,
       locationId: locationId || null,

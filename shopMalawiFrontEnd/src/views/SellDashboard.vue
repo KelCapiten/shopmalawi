@@ -3,7 +3,8 @@
   <ion-page>
     <AppHeader :showSearchBar="false" :showCategorySegment="false" />
     <ion-content class="ion-padding">
-      <sellProductForm />
+      <!-- Listen for product-saved event -->
+      <sellProductForm @product-saved="handleProductSaved" />
     </ion-content>
     <AppFooter />
   </ion-page>
@@ -21,6 +22,11 @@ export default defineComponent({
     AppHeader,
     AppFooter,
     sellProductForm,
+  },
+  methods: {
+    handleProductSaved() {
+      this.$router.push({ name: "Store" });
+    },
   },
 });
 </script>
