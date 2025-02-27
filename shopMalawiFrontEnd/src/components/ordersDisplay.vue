@@ -410,6 +410,7 @@
                   <ImageUploader
                     class="ImageUploader"
                     label="Refund Screenshot"
+                    :maxImages="1"
                     placeholderMessage="Click to upload"
                     @uploaded-images="
                       (files) =>
