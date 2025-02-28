@@ -167,7 +167,7 @@ export const getBuyOrders = async (req, res) => {
                                         AND img.imageable_type = 'product'
       LEFT JOIN payments p               ON o.id = p.order_id
       LEFT JOIN images pimg              ON p.payment_screenshots_id = pimg.id
-                                        AND pimg.imageable_type = 'payment'
+                                      AND pimg.imageable_type = 'payment'
       LEFT JOIN refunds r                ON o.id = r.order_id
       LEFT JOIN images rimg              ON r.payment_screenshots_id = rimg.id
                                         AND rimg.imageable_type = 'payment'

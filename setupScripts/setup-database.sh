@@ -19,57 +19,11 @@ CREATE TABLE IF NOT EXISTS roles (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- Users Table Schema
-CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL,
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL DEFAULT 'no-email@example.com',
-    password_hash VARCHAR(255) NOT NULL,
-    phone_number VARCHAR(20) NOT NULL,
-    verified BOOLEAN DEFAULT FALSE,
-    location_id INT DEFAULT NULL,
-    role_id INT DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE (username),
-    UNIQUE (email),
-    UNIQUE (phone_number),
-    FOREIGN KEY (role_id) REFERENCES roles(id),
-    FOREIGN KEY (location_id) REFERENCES locations(id)
-) ENGINE=InnoDB;
-
--- User Images Table (Storing Actual Images)
-CREATE TABLE user_images (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    image_path VARCHAR(255) NOT NULL COMMENT 'File path to the stored image',
-    type ENUM('profile', 'ad'),
-    alt_text VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- locations Table
+-- Locations Table
 CREATE TABLE IF NOT EXISTS locations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- User Bank Details Table
-CREATE TABLE IF NOT EXISTS user_bank_details (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    payment_method_id INT NOT NULL,
-    account_number VARCHAR(50) NOT NULL UNIQUE,
-    account_holder_name VARCHAR(100) NOT NULL,
-    branch_code VARCHAR(20),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id) ON DELETE CASCADE  -- New foreign key constraint
 ) ENGINE=InnoDB;
 
 -- Payment Methods Table
@@ -90,6 +44,57 @@ CREATE TABLE IF NOT EXISTS categories (
     FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Users Table
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL DEFAULT 'no-email@example.com',
+    password_hash VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(20) NOT NULL,
+    verified BOOLEAN DEFAULT FALSE,
+    location_id INT DEFAULT NULL,
+    role_id INT DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE (username),
+    UNIQUE (email),
+    UNIQUE (phone_number),
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    FOREIGN KEY (location_id) REFERENCES locations(id),
+    CONSTRAINT chk_email CHECK (email REGEXP '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+    CONSTRAINT chk_phone CHECK (phone_number REGEXP '^\+?[0-9]{10,15}$')
+) ENGINE=InnoDB;
+
+-- User Bank Details Table
+CREATE TABLE IF NOT EXISTS user_bank_details (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    payment_method_id INT NOT NULL,
+    account_number VARCHAR(50) NOT NULL UNIQUE,
+    account_holder_name VARCHAR(100) NOT NULL,
+    branch_code VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Images Table
+CREATE TABLE IF NOT EXISTS images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    imageable_id INT NOT NULL,
+    imageable_type ENUM('product', 'store', 'event', 'user', 'system', 'payment') NOT NULL,
+    image_path VARCHAR(255) NOT NULL,
+    alt_text VARCHAR(255),
+    is_primary BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_imageable (imageable_id, imageable_type),
+    INDEX idx_image_path (image_path),
+    INDEX idx_is_primary (is_primary)
+) ENGINE=InnoDB;
+
 -- Products Table
 CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -97,22 +102,24 @@ CREATE TABLE IF NOT EXISTS products (
     description TEXT NOT NULL,
     price DECIMAL(12, 2) NOT NULL COMMENT 'Amount in Malawian Kwacha (MWK)',
     mark_up_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (mark_up_amount >= 0) COMMENT 'Amount in Malawian Kwacha (MWK)',
-    subcategory_id INT,
-    subcategory_name VARCHAR(100),
-    maincategory_id INT,
-    maincategory_name VARCHAR(100),
+    category_id INT,
     stock_quantity INT NOT NULL DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     uploaded_by INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FULLTEXT (name, description),
-    FOREIGN KEY (subcategory_id) REFERENCES categories(id) ON DELETE SET NULL,
-    FOREIGN KEY (maincategory_id) REFERENCES categories(id) ON DELETE SET NULL,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
     FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX (subcategory_id),
-    INDEX (maincategory_id),
-    INDEX (uploaded_by)
+    INDEX (category_id),
+    INDEX (uploaded_by),
+    INDEX idx_price_active (price, is_active),
+    INDEX idx_name (name),
+    CONSTRAINT chk_price CHECK (price >= 0),
+    CONSTRAINT chk_stock CHECK (stock_quantity >= 0),
+    CONSTRAINT chk_markup CHECK (mark_up_amount <= price),
+    CONSTRAINT chk_quantity CHECK (stock_quantity >= 0),
+    INDEX idx_price_location (price, uploaded_by, is_active)
 ) ENGINE=InnoDB;
 
 -- Inquiries Table
@@ -148,18 +155,6 @@ CREATE TABLE IF NOT EXISTS product_offers (
     INDEX idx_inquiries_id (inquiries_id)
 ) ENGINE=InnoDB;
 
--- Images Table
-CREATE TABLE images (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    imageable_id INT NOT NULL,
-    imageable_type ENUM('product', 'store', 'event', 'user') NOT NULL,
-    image_path VARCHAR(255) NOT NULL,
-    alt_text VARCHAR(255),
-    is_primary BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_imageable (imageable_id, imageable_type)
-) ENGINE=InnoDB;
-
 -- Stores Table
 CREATE TABLE IF NOT EXISTS stores (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -168,8 +163,6 @@ CREATE TABLE IF NOT EXISTS stores (
     description TEXT,
     category_id INT DEFAULT NULL,
     is_active BOOLEAN DEFAULT TRUE,
-    banner_url VARCHAR(255),
-    profile_picture_url VARCHAR(255),
     owner_id INT NOT NULL, 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -191,26 +184,6 @@ CREATE TABLE IF NOT EXISTS product_stores (
     INDEX (store_id)
 ) ENGINE=InnoDB;
 
--- System Images Table 
-CREATE TABLE system_images (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    image_path VARCHAR(255) NOT NULL COMMENT 'File path to the stored image',
-    alt_text VARCHAR(255),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- Payment Screenshots Table 
-CREATE TABLE payment_screenshots (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    image_path VARCHAR(255) NOT NULL COMMENT 'File path to the stored image',
-    alt_text VARCHAR(255),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
 -- Product Attributes Table (for variations like brand, size, color)
 CREATE TABLE IF NOT EXISTS product_attributes (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -221,19 +194,24 @@ CREATE TABLE IF NOT EXISTS product_attributes (
     INDEX (product_id)
 ) ENGINE=InnoDB;
 
--- Orders Table
+-- Orders Table with shipping details
 CREATE TABLE IF NOT EXISTS orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     shipping_address TEXT NOT NULL,
     shipping_town VARCHAR(100) NOT NULL,
+    shipping_status ENUM('pending', 'shipped', 'delivered') DEFAULT 'pending',
     total_amount DECIMAL(10, 2) NOT NULL COMMENT 'Amount in Malawian Kwacha (MWK)',
     status ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX (user_id),
-    INDEX (status)
+    INDEX (status),
+    INDEX (shipping_status),
+    INDEX idx_user_status (user_id, status),
+    CONSTRAINT chk_order_amount CHECK (total_amount > 0),
+    INDEX idx_status_date (status, created_at)
 ) ENGINE=InnoDB;
 
 -- Order Items Table
@@ -246,7 +224,9 @@ CREATE TABLE IF NOT EXISTS order_items (
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
     INDEX (order_id),
-    INDEX (product_id)
+    INDEX (product_id),
+    CONSTRAINT chk_order_quantity CHECK (quantity > 0),
+    CONSTRAINT chk_order_price CHECK (price > 0)
 ) ENGINE=InnoDB;
 
 -- Payments Table
@@ -254,45 +234,46 @@ CREATE TABLE IF NOT EXISTS payments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
     amount DECIMAL(10, 2) NOT NULL COMMENT 'Amount in Malawian Kwacha (MWK)',
-    payment_method_id INT NOT NULL, -- References payment_methods table
-    payment_screenshots_id INT NOT NULL,
-    status ENUM('pending', 'completed', 'failed', 'refund', 'refunding', 'refunded', 'canceled') DEFAULT 'pending',
+    payment_method_id INT NOT NULL,
+    screenshot_image_id INT,
+    status ENUM('pending', 'completed', 'failed', 'cancelled', 'refunding', 'refunded') DEFAULT 'pending',
     transaction_id VARCHAR(255) UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
     FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id),
-    FOREIGN KEY (payment_screenshots_id) REFERENCES payment_screenshots(id) ON DELETE CASCADE,
+    FOREIGN KEY (screenshot_image_id) REFERENCES images(id) ON DELETE SET NULL,
     INDEX (order_id),
-    INDEX (payment_method_id)
+    INDEX (payment_method_id),
+    CONSTRAINT chk_payment_amount CHECK (amount > 0)
 ) ENGINE=InnoDB;
 
--- Refunds Table
-CREATE TABLE IF NOT EXISTS refunds (
+-- Returns/Refunds Table
+CREATE TABLE IF NOT EXISTS returns_refunds (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
+    type ENUM('return', 'refund') NOT NULL,
     reason TEXT,
-    payment_screenshots_id INT NOT NULL,
-    status ENUM('pending', 'approved', 'rejected', 'refunded') DEFAULT 'pending',
+    screenshot_image_id INT,
+    status ENUM('pending', 'approved', 'rejected', 'refunded', 'returned') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    FOREIGN KEY (payment_screenshots_id) REFERENCES payment_screenshots(id) ON DELETE CASCADE,
+    FOREIGN KEY (screenshot_image_id) REFERENCES images(id) ON DELETE SET NULL,
     INDEX (order_id),
-    INDEX (status)
+    INDEX (status),
+    INDEX (type)
 ) ENGINE=InnoDB;
 
--- Shipping Table
-CREATE TABLE IF NOT EXISTS shipping (
+-- Return Items Table
+CREATE TABLE IF NOT EXISTS return_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    order_id INT NOT NULL,
-    address TEXT NOT NULL,
-    town VARCHAR(100) NOT NULL,
-    status ENUM('pending', 'shipped', 'delivered') DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    INDEX (order_id),
-    INDEX (status)
+    return_refund_id INT NOT NULL,
+    order_item_id INT NOT NULL,
+    quantity INT NOT NULL,
+    FOREIGN KEY (return_refund_id) REFERENCES returns_refunds(id) ON DELETE CASCADE,
+    FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE CASCADE,
+    INDEX (return_refund_id),
+    INDEX (order_item_id)
 ) ENGINE=InnoDB;
 
 -- Reviews Table
@@ -300,14 +281,16 @@ CREATE TABLE IF NOT EXISTS reviews (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     product_id INT NOT NULL,
-    rating INT,
+    rating INT NOT NULL,
     comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_product_review (user_id, product_id),
     CHECK (rating BETWEEN 1 AND 5),
     INDEX (user_id),
-    INDEX (product_id)
+    INDEX (product_id),
+    INDEX idx_product_rating (product_id, rating)
 ) ENGINE=InnoDB;
 
 -- Wishlist Items Table
@@ -348,31 +331,6 @@ CREATE TABLE IF NOT EXISTS discount_usages (
     INDEX (user_id)
 ) ENGINE=InnoDB;
 
--- Returns Table
-CREATE TABLE IF NOT EXISTS returns (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    order_id INT NOT NULL,
-    reason TEXT,
-    status ENUM('pending', 'approved', 'rejected', 'refunded') DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    INDEX (order_id),
-    INDEX (status)
-) ENGINE=InnoDB;
-
--- Return Items Table
-CREATE TABLE IF NOT EXISTS return_items (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    return_id INT NOT NULL,
-    order_item_id INT NOT NULL,
-    quantity INT NOT NULL,
-    FOREIGN KEY (return_id) REFERENCES returns(id) ON DELETE CASCADE,
-    FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE CASCADE,
-    INDEX (return_id),
-    INDEX (order_item_id)
-) ENGINE=InnoDB;
-
 -- Events Table
 CREATE TABLE IF NOT EXISTS events (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -385,7 +343,7 @@ CREATE TABLE IF NOT EXISTS events (
     ticket_price DECIMAL(10, 2) DEFAULT 0.00 COMMENT 'Amount in Malawian Kwacha (MWK)',
     organizer_id INT NOT NULL,
     capacity INT,
-    banner_image VARCHAR(255),
+    capacity_remaining INT,
     status ENUM('draft', 'published', 'cancelled', 'completed') DEFAULT 'draft',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -395,7 +353,12 @@ CREATE TABLE IF NOT EXISTS events (
     INDEX (location_id),
     INDEX (organizer_id),
     INDEX (start_date),
-    INDEX (status)
+    INDEX (status),
+    INDEX idx_date_status (start_date, status),
+    CONSTRAINT chk_dates CHECK (end_date >= start_date),
+    CONSTRAINT chk_capacity CHECK (capacity > 0),
+    CONSTRAINT chk_capacity_remaining CHECK (capacity_remaining >= 0 AND capacity_remaining <= capacity),
+    CONSTRAINT chk_ticket_price CHECK (ticket_price >= 0)
 ) ENGINE=InnoDB;
 
 -- Event Categories Table
@@ -445,6 +408,41 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     INDEX (record_id),
     INDEX (performed_by)
 ) ENGINE=InnoDB;
+
+-- Triggers for Event Capacity Management
+DELIMITER //
+
+-- Trigger to set initial capacity_remaining
+CREATE TRIGGER before_event_insert 
+BEFORE INSERT ON events
+FOR EACH ROW
+BEGIN
+    SET NEW.capacity_remaining = NEW.capacity;
+END//
+
+-- Trigger to update capacity_remaining when tickets are issued
+CREATE TRIGGER after_ticket_insert
+AFTER INSERT ON event_tickets
+FOR EACH ROW
+BEGIN
+    UPDATE events 
+    SET capacity_remaining = capacity_remaining - 1
+    WHERE id = NEW.event_id AND capacity_remaining > 0;
+END//
+
+-- Trigger to restore capacity when tickets are cancelled
+CREATE TRIGGER after_ticket_update
+AFTER UPDATE ON event_tickets
+FOR EACH ROW
+BEGIN
+    IF NEW.status = 'cancelled' AND OLD.status != 'cancelled' THEN
+        UPDATE events 
+        SET capacity_remaining = capacity_remaining + 1
+        WHERE id = NEW.event_id AND capacity_remaining < capacity;
+    END IF;
+END//
+
+DELIMITER ;
 
 -- Insert Roles
 INSERT INTO roles (role_name, description) VALUES
