@@ -41,7 +41,7 @@ const inquiriesService = {
   },
   async getProductsByInquiryAndUser(inquiries_id: number) {
     const res = await apiClient.get(
-      "/api/inquiries/getProductsByInquiryAndUser",
+      "/api/inquiries/getProductsAssociatedWithInquiry",
       {
         params: { inquiries_id },
       }

@@ -65,11 +65,11 @@ export const createOrderAndPayment = async (req, res) => {
 
     const file = req.file;
     const modifiedFilePath = `/${file.path.replace(/\\/g, "/")}`;
-    const [screenshotResult] = await connection.query(
-      `INSERT INTO payment_screenshots (name, image_path, alt_text) VALUES (?, ?, ?)`,
-      [file.originalname, modifiedFilePath, "Payment Screenshot"]
+    const [imageResult] = await connection.query(
+      `INSERT INTO images (imageable_id, imageable_type, image_path, alt_text) VALUES (?, 'payment', ?, ?)`,
+      [0, modifiedFilePath, "Payment Screenshot"]
     );
-    const payment_screenshots_id = screenshotResult.insertId;
+    const payment_screenshots_id = imageResult.insertId;
 
     const generatedTransactionId = transaction_id || `TX-${order_id}`;
 
@@ -83,6 +83,11 @@ export const createOrderAndPayment = async (req, res) => {
         generatedTransactionId,
       ]
     );
+
+    await connection.query(`UPDATE images SET imageable_id = ? WHERE id = ?`, [
+      paymentResult.insertId,
+      payment_screenshots_id,
+    ]);
 
     await connection.commit();
 
@@ -141,10 +146,9 @@ export const getBuyOrders = async (req, res) => {
         p.transaction_id,
         p.status           AS payment_status,
 
-        ps.id              AS screenshot_id,
-        ps.name            AS screenshot_name,
-        ps.image_path      AS screenshot_path,
-        ps.alt_text        AS screenshot_alt,
+        pimg.id            AS screenshot_id,
+        pimg.image_path    AS screenshot_path,
+        pimg.alt_text      AS screenshot_alt,
 
         r.id               AS refund_id,
         r.reason           AS refund_reason,
@@ -152,20 +156,21 @@ export const getBuyOrders = async (req, res) => {
         r.created_at       AS refund_created_at,
         r.updated_at       AS refund_updated_at,
 
-        ps2.id             AS refund_screenshot_id,
-        ps2.name           AS refund_screenshot_name,
-        ps2.image_path     AS refund_screenshot_path,
-        ps2.alt_text       AS refund_screenshot_alt
+        rimg.id            AS refund_screenshot_id,
+        rimg.image_path    AS refund_screenshot_path,
+        rimg.alt_text      AS refund_screenshot_alt
 
       FROM orders o
       LEFT JOIN order_items oi           ON o.id = oi.order_id
       LEFT JOIN products pd              ON oi.product_id = pd.id
       LEFT JOIN images img               ON pd.id = img.imageable_id
-                                        AND img.imageable_type = 'products'
+                                        AND img.imageable_type = 'product'
       LEFT JOIN payments p               ON o.id = p.order_id
-      LEFT JOIN payment_screenshots ps   ON p.payment_screenshots_id = ps.id
+      LEFT JOIN images pimg              ON p.payment_screenshots_id = pimg.id
+                                        AND pimg.imageable_type = 'payment'
       LEFT JOIN refunds r                ON o.id = r.order_id
-      LEFT JOIN payment_screenshots ps2  ON r.payment_screenshots_id = ps2.id
+      LEFT JOIN images rimg              ON r.payment_screenshots_id = rimg.id
+                                        AND rimg.imageable_type = 'payment'
     `;
 
     const params = [];
@@ -326,10 +331,9 @@ export const getSellOrders = async (req, res) => {
         p.transaction_id,
         p.status           AS payment_status,
 
-        ps.id              AS screenshot_id,
-        ps.name            AS screenshot_name,
-        ps.image_path      AS screenshot_path,
-        ps.alt_text        AS screenshot_alt,
+        pimg.id            AS screenshot_id,
+        pimg.image_path    AS screenshot_path,
+        pimg.alt_text      AS screenshot_alt,
 
         r.id               AS refund_id,
         r.reason           AS refund_reason,
@@ -337,20 +341,21 @@ export const getSellOrders = async (req, res) => {
         r.created_at       AS refund_created_at,
         r.updated_at       AS refund_updated_at,
 
-        ps2.id             AS refund_screenshot_id,
-        ps2.name           AS refund_screenshot_name,
-        ps2.image_path     AS refund_screenshot_path,
-        ps2.alt_text       AS refund_screenshot_alt
+        rimg.id            AS refund_screenshot_id,
+        rimg.image_path    AS refund_screenshot_path,
+        rimg.alt_text      AS refund_screenshot_alt
 
       FROM orders o
       LEFT JOIN order_items oi           ON o.id = oi.order_id
       LEFT JOIN products pd              ON oi.product_id = pd.id
       LEFT JOIN images img               ON pd.id = img.imageable_id
-                                        AND img.imageable_type = 'products'
+                                        AND img.imageable_type = 'product'
       LEFT JOIN payments p               ON o.id = p.order_id
-      LEFT JOIN payment_screenshots ps   ON p.payment_screenshots_id = ps.id
+      LEFT JOIN images pimg              ON p.payment_screenshots_id = pimg.id
+                                        AND pimg.imageable_type = 'payment'
       LEFT JOIN refunds r                ON o.id = r.order_id
-      LEFT JOIN payment_screenshots ps2  ON r.payment_screenshots_id = ps2.id
+      LEFT JOIN images rimg              ON r.payment_screenshots_id = rimg.id
+                                        AND rimg.imageable_type = 'payment'
       WHERE pd.uploaded_by = ?
       ORDER BY o.created_at DESC, oi.product_id, img.id
     `;
@@ -556,11 +561,11 @@ export const recordRefund = async (req, res) => {
 
     const file = req.file;
     const modifiedFilePath = `/${file.path.replace(/\\/g, "/")}`;
-    const [screenshotResult] = await connection.query(
-      `INSERT INTO payment_screenshots (name, image_path, alt_text) VALUES (?, ?, ?)`,
-      [file.originalname, modifiedFilePath, "Refund Payment Screenshot"]
+    const [imageResult] = await connection.query(
+      `INSERT INTO images (imageable_id, imageable_type, image_path, alt_text) VALUES (?, 'payment', ?, ?)`,
+      [0, modifiedFilePath, "Refund Payment Screenshot"]
     );
-    const payment_screenshots_id = screenshotResult.insertId;
+    const payment_screenshots_id = imageResult.insertId;
 
     // 1) Select the existing record by `order_id`
     //    and use `id` instead of `refund_id`
@@ -589,6 +594,11 @@ export const recordRefund = async (req, res) => {
       );
       refund_id = refundResult.insertId;
     }
+
+    await connection.query(`UPDATE images SET imageable_id = ? WHERE id = ?`, [
+      refund_id,
+      payment_screenshots_id,
+    ]);
 
     await connection.commit();
 

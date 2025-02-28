@@ -8,7 +8,7 @@ import {
   deleteInquiry,
   associateInquiryToProduct,
   disassociateInquiryFromProduct,
-  getProductsByInquiryAndUser,
+  getProductsAssociatedWithInquiry,
 } from "../controllers/inquiriesController.js";
 import { upload } from "../middleware/uploadMiddleware.js";
 
@@ -51,6 +51,9 @@ router.delete(
 router.get("/getInquiries", getInquiries);
 
 // Fetch all Products Associated with an Inquiry and User
-router.get("/getProductsByInquiryAndUser", getProductsByInquiryAndUser);
+router.get(
+  "/getProductsAssociatedWithInquiry",
+  getProductsAssociatedWithInquiry
+);
 
 export default router;

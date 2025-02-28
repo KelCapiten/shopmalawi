@@ -152,12 +152,13 @@ CREATE TABLE IF NOT EXISTS product_offers (
 CREATE TABLE images (
     id INT AUTO_INCREMENT PRIMARY KEY,
     imageable_id INT NOT NULL,
-    imageable_type VARCHAR(50) NOT NULL,
+    imageable_type ENUM('product', 'store', 'event', 'user') NOT NULL,
     image_path VARCHAR(255) NOT NULL,
     alt_text VARCHAR(255),
     is_primary BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-); ENGINE=InnoDB;
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_imageable (imageable_id, imageable_type)
+) ENGINE=InnoDB;
 
 -- Stores Table
 CREATE TABLE IF NOT EXISTS stores (
@@ -372,6 +373,63 @@ CREATE TABLE IF NOT EXISTS return_items (
     INDEX (order_item_id)
 ) ENGINE=InnoDB;
 
+-- Events Table
+CREATE TABLE IF NOT EXISTS events (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    venue VARCHAR(255) NOT NULL,
+    location_id INT NOT NULL,
+    start_date DATETIME NOT NULL,
+    end_date DATETIME NOT NULL,
+    ticket_price DECIMAL(10, 2) DEFAULT 0.00 COMMENT 'Amount in Malawian Kwacha (MWK)',
+    organizer_id INT NOT NULL,
+    capacity INT,
+    banner_image VARCHAR(255),
+    status ENUM('draft', 'published', 'cancelled', 'completed') DEFAULT 'draft',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE RESTRICT,
+    FOREIGN KEY (organizer_id) REFERENCES users(id) ON DELETE CASCADE,
+    FULLTEXT (title, description, venue),
+    INDEX (location_id),
+    INDEX (organizer_id),
+    INDEX (start_date),
+    INDEX (status)
+) ENGINE=InnoDB;
+
+-- Event Categories Table
+CREATE TABLE IF NOT EXISTS event_categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- Event-Category Relationship Table
+CREATE TABLE IF NOT EXISTS event_category_relations (
+    event_id INT NOT NULL,
+    category_id INT NOT NULL,
+    PRIMARY KEY (event_id, category_id),
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES event_categories(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Event Tickets Table
+CREATE TABLE IF NOT EXISTS event_tickets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    event_id INT NOT NULL,
+    user_id INT NOT NULL,
+    ticket_code VARCHAR(50) UNIQUE NOT NULL,
+    status ENUM('valid', 'used', 'cancelled') DEFAULT 'valid',
+    purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE RESTRICT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX (event_id),
+    INDEX (user_id),
+    INDEX (ticket_code)
+) ENGINE=InnoDB;
+
 -- Audit Logs Table
 CREATE TABLE IF NOT EXISTS audit_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -400,6 +458,14 @@ INSERT INTO categories (name, description) VALUES
 ('Clothing', 'Men and Women clothing for all ages'),
 ('Produce', 'Agricultural products across Malawi'),
 ('Services', 'Need something done? Find it here');
+
+-- Insert Event Categories
+INSERT INTO event_categories (name, description) VALUES
+('Music', 'Music concerts and performances'),
+('Business', 'Business conferences and networking events'),
+('Sports', 'Sporting events and competitions'),
+('Cultural', 'Cultural festivals and celebrations'),
+('Education', 'Educational workshops and seminars');
 
 -- Store the IDs of the main categories in variables
 SET @electronics_id = (SELECT id FROM categories WHERE name = 'Electronics');

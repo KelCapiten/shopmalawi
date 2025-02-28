@@ -58,7 +58,7 @@ export const addInquiry = async (req, res) => {
       return connection.query(
         `INSERT INTO images 
            (imageable_id, imageable_type, image_path, is_primary)
-           VALUES (?, 'product_inquiries', ?, ?);`,
+           VALUES (?, 'inquiry', ?, ?);`,
         [inquiryId, modifiedFilePath, index === 0]
       );
     });
@@ -103,7 +103,7 @@ export const getInquiries = async (req, res) => {
         LEFT JOIN categories c ON i.category_id = c.id
         LEFT JOIN users u ON i.uploaded_by = u.id
         LEFT JOIN locations l ON i.location_id = l.id
-        LEFT JOIN images img ON img.imageable_id = i.id AND img.imageable_type = 'product_inquiries'
+        LEFT JOIN images img ON img.imageable_id = i.id AND img.imageable_type = 'inquiry'
         ORDER BY i.created_at DESC
       `;
 
@@ -202,7 +202,7 @@ export const updateInquiry = async (req, res) => {
     if (req.files && req.files.length > 0) {
       // Delete existing images for this inquiry
       await connection.query(
-        `DELETE FROM images WHERE imageable_id = ? AND imageable_type = 'product_inquiries'`,
+        `DELETE FROM images WHERE imageable_id = ? AND imageable_type = 'inquiry'`,
         [id]
       );
 
@@ -212,7 +212,7 @@ export const updateInquiry = async (req, res) => {
         return connection.query(
           `INSERT INTO images 
              (imageable_id, imageable_type, image_path, is_primary)
-             VALUES (?, 'product_inquiries', ?, ?)`,
+             VALUES (?, 'inquiry', ?, ?)`,
           [id, modifiedFilePath, index === 0]
         );
       });
@@ -240,7 +240,7 @@ export const deleteInquiry = async (req, res) => {
 
     // Delete associated images
     await connection.query(
-      `DELETE FROM images WHERE imageable_id = ? AND imageable_type = 'product_inquiries'`,
+      `DELETE FROM images WHERE imageable_id = ? AND imageable_type = 'inquiry'`,
       [id]
     );
 
@@ -349,104 +349,8 @@ export const disassociateInquiryFromProduct = async (req, res) => {
   }
 };
 
-// endpoint to get Products Associated with an Inquiry and User
-export const getProductsByInquiryAndUserBU = async (req, res) => {
-  const { inquiries_id, uploaded_by } = req.query;
-
-  if (!inquiries_id || !uploaded_by) {
-    return res.status(400).json({
-      message: "inquiries_id and uploaded_by are required parameters.",
-    });
-  }
-
-  const connection = await db.getConnection();
-  try {
-    const query = `
-      SELECT 
-        p.id, 
-        p.name, 
-        p.description, 
-        p.price, 
-        p.mark_up_amount, 
-        p.subcategory_id, 
-        p.subcategory_name, 
-        p.maincategory_id, 
-        p.maincategory_name, 
-        p.stock_quantity, 
-        p.uploaded_by AS uploaded_by_userID, 
-        u.username AS uploaded_by,
-        i.image_path, 
-        i.alt_text, 
-        i.is_primary,
-        po.created_at AS association_date
-      FROM product_offers po
-      JOIN products p ON po.product_id = p.id
-      LEFT JOIN images i ON p.id = i.imageable_id AND i.imageable_type = 'products'
-      LEFT JOIN users u ON p.uploaded_by = u.id
-      WHERE po.inquiries_id = ? AND p.uploaded_by = ?
-      ORDER BY po.created_at ASC
-    `;
-
-    const [products] = await connection.query(query, [
-      parseInt(inquiries_id, 10),
-      parseInt(uploaded_by, 10),
-    ]);
-
-    const productsWithImages = products.reduce((acc, product) => {
-      const existingProduct = acc.find((p) => p.id === product.id);
-      if (existingProduct) {
-        if (product.image_path) {
-          existingProduct.images.push({
-            image_path: product.image_path,
-            alt_text: product.alt_text,
-            is_primary: product.is_primary,
-          });
-        }
-      } else {
-        acc.push({
-          id: product.id,
-          name: product.name,
-          description: product.description,
-          price: product.price,
-          mark_up_amount: product.mark_up_amount,
-          subcategory_id: product.subcategory_id,
-          subcategory_name: product.subcategory_name,
-          maincategory_id: product.maincategory_id,
-          maincategory_name: product.maincategory_name,
-          stock_quantity: product.stock_quantity,
-          uploaded_by_userID: product.uploaded_by_userID,
-          uploaded_by: product.uploaded_by,
-          association_date: product.association_date,
-          images: product.image_path
-            ? [
-                {
-                  image_path: product.image_path,
-                  alt_text: product.alt_text,
-                  is_primary: product.is_primary,
-                },
-              ]
-            : [],
-        });
-      }
-      return acc;
-    }, []);
-
-    const groupedByOffers = {
-      subcategory_name: "Offers",
-      products: productsWithImages,
-    };
-
-    res.status(200).json([groupedByOffers]);
-  } catch (error) {
-    console.error("Error fetching products by inquiry and user:", error);
-    res.status(500).json({ message: "Failed to fetch products." });
-  } finally {
-    connection.release();
-  }
-};
-
 // endpoint to get Products Associated with an Inquiry
-export const getProductsByInquiryAndUser = async (req, res) => {
+export const getProductsAssociatedWithInquiry = async (req, res) => {
   const { inquiries_id } = req.query;
 
   if (!inquiries_id) {
@@ -458,7 +362,7 @@ export const getProductsByInquiryAndUser = async (req, res) => {
   const connection = await db.getConnection();
   try {
     const query = `
-      SELECT 
+      SELECT DISTINCT
         p.id, 
         p.name, 
         p.description, 
@@ -477,10 +381,10 @@ export const getProductsByInquiryAndUser = async (req, res) => {
         po.created_at AS association_date
       FROM product_offers po
       JOIN products p ON po.product_id = p.id
-      LEFT JOIN images i ON p.id = i.imageable_id AND i.imageable_type = 'products'
       LEFT JOIN users u ON p.uploaded_by = u.id
+      LEFT JOIN images i ON p.id = i.imageable_id AND i.imageable_type = 'product'
       WHERE po.inquiries_id = ?
-      ORDER BY po.created_at ASC
+      ORDER BY po.created_at ASC, i.is_primary DESC
     `;
 
     const [products] = await connection.query(query, [

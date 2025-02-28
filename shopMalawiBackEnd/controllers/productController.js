@@ -74,7 +74,7 @@ export const addProduct = async (req, res) => {
       return connection.query(
         `INSERT INTO images 
          (imageable_id, imageable_type, image_path, alt_text, is_primary) 
-         VALUES (?, 'products', ?, ?, ?)`,
+         VALUES (?, 'product', ?, ?, ?)`,
         [productId, modifiedFilePath, null, index === 0]
       );
     });
@@ -109,8 +109,6 @@ export const getAllProducts = async (req, res) => {
       store_id, // new query parameter
     } = req.query;
 
-    // Base SQL query: note we join on `images i` for product images.
-    // When store_id is provided, we add an INNER JOIN on product_stores.
     let query = `
       SELECT 
         p.id, 
@@ -135,7 +133,7 @@ export const getAllProducts = async (req, res) => {
         ON p.uploaded_by = u.id
       LEFT JOIN images i
         ON i.imageable_id = p.id
-        AND i.imageable_type = 'products'
+        AND i.imageable_type = 'product'
     `;
 
     // If store_id is provided, join with product_stores to filter by store.
@@ -386,7 +384,7 @@ export const getProductById = async (req, res) => {
         ON p.uploaded_by = u.id
       LEFT JOIN images i
         ON i.imageable_id = p.id
-        AND i.imageable_type = 'products'
+        AND i.imageable_type = 'product'
       WHERE p.id = ?
     `;
 
@@ -397,10 +395,6 @@ export const getProductById = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    /**
-     * We only have ONE product ID, but possibly multiple image rows.
-     * We'll combine them into a single object with a .images array.
-     */
     const product = rows.reduce((acc, row) => {
       // If acc is still null, initialize with the product data
       if (!acc) {
@@ -593,7 +587,7 @@ export const editProduct = async (req, res) => {
 
     if (req.files && req.files.length > 0) {
       await connection.query(
-        "DELETE FROM images WHERE imageable_id = ? AND imageable_type = 'products'",
+        "DELETE FROM images WHERE imageable_id = ? AND imageable_type = 'product'",
         [id]
       );
 
@@ -602,7 +596,7 @@ export const editProduct = async (req, res) => {
         return connection.query(
           `INSERT INTO images 
            (imageable_id, imageable_type, image_path, alt_text, is_primary)
-           VALUES (?, 'products', ?, ?, ?)`,
+           VALUES (?, 'product', ?, ?, ?)`,
           [id, modifiedFilePath, null, index === 0]
         );
       });

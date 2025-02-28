@@ -31,7 +31,7 @@ export const searchProducts = async (req, res) => {
         pi.is_primary,
         p.created_at
       FROM products p
-      LEFT JOIN images pi ON p.id = pi.imageable_id AND pi.imageable_type = 'products'
+      LEFT JOIN images pi ON p.id = pi.imageable_id AND pi.imageable_type = 'product'
       LEFT JOIN users u ON p.uploaded_by = u.id
       WHERE 1=1
     `;
@@ -201,7 +201,7 @@ export const searchProductsExcludingOffered = async (req, res) => {
       FROM 
         products p
       LEFT JOIN 
-        images pi ON p.id = pi.imageable_id AND pi.imageable_type = 'products'
+        images pi ON p.id = pi.imageable_id AND pi.imageable_type = 'product'
       LEFT JOIN 
         users u ON p.uploaded_by = u.id
       WHERE 

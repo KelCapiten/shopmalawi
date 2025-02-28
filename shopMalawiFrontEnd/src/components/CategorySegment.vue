@@ -1,9 +1,10 @@
+//src/components/CategorySegment.vue
 <template>
   <!-- Top-level categories -->
   <ion-toolbar>
     <ion-segment scrollable class="category-segment">
       <ion-segment-button
-        v-for="category in categories"
+        v-for="category in combinedCategories"
         :key="category.id"
         :value="category.id"
         @click="selectCategory(category.id)"
@@ -33,21 +34,26 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useCategories } from "@/composables/useCategories";
 
-// Composable for categories
 const { categories, fetchCategories } = useCategories();
 
-// Track which top-level category is expanded
 const visibleCategoryId = ref<number | null>(null);
 
-// When component mounts, fetch all categories
 onMounted(() => {
   fetchCategories();
 });
 
-// A computed list of subcategories for the expanded category
+const staticCategories = [
+  { id: -1, name: "Events", subcategories: [] },
+  { id: -2, name: "Chill-Spots", subcategories: [] },
+];
+
+const combinedCategories = computed(() => {
+  return [...staticCategories, ...categories.value];
+});
+
 const subcategories = computed(() => {
   if (visibleCategoryId.value !== null) {
-    const selectedCategory = categories.value.find(
+    const selectedCategory = combinedCategories.value.find(
       (cat) => cat.id === visibleCategoryId.value
     );
     return selectedCategory?.subcategories || [];
@@ -55,18 +61,15 @@ const subcategories = computed(() => {
   return [];
 });
 
-// Toggle top-level category expansion
 function toggleCategory(categoryId: number) {
   visibleCategoryId.value =
     visibleCategoryId.value === categoryId ? null : categoryId;
 }
 
-// Router instance for navigation
 const router = useRouter();
 
 function selectCategory(categoryId: number) {
   toggleCategory(categoryId);
-
   router.push({
     name: "shop",
     query: { categoryId },
