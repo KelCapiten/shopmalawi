@@ -74,6 +74,7 @@
           <div class="form-group custom-selector">
             <label>Store Category (optional)</label>
             <div
+              ref="selectorRef"
               class="selector-display"
               tabindex="0"
               @click="toggleCategoryDropdown"
@@ -89,16 +90,22 @@
                 <path d="M7 10l5 5 5-5z" />
               </svg>
             </div>
-            <div v-if="showCategoryList" class="selector-dropdown">
+            <Teleport to="body">
               <div
-                class="selector-option"
-                v-for="cat in categories"
-                :key="cat.id"
-                @click="selectCategory(cat)"
+                v-if="showCategoryList"
+                class="selector-dropdown"
+                :style="dropdownStyle"
               >
-                {{ cat.name }}
+                <div
+                  class="selector-option"
+                  v-for="cat in categories"
+                  :key="cat.id"
+                  @click="selectCategory(cat)"
+                >
+                  {{ cat.name }}
+                </div>
               </div>
-            </div>
+            </Teleport>
           </div>
         </div>
 
@@ -123,6 +130,7 @@ import {
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import { useCategories } from "@/composables/useCategories";
 import ImageUploader from "@/components/ImageUploader.vue";
+import { Teleport } from "vue";
 
 export default defineComponent({
   name: "StoreRegistrationForm",
@@ -149,6 +157,8 @@ export default defineComponent({
     const formContainerRef = ref<HTMLElement | null>(null);
     const showCategoryList = ref(false);
     const descriptionTextarea = ref<HTMLTextAreaElement | null>(null);
+    const selectorRef = ref<HTMLElement | null>(null);
+    const dropdownStyle = ref({});
 
     const handleBannerImages = (selectedFiles: File[]) => {
       userstore.uploadedBannerImages = selectedFiles;
@@ -184,9 +194,13 @@ export default defineComponent({
         adjustHeight();
       });
       window.addEventListener("click", handleClickOutside);
+      window.addEventListener("scroll", updateDropdownPosition);
+      window.addEventListener("resize", updateDropdownPosition);
     });
     onUnmounted(() => {
       window.removeEventListener("click", handleClickOutside);
+      window.removeEventListener("scroll", updateDropdownPosition);
+      window.removeEventListener("resize", updateDropdownPosition);
       // Clear the form
       userstore.newStoreForm = {
         brand_name: "",
@@ -198,7 +212,10 @@ export default defineComponent({
 
     const handleClickOutside = (event: MouseEvent) => {
       if (!(event.target instanceof Element)) return;
-      if (!event.target.closest(".custom-selector")) {
+      if (
+        !selectorRef.value?.contains(event.target) &&
+        !event.target.closest(".selector-dropdown")
+      ) {
         showCategoryList.value = false;
       }
     };
@@ -211,8 +228,26 @@ export default defineComponent({
       return cat ? cat.name : "Select a category";
     });
 
+    const updateDropdownPosition = () => {
+      if (!selectorRef.value) return;
+
+      const rect = selectorRef.value.getBoundingClientRect();
+      dropdownStyle.value = {
+        position: "fixed",
+        top: `${rect.bottom + window.scrollY + 4}px`,
+        left: `${rect.left + window.scrollX}px`,
+        width: `${rect.width}px`,
+        zIndex: "10000",
+      };
+    };
+
     const toggleCategoryDropdown = () => {
       showCategoryList.value = !showCategoryList.value;
+      if (showCategoryList.value) {
+        nextTick(() => {
+          updateDropdownPosition();
+        });
+      }
     };
 
     const selectCategory = (cat: { id: number; name: string }) => {
@@ -252,6 +287,8 @@ export default defineComponent({
       adjustHeight,
       handleBannerImages,
       handleProfileImages,
+      selectorRef,
+      dropdownStyle,
     };
   },
 });
@@ -388,17 +425,12 @@ button[type="button"]:hover {
   height: 16px;
 }
 .selector-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%;
-  margin-top: 4px;
   background: #fff;
   border: 1px solid #ccc;
   border-radius: 4px;
   max-height: 180px;
   overflow-y: auto;
-  z-index: 1001;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 .selector-option {
   padding: 8px;

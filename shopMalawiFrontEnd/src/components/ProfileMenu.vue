@@ -7,17 +7,17 @@
     </div>
     <div v-if="showDropdown" class="dropdown-menu">
       <div
-        v-if="userstore.selectedStore && userstore.selectedStore.id !== 0"
+        v-if="userstore.stores.length > 0"
         class="dropdown-item"
         @click="addStore"
       >
-        Add Another Store
+        Add another store
       </div>
-      <div class="dropdown-item" @click="goToSell">Add Product</div>
+      <div class="dropdown-item" @click="goToSell">Add a product</div>
       <div class="dropdown-item" @click="openPaymentMethods">
-        Your Payment Details
+        Your payment details
       </div>
-      <div class="dropdown-item" @click="goToOrders">Your Orders</div>
+      <div class="dropdown-item" @click="goToOrders">Your orders</div>
       <div class="dropdown-item" @click="goToProfile">Profile</div>
       <div class="dropdown-item" @click="logout">Logout</div>
     </div>
