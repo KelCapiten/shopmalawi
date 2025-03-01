@@ -2,6 +2,7 @@
 <template>
   <div class="account-details-container">
     <div class="settings-content">
+      <h4 class="settings-title">Manage Your Payment Methods</h4>
       <div v-if="loading" class="loading-message">
         Loading account details...
       </div>
@@ -56,55 +57,88 @@
         class="account-form"
         :class="{ cleared: formCleared }"
       >
-        <IonSelect
-          v-model="form.payment_method_id"
-          placeholder="Select Bank"
-          required
-          :class="{ invalid: validationErrors.payment_method_id }"
-        >
-          <IonSelectOption
-            v-for="bank in banks"
-            :key="bank.id"
-            :value="bank.id"
-          >
-            {{ bank.name }}
-          </IonSelectOption>
-        </IonSelect>
-        <span v-if="validationErrors.payment_method_id" class="error-text">
-          {{ validationErrors.payment_method_id }}
-        </span>
-        <input
-          v-model="form.account_number"
-          type="text"
-          placeholder="Account Number"
-          required
-          :class="{ invalid: validationErrors.account_number }"
-        />
-        <span v-if="validationErrors.account_number" class="error-text">
-          {{ validationErrors.account_number }}
-        </span>
-        <input
-          v-model="form.account_holder_name"
-          type="text"
-          placeholder="Account Holder Name"
-          required
-          :class="{ invalid: validationErrors.account_holder_name }"
-        />
-        <span v-if="validationErrors.account_holder_name" class="error-text">
-          {{ validationErrors.account_holder_name }}
-        </span>
-        <input
-          v-model="form.branch_code"
-          type="text"
-          placeholder="Branch Code (optional)"
-        />
-        <div class="form-actions">
+        <h4>Add A Payment Method</h4>
+
+        <div class="form-group custom-selector">
+          <label>Payment Method</label>
+          <div class="selector-display" tabindex="0">
+            <IonSelect
+              v-model="form.payment_method_id"
+              placeholder="Select Payment Method"
+              required
+              :class="{ invalid: validationErrors.payment_method_id }"
+            >
+              <IonSelectOption
+                v-for="bank in banks"
+                :key="bank.id"
+                :value="bank.id"
+              >
+                {{ bank.name }}
+              </IonSelectOption>
+            </IonSelect>
+          </div>
+          <span v-if="validationErrors.payment_method_id" class="error-text">
+            {{ validationErrors.payment_method_id }}
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label>Account Number</label>
+          <input
+            v-model="form.account_number"
+            type="text"
+            placeholder="Enter account number"
+            required
+            :class="{ invalid: validationErrors.account_number }"
+          />
+          <span v-if="validationErrors.account_number" class="error-text">
+            {{ validationErrors.account_number }}
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label>Account Holder Name</label>
+          <input
+            v-model="form.account_holder_name"
+            type="text"
+            placeholder="Enter account holder name"
+            required
+            :class="{ invalid: validationErrors.account_holder_name }"
+          />
+          <span v-if="validationErrors.account_holder_name" class="error-text">
+            {{ validationErrors.account_holder_name }}
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label>Branch Code</label>
+          <input
+            v-model="form.branch_code"
+            type="text"
+            placeholder="Enter branch code (optional)"
+          />
+        </div>
+
+        <div class="button-group">
           <button type="submit">
-            {{ editingRecord ? "Update" : "Add" }} Account Details
+            {{ editingRecord ? "Update" : "Add" }} Account
           </button>
-          <button type="button" @click="cancelEditing">Cancel</button>
+          <button type="button" class="cancel-btn" @click="cancelEditing">
+            Cancel
+          </button>
         </div>
       </form>
+    </div>
+
+    <div v-if="showDeleteConfirmation" class="confirmation-popup-overlay">
+      <div class="confirmation-popup">
+        <h5>Delete Payment Method</h5>
+        <p>Are you sure you want to delete this payment method?</p>
+        <div class="confirmation-buttons">
+          <button class="cancel-button" @click="cancelDelete">Cancel</button>
+          <button class="confirm-button" @click="confirmDelete">Delete</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -321,17 +355,37 @@ export default defineComponent({
       }
     };
 
-    const handleDelete = async (id: number) => {
-      try {
-        await removeBankDetails(id);
-        await loadBankDetails();
-        if (editingRecord.value && editingRecord.value.id === id) {
-          editingRecord.value = null;
-          resetForm();
+    const showDeleteConfirmation = ref(false);
+    const deleteId = ref<number | null>(null);
+
+    const handleDelete = (id: number) => {
+      deleteId.value = id;
+      showDeleteConfirmation.value = true;
+    };
+
+    const cancelDelete = () => {
+      showDeleteConfirmation.value = false;
+      deleteId.value = null;
+    };
+
+    const confirmDelete = async () => {
+      if (deleteId.value) {
+        try {
+          await removeBankDetails(deleteId.value);
+          await loadBankDetails();
+          if (
+            editingRecord.value &&
+            editingRecord.value.id === deleteId.value
+          ) {
+            editingRecord.value = null;
+            resetForm();
+          }
+        } catch (err) {
+          console.error("Error deleting account details:", err);
         }
-      } catch (err) {
-        console.error("Error deleting account details:", err);
       }
+      showDeleteConfirmation.value = false;
+      deleteId.value = null;
     };
 
     return {
@@ -348,6 +402,9 @@ export default defineComponent({
       validationErrors,
       formCleared,
       getBackgroundStyle,
+      showDeleteConfirmation,
+      cancelDelete,
+      confirmDelete,
     };
   },
 });
@@ -358,19 +415,89 @@ export default defineComponent({
   margin: 1rem 0;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
+
 .settings-content {
   margin-top: 0.5rem;
   background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.settings-title {
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #333;
+}
+
+.form-group input,
+.selector-display {
+  width: 100%;
+  padding: 8px;
   border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 1rem;
+  border-radius: 4px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
-.loading-message,
-.error-message {
-  text-align: center;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
+
+.form-group input:focus,
+.selector-display:focus {
+  border-color: orange;
+  box-shadow: 0 0 5px rgba(255, 165, 0, 0.5);
+  outline: none;
 }
+
+.button-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.button-group button {
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+.button-group button[type="submit"] {
+  background-color: #498115;
+  color: #fff;
+}
+
+.button-group button[type="submit"]:hover {
+  background-color: #3a6611;
+}
+
+.cancel-btn {
+  background-color: #ccc;
+  color: #333;
+}
+
+.cancel-btn:hover {
+  background-color: #bbb;
+}
+
+.error-text {
+  color: #e74c3c;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
 .account-list {
   margin-bottom: 1rem;
 }
@@ -453,5 +580,78 @@ export default defineComponent({
   font-size: 0.8rem;
   margin-top: -0.5rem;
   margin-bottom: 0.5rem;
+}
+ion-select {
+  width: 100%;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  --placeholder-color: #666;
+  --placeholder-opacity: 1;
+}
+
+.confirmation-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.confirmation-popup {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.confirmation-popup h5 {
+  margin: 0 0 1rem 0;
+  color: #333;
+}
+
+.confirmation-popup p {
+  margin: 0 0 1.5rem 0;
+  color: #666;
+  line-height: 1.4;
+}
+
+.confirmation-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.cancel-button,
+.confirm-button {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.cancel-button {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.confirm-button {
+  background: #dc3545;
+  color: white;
+}
+
+.cancel-button:hover {
+  background: #e4e4e4;
+}
+
+.confirm-button:hover {
+  background: #c82333;
 }
 </style>
