@@ -31,7 +31,7 @@
         <p>{{ placeholderMessage }}</p>
       </div>
       <div v-else class="image-preview" :class="{ circular: circular }">
-        <div class="preview-controls">
+        <div v-if="showControls" class="preview-controls">
           <button class="control-button" @click="clearImages">
             <ion-icon :icon="trashOutline" class="control-icon"></ion-icon>
           </button>
@@ -181,6 +181,10 @@ export default defineComponent({
     maxHeight: {
       type: Number,
       default: 1600,
+    },
+    showControls: {
+      type: Boolean,
+      default: true,
     },
   },
   emits: ["uploaded-images"],
@@ -538,7 +542,6 @@ export default defineComponent({
   background-color: #f9f9f9;
   position: relative;
   overflow: hidden;
-  padding: 20px;
 }
 .upload-area.circular {
   border-radius: 50%;
@@ -574,18 +577,12 @@ export default defineComponent({
   margin-bottom: 5px;
 }
 .image-preview {
-  width: 100%;
   border-radius: 8px;
   overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
-}
-.image-preview.circular {
-  border-radius: 50%;
-  width: 250px;
-  height: 250px;
 }
 .preview-controls {
   position: absolute;
@@ -626,11 +623,12 @@ export default defineComponent({
 .uploaded-image {
   max-width: 100%;
   max-height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   border-radius: 8px;
 }
 .uploaded-image.circular {
-  border-radius: 50%;
+  height: 110px;
+  width: 110px;
   object-fit: cover;
 }
 .swiper-pagination-bullet {

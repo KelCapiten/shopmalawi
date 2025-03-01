@@ -105,12 +105,19 @@ export const useUserstoreStore = defineStore("userstoreStore", {
           ? this.stores[0]
           : this.getDefaultStore(ownerId);
         if (this.selectedStore && this.selectedStore.id !== 0) {
-          this.selectedStore.banner_url = updateImageUrl(
-            this.selectedStore.banner_url || ""
-          );
-          this.selectedStore.profile_picture_url = updateImageUrl(
-            this.selectedStore.profile_picture_url || ""
-          );
+          // Only update URLs if they're not the default assets
+          if (this.selectedStore.banner_url !== "/assets/blendBoard.jpg") {
+            this.selectedStore.banner_url = updateImageUrl(
+              this.selectedStore.banner_url || ""
+            );
+          }
+          if (
+            this.selectedStore.profile_picture_url !== "/assets/theLogo.jpg"
+          ) {
+            this.selectedStore.profile_picture_url = updateImageUrl(
+              this.selectedStore.profile_picture_url || ""
+            );
+          }
         }
       } catch (error) {
         console.error("Error fetching store:", error);
@@ -457,7 +464,6 @@ export const useUserstoreStore = defineStore("userstoreStore", {
     } {
       const foundStoreIds: number[] = [];
       for (const cacheKey in this.productsCache) {
-        // Skip default store (id === 0)
         if (cacheKey.includes("0")) continue;
         const cachedData = this.productsCache[cacheKey].data;
         if (

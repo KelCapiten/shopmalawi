@@ -162,6 +162,8 @@ CREATE TABLE IF NOT EXISTS product_offers (
 CREATE TABLE IF NOT EXISTS stores (
     id INT AUTO_INCREMENT PRIMARY KEY,
     brand_name VARCHAR(255) NOT NULL,
+    banner_url VARCHAR(255),
+    profile_picture_url VARCHAR(255),
     tagline VARCHAR(255),
     description TEXT,
     category_id INT DEFAULT NULL,

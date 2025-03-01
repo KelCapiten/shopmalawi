@@ -23,7 +23,8 @@
         </div>
         <div class="circle-uploader">
           <ImageUploader
-            placeholderMessage="Update store profile image."
+            placeholderMessage=""
+            :showControls="false"
             :showLabel="false"
             :circular="true"
             @uploaded-images="handleProfileImages"
@@ -186,6 +187,13 @@ export default defineComponent({
     });
     onUnmounted(() => {
       window.removeEventListener("click", handleClickOutside);
+      // Clear the form
+      userstore.newStoreForm = {
+        brand_name: "",
+        tagline: "",
+        description: "",
+        category_id: 0,
+      };
     });
 
     const handleClickOutside = (event: MouseEvent) => {

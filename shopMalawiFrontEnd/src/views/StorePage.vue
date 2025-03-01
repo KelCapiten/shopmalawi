@@ -33,7 +33,7 @@
 
       <!-- Store Selector -->
       <StoreSelector
-        v-if="userstore.stores.length > 1"
+        v-if="userstore.stores.length > 0"
         :stores="userstore.stores"
         :selectedStoreId="selectedStoreId"
         @storeSelected="handleStoreSelected"
