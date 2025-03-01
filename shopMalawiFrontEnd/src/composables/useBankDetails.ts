@@ -6,7 +6,7 @@ import {
   updateBankDetails,
   deleteBankDetails,
 } from "@/services/bankDetailsService";
-import type { BankDetails } from "@/types";
+import type { BankDetails } from "@/types/types";
 
 export interface AddBankDetailsPayload {
   user_id: number;

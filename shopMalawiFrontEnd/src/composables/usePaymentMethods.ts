@@ -5,7 +5,7 @@ import {
   updatePaymentMethod,
   deletePaymentMethod,
 } from "@/services/paymentMethodsService";
-import type { PaymentMethod } from "@/types";
+import type { PaymentMethod } from "@/types/types";
 
 export default function usePaymentMethods() {
   const paymentMethods = ref<PaymentMethod[]>([]);

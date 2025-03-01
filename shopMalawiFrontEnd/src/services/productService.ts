@@ -1,6 +1,6 @@
 // src/services/productService.ts
 import apiClient from "./apiClient";
-import type { Product } from "@/types";
+import type { Product, AddProductResponse } from "@/types/types";
 
 interface AddProductPayload {
   name: string;
@@ -31,11 +31,6 @@ interface GetProductsFilters {
   store_id?: number;
 }
 
-interface AddProductResponse {
-  message: string;
-  productId: number;
-}
-
 export async function addProduct(
   payload: AddProductPayload
 ): Promise<AddProductResponse> {
@@ -45,17 +40,18 @@ export async function addProduct(
   formData.append("price", payload.price.toString());
   formData.append("category_id", payload.category_id.toString());
   formData.append("stockQuantity", payload.stockQuantity.toString());
-  payload.images.forEach((file) => {
-    formData.append("images", file);
+
+  payload.images.forEach((image: File) => {
+    formData.append("images", image);
   });
-  const response = await apiClient.post<AddProductResponse>(
-    "/api/products/addProduct",
-    formData,
-    {
-      headers: { "Content-Type": "multipart/form-data" },
-    }
-  );
-  return response.data;
+
+  const response = await apiClient.post("/api/products/addProduct", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return response.data as AddProductResponse;
 }
 
 export async function editProduct(

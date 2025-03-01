@@ -4,7 +4,7 @@ import {
   searchProducts,
   searchProductsExcludingOffered,
 } from "@/services/searchService";
-import type { Product } from "@/types";
+import type { Product } from "@/types/types";
 
 export function useSearch() {
   const results = ref<ProductGroup[]>([]);

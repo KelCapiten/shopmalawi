@@ -6,7 +6,7 @@ import {
   updateCategory,
   deleteCategory,
 } from "@/services/categoryService";
-import type { Category } from "@/types";
+import type { Category } from "@/types/types";
 
 export function useCategories() {
   const categories = ref<Category[]>([]);

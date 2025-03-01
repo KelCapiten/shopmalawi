@@ -1,6 +1,6 @@
 // src/composables/useProducts.ts
 import { ref } from "vue";
-import type { Product } from "@/types";
+import type { Product, AddProductResponse } from "@/types/types";
 import {
   addProduct as serviceAddProduct,
   getAllProducts as serviceGetAllProducts,
@@ -42,7 +42,7 @@ export function useProducts() {
     category_id: number;
     stockQuantity: number;
     images: File[];
-  }) {
+  }): Promise<AddProductResponse> {
     loading.value = true;
     error.value = null;
     try {

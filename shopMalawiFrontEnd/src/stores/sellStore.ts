@@ -93,7 +93,7 @@ export const useProductsStore = defineStore("productsStore", {
           this.successMessage = "Item updated successfully!";
         } else {
           // Add new mode
-          await addNewProduct({
+          const response = await addNewProduct({
             name: this.product.name,
             description: this.product.description,
             price: this.product.price,
@@ -101,10 +101,13 @@ export const useProductsStore = defineStore("productsStore", {
             stockQuantity: this.product.stockQuantity,
             images: this.product.images,
           });
+
+          if (response.product) {
+            const userstore = useUserstoreStore();
+            userstore.addProductToCache(response.product);
+          }
           this.successMessage = "Item added successfully!";
         }
-        const userstore = useUserstoreStore();
-        await userstore.fetchSelectedStoreProducts();
         this.clearProduct();
       } catch (error: any) {
         if (

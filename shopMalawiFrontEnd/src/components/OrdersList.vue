@@ -21,6 +21,15 @@
       </button>
     </div>
 
+    <!-- Tab Description -->
+    <div class="tab-description">
+      <p v-if="selectedTab === 'buy'">These are items you have bought</p>
+      <p v-if="selectedTab === 'sell'">
+        These are items buyers have paid for. Please process and send the items
+        as soon as possible.
+      </p>
+    </div>
+
     <!-- Filters Bar -->
     <div class="filter-bar">
       <button
@@ -254,6 +263,15 @@ export default defineComponent({
 .tab-button.active {
   background: #007aff;
   color: #fff;
+}
+.tab-description {
+  text-align: center;
+  padding: 0.75rem;
+  color: #666;
+  font-size: 0.9rem;
+  background: #f9f9f9;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 0.5rem;
 }
 .filter-bar {
   display: flex;

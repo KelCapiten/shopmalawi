@@ -207,7 +207,7 @@
 
 <script lang="ts">
 import { defineComponent, PropType, computed } from "vue";
-import { Product } from "@/types";
+import { Product } from "@/types/types";
 import { getPrimaryImage } from "@/utils/utilities";
 import { IonIcon } from "@ionic/vue";
 import {

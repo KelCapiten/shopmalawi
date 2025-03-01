@@ -1,6 +1,6 @@
 //src\services\searchService.ts
 import apiClient from "./apiClient";
-import type { Product } from "@/types";
+import type { Product } from "@/types/types";
 
 export interface SearchProductsParams {
   query?: string;

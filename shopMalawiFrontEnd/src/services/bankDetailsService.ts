@@ -1,5 +1,5 @@
 import apiClient from "./apiClient";
-import type { BankDetails } from "@/types";
+import type { BankDetails } from "@/types/types";
 
 export const getBankDetails = async (
   userId?: number,

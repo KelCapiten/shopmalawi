@@ -10,8 +10,9 @@ export interface Product {
   name: string;
   description: string;
   price: number;
-  subcategory_id: number;
-  subcategory_name: string;
+  mark_up_amount: number;
+  category_id: number;
+  category_name: string;
   maincategory_id: number | null;
   maincategory_name: string | null;
   stock_quantity: number;
@@ -20,7 +21,13 @@ export interface Product {
   uploaded_by: string;
   images: Image[];
   created_at: string;
-  isSellerPick: boolean;
+  isSellerPick?: boolean;
+}
+
+export interface AddProductResponse {
+  message: string;
+  productId: number;
+  product: Product;
 }
 
 export interface Category {

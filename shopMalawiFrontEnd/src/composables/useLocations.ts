@@ -1,6 +1,6 @@
 //\src\composables\useLocations.ts
 import { ref } from "vue";
-import type { Location } from "@/types";
+import type { Location } from "@/types/types";
 import {
   getLocations,
   addLocation,

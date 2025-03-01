@@ -44,7 +44,7 @@
           <IonLabel>All Products</IonLabel>
         </IonSegmentButton>
         <IonSegmentButton value="orders">
-          <IonLabel>Orders</IonLabel>
+          <IonLabel>Your Orders</IonLabel>
         </IonSegmentButton>
       </IonSegment>
 
@@ -99,9 +99,7 @@
         </div>
       </div>
       <div class="ProductDisplay" v-else-if="selectedSegment === 'orders'">
-        <div class="orders-placeholder">
-          <p>No orders to display.</p>
-        </div>
+        <OrdersList />
       </div>
     </IonContent>
 
@@ -161,6 +159,7 @@ import ProductDisplay from "@/components/productDisplay.vue";
 import sellProductForm from "@/components/sellProductForm.vue";
 import StoreSelector from "@/components/storeSelector.vue";
 import AddProductToStore from "@/components/AddProductToStore.vue";
+import OrdersList from "@/components/OrdersList.vue";
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useProductsStore } from "@/stores/sellStore";
@@ -179,6 +178,7 @@ export default defineComponent({
     sellProductForm,
     StoreSelector,
     AddProductToStore,
+    OrdersList,
   },
   setup() {
     const userstore = useUserstoreStore();

@@ -1,7 +1,7 @@
 //\src\composables\useInquiry.ts
 import { ref } from "vue";
 import inquiriesService from "@/services/inquiriesService";
-import type { Product } from "@/types";
+import type { Product } from "@/types/types";
 
 export function useInquiries() {
   const inquiries = ref<any[]>([]);

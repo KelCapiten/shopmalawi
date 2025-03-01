@@ -10,7 +10,7 @@ import {
   updateIsSellerPickStatus,
 } from "@/services/userstoreService";
 import { getUserInfoService } from "@/services/userService";
-import type { Store, Product } from "@/types";
+import type { Store, Product } from "@/types/types";
 import { useAuthStore } from "@/stores/authStore";
 import { useProducts } from "@/composables/useProducts";
 import { useProductsStore } from "@/stores/sellStore";
@@ -167,25 +167,6 @@ export const useUserstoreStore = defineStore("userstoreStore", {
     async getAllStoreProducts() {
       for (const store of this.stores) {
         await this.fetchSelectedStoreProducts(store.id);
-      }
-    },
-    async createStore(newStore: Store) {
-      try {
-        const result = await addStore(newStore);
-        this.stores.push(result);
-        this.selectedStore = result;
-        if (this.selectedStore && this.selectedStore.id !== 0) {
-          this.selectedStore.banner_url = updateImageUrl(
-            this.selectedStore.banner_url || ""
-          );
-          this.selectedStore.profile_picture_url = updateImageUrl(
-            this.selectedStore.profile_picture_url || ""
-          );
-        }
-        return result;
-      } catch (error) {
-        console.error("Error creating store:", error);
-        throw error;
       }
     },
     async registerStore() {
@@ -494,6 +475,44 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         }
       }
       return { inStore: foundStoreIds.length > 0, storeIds: foundStoreIds };
+    },
+    addProductToCache(newProduct: any) {
+      // If the product has a category, try to find its group
+      if (newProduct.category_id) {
+        const existingGroup = this.products.find(
+          (group: any) => group.id === newProduct.category_id
+        );
+
+        if (existingGroup) {
+          // Add to existing category group
+          existingGroup.products.unshift(newProduct);
+        } else {
+          // Create new category group
+          this.products.unshift({
+            id: newProduct.category_id,
+            name: newProduct.category_name,
+            products: [newProduct],
+          });
+        }
+      } else {
+        // If no grouping, just add to root level (assuming products is an array)
+        if (!Array.isArray(this.products)) {
+          this.products = [newProduct];
+        } else {
+          this.products.unshift(newProduct);
+        }
+      }
+
+      // Update the products cache
+      const authStore = useAuthStore();
+      const effectiveOwnerId = this.ownerIdFromQuery ?? authStore.user?.id;
+      const cacheKey = `${this.selectedStore?.id}_${effectiveOwnerId}`;
+      if (this.productsCache[cacheKey]) {
+        this.productsCache[cacheKey] = {
+          data: this.products,
+          fetchedAt: Date.now(),
+        };
+      }
     },
   },
 });

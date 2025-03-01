@@ -67,9 +67,53 @@ export const addProduct = async (req, res) => {
     });
 
     await Promise.all(imageQueries);
+
+    // Fetch the complete product details after creation
+    const [productDetails] = await connection.query(
+      `SELECT 
+        p.id, 
+        p.name, 
+        p.description, 
+        p.price,
+        p.mark_up_amount,
+        p.category_id,
+        c.name as category_name,
+        mc.name as maincategory_name,
+        mc.id as maincategory_id,
+        p.stock_quantity, 
+        p.is_active,
+        p.uploaded_by AS uploaded_by_userID, 
+        u.username AS uploaded_by,
+        p.created_at
+      FROM products p
+      LEFT JOIN users u ON p.uploaded_by = u.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN categories mc ON c.parent_id = mc.id
+      WHERE p.id = ?`,
+      [productId]
+    );
+
+    // Fetch the product images
+    const [productImages] = await connection.query(
+      `SELECT image_path, alt_text, is_primary 
+       FROM images 
+       WHERE imageable_id = ? AND imageable_type = 'product'`,
+      [productId]
+    );
+
     await connection.commit();
 
-    res.status(201).json({ message: "Product added successfully", productId });
+    // Combine product details with images
+    const completeProduct = {
+      ...productDetails[0],
+      images: productImages,
+    };
+
+    res.status(201).json({
+      message: "Product added successfully",
+      productId,
+      product: completeProduct,
+    });
   } catch (error) {
     console.error("Error adding product:", error);
     await connection.rollback();

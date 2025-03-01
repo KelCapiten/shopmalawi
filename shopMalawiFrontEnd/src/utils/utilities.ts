@@ -1,7 +1,7 @@
 // src/utils/utilities.ts
 import router from "@/router";
-import { Product } from "@/types";
-import type { Category } from "@/types";
+import { Product } from "@/types/types";
+import type { Category } from "@/types/types";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:1994";

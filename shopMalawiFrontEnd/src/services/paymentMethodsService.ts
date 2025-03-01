@@ -1,6 +1,6 @@
 // src/services/paymentMethodsService.ts
 import apiClient from "./apiClient";
-import type { PaymentMethod } from "@/types";
+import type { PaymentMethod } from "@/types/types";
 
 // Get all or user-specific payment methods
 export async function getPaymentMethods(

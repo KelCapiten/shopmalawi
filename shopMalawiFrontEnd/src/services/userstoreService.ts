@@ -1,6 +1,6 @@
 // src/services/userstoreService.ts
 import apiClient from "./apiClient";
-import type { Store } from "@/types";
+import type { Store } from "@/types/types";
 
 export async function getStore(query?: {
   id?: number;
