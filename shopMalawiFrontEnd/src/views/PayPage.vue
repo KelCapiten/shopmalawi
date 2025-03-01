@@ -89,7 +89,7 @@ import { loadProductFromSessionStorage } from "@/utils/utilities";
 import PaymentMethod from "@/components/PaymentMethod.vue";
 import productDisplay from "@/components/productDisplay.vue";
 import BuySegment from "@/components/BuySegment.vue";
-import { useOrdersStore } from "@/stores/ordersStore";
+import { useOrdersStore } from "@/stores/buyStore";
 import useOrderPayment from "@/composables/useOrderPayment";
 
 export default defineComponent({

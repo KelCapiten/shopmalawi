@@ -1,10 +1,38 @@
-//\controllers\inquiriesController.js
+//controllers/inquiriesController.js
 import db from "../config/db.js";
+import sanitizeHtml from "sanitize-html";
+
+const sanitizeOptions = {
+  allowedTags: [
+    "p",
+    "strong",
+    "em",
+    "u",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "ul",
+    "ol",
+    "li",
+    "blockquote",
+    "a",
+    "br",
+  ],
+  allowedAttributes: {
+    a: ["href", "target"],
+  },
+};
 
 // endpoint to add product inquiry
 export const addInquiry = async (req, res) => {
-  const { name, description, category_id, stock_quantity, location_id } =
+  let { name, description, category_id, stock_quantity, location_id } =
     req.body;
+
+  // Sanitize the description HTML
+  description = sanitizeHtml(description, sanitizeOptions);
 
   // Validate required fields
   if (
@@ -150,14 +178,11 @@ export const getInquiries = async (req, res) => {
 // endpoint to update product inquiry (with image update)
 export const updateInquiry = async (req, res) => {
   const { id } = req.params;
-  const {
-    name,
-    description,
-    category_id,
-    stock_quantity,
-    location_id,
-    status,
-  } = req.body;
+  let { name, description, category_id, stock_quantity, location_id, status } =
+    req.body;
+
+  // Sanitize the description HTML
+  description = sanitizeHtml(description, sanitizeOptions);
 
   // Validate required fields
   if (
@@ -367,11 +392,11 @@ export const getProductsAssociatedWithInquiry = async (req, res) => {
         p.name, 
         p.description, 
         p.price, 
-        p.mark_up_amount, 
-        p.subcategory_id, 
-        p.subcategory_name, 
-        p.maincategory_id, 
-        p.maincategory_name, 
+        p.mark_up_amount,
+        p.category_id,
+        c.name AS category_name,
+        pc.id AS maincategory_id,
+        pc.name AS maincategory_name,
         p.stock_quantity, 
         p.uploaded_by AS uploaded_by_userID, 
         u.username AS uploaded_by,
@@ -381,6 +406,8 @@ export const getProductsAssociatedWithInquiry = async (req, res) => {
         po.created_at AS association_date
       FROM product_offers po
       JOIN products p ON po.product_id = p.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN categories pc ON c.parent_id = pc.id
       LEFT JOIN users u ON p.uploaded_by = u.id
       LEFT JOIN images i ON p.id = i.imageable_id AND i.imageable_type = 'product'
       WHERE po.inquiries_id = ?
@@ -408,8 +435,8 @@ export const getProductsAssociatedWithInquiry = async (req, res) => {
           description: product.description,
           price: product.price,
           mark_up_amount: product.mark_up_amount,
-          subcategory_id: product.subcategory_id,
-          subcategory_name: product.subcategory_name,
+          category_id: product.category_id,
+          category_name: product.category_name,
           maincategory_id: product.maincategory_id,
           maincategory_name: product.maincategory_name,
           stock_quantity: product.stock_quantity,

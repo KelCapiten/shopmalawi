@@ -4,7 +4,7 @@ import { useProducts } from "@/composables/useProducts";
 import { useUserstoreStore } from "@/stores/userstoreStore";
 
 interface NewProduct {
-  id?: number; // Optional: if present, we're editing
+  id?: number;
   name: string;
   description: string;
   price: number;
@@ -104,7 +104,7 @@ export const useProductsStore = defineStore("productsStore", {
           this.successMessage = "Item added successfully!";
         }
         const userstore = useUserstoreStore();
-        await userstore.fetchUserProducts();
+        await userstore.fetchSelectedStoreProducts();
         this.clearProduct();
       } catch (error: any) {
         if (

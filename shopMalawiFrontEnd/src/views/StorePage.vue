@@ -163,7 +163,7 @@ import StoreSelector from "@/components/storeSelector.vue";
 import AddProductToStore from "@/components/AddProductToStore.vue";
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import { useAuthStore } from "@/stores/authStore";
-import { useProductsStore } from "@/stores/productsStore";
+import { useProductsStore } from "@/stores/sellStore";
 import {
   appsOutline,
   checkmarkCircleOutline,

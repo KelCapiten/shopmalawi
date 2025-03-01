@@ -19,10 +19,10 @@ export const searchProducts = async (req, res) => {
         p.description,
         p.price,
         p.mark_up_amount,
-        p.subcategory_id,
-        p.subcategory_name,
-        p.maincategory_id,
-        p.maincategory_name,
+        p.category_id,
+        c.name as category_name,
+        mc.name as maincategory_name,
+        mc.id as maincategory_id,
         p.stock_quantity,
         p.uploaded_by AS uploaded_by_userID,
         u.username AS uploaded_by,
@@ -31,6 +31,8 @@ export const searchProducts = async (req, res) => {
         pi.is_primary,
         p.created_at
       FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN categories mc ON c.parent_id = mc.id
       LEFT JOIN images pi ON p.id = pi.imageable_id AND pi.imageable_type = 'product'
       LEFT JOIN users u ON p.uploaded_by = u.id
       WHERE 1=1
@@ -49,7 +51,7 @@ export const searchProducts = async (req, res) => {
           .status(400)
           .json({ message: "Invalid subcategory_id parameter" });
       }
-      sql += " AND p.subcategory_id = ? ";
+      sql += " AND c.id = ? ";
       params.push(parsedSubcategoryId);
     }
 
@@ -60,19 +62,8 @@ export const searchProducts = async (req, res) => {
           .status(400)
           .json({ message: "Invalid maincategory_id parameter" });
       }
-      const [subRows] = await db.query(
-        `SELECT id FROM categories WHERE parent_id = ?`,
-        [parsedMaincategoryId]
-      );
-      const subcategoryIds = subRows.map((row) => row.id);
-      if (subcategoryIds.length > 0) {
-        const placeholders = subcategoryIds.map(() => "?").join(",");
-        sql += ` AND (p.maincategory_id = ? OR p.subcategory_id IN (${placeholders})) `;
-        params.push(parsedMaincategoryId, ...subcategoryIds);
-      } else {
-        sql += " AND p.maincategory_id = ? ";
-        params.push(parsedMaincategoryId);
-      }
+      sql += " AND (c.id = ? OR c.parent_id = ?) ";
+      params.push(parsedMaincategoryId, parsedMaincategoryId);
     }
 
     if (priceRange) {
@@ -125,8 +116,8 @@ export const searchProducts = async (req, res) => {
           description: product.description,
           price: product.price,
           mark_up_amount: product.mark_up_amount,
-          subcategory_id: product.subcategory_id,
-          subcategory_name: product.subcategory_name,
+          category_id: product.category_id,
+          category_name: product.category_name,
           maincategory_id: product.maincategory_id,
           maincategory_name: product.maincategory_name,
           stock_quantity: product.stock_quantity,
@@ -187,10 +178,10 @@ export const searchProductsExcludingOffered = async (req, res) => {
         p.description, 
         p.price, 
         p.mark_up_amount, 
-        p.subcategory_id, 
-        p.subcategory_name, 
-        p.maincategory_id, 
-        p.maincategory_name, 
+        p.category_id,
+        c.name as category_name,
+        mc.name as maincategory_name,
+        mc.id as maincategory_id,
         p.stock_quantity, 
         p.uploaded_by AS uploaded_by_userID, 
         u.username AS uploaded_by,
@@ -200,6 +191,8 @@ export const searchProductsExcludingOffered = async (req, res) => {
         p.created_at
       FROM 
         products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN categories mc ON c.parent_id = mc.id
       LEFT JOIN 
         images pi ON p.id = pi.imageable_id AND pi.imageable_type = 'product'
       LEFT JOIN 
@@ -225,7 +218,7 @@ export const searchProductsExcludingOffered = async (req, res) => {
           .status(400)
           .json({ message: "Invalid subcategory_id parameter" });
       }
-      sql += " AND p.subcategory_id = ? ";
+      sql += " AND c.id = ? ";
       params.push(parsedSubcategoryId);
     }
 
@@ -237,20 +230,8 @@ export const searchProductsExcludingOffered = async (req, res) => {
           .json({ message: "Invalid maincategory_id parameter" });
       }
 
-      const [subRows] = await db.query(
-        `SELECT id FROM categories WHERE parent_id = ?`,
-        [parsedMaincategoryId]
-      );
-      const subcategoryIds = subRows.map((row) => row.id);
-
-      if (subcategoryIds.length > 0) {
-        const placeholders = subcategoryIds.map(() => "?").join(",");
-        sql += ` AND (p.maincategory_id = ? OR p.subcategory_id IN (${placeholders})) `;
-        params.push(parsedMaincategoryId, ...subcategoryIds);
-      } else {
-        sql += " AND p.maincategory_id = ? ";
-        params.push(parsedMaincategoryId);
-      }
+      sql += " AND (c.id = ? OR c.parent_id = ?) ";
+      params.push(parsedMaincategoryId, parsedMaincategoryId);
     }
 
     if (priceRange) {
@@ -303,8 +284,8 @@ export const searchProductsExcludingOffered = async (req, res) => {
           description: product.description,
           price: product.price,
           mark_up_amount: product.mark_up_amount,
-          subcategory_id: product.subcategory_id,
-          subcategory_name: product.subcategory_name,
+          category_id: product.category_id,
+          category_name: product.category_name,
           maincategory_id: product.maincategory_id,
           maincategory_name: product.maincategory_name,
           stock_quantity: product.stock_quantity,
@@ -325,11 +306,11 @@ export const searchProductsExcludingOffered = async (req, res) => {
     }, []);
 
     const groupedBySubcategory = productsWithImages.reduce((acc, product) => {
-      const subcategoryId = product.subcategory_id;
+      const subcategoryId = product.category_id;
       if (!acc[subcategoryId]) {
         acc[subcategoryId] = {
           id: subcategoryId,
-          name: product.subcategory_name,
+          name: product.category_name,
           products: [],
         };
       }

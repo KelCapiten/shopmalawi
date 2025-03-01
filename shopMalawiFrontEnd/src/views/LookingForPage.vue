@@ -34,7 +34,7 @@
       <!-- sellProductForm Overlay (new and independent) -->
       <transition name="slideForm">
         <div v-if="showSellProductForm" ref="sellFormRef">
-          <sellProductForm
+          <x
             submitButtonText="Add Product"
             headingLabel="Add New Product"
             @product-saved="handleSellProductFormSubmit"
@@ -53,15 +53,14 @@
 
       <SavingOverlay :isSaving="isSending || loading" />
 
-      <!-- FAB toggles the InputForm overlay -->
       <ion-fab
         vertical="bottom"
         horizontal="end"
         slot="fixed"
         v-if="!showSellProductForm"
       >
-        <ion-fab-button @click="toggleForm" color="light">
-          <ion-icon :icon="showForm ? close : search" />
+        <ion-fab-button @click="toggleForm" color="light" class="large-fab">
+          <ion-icon :icon="showForm ? closeCircle : addCircle" />
         </ion-fab-button>
       </ion-fab>
 
@@ -82,7 +81,7 @@ import { debounce, navigateToProductPage } from "@/utils/utilities";
 import { useAuthStore } from "@/stores/authStore";
 import { useInquiries } from "@/composables/useInquiry";
 import { useSearch } from "@/composables/useSearch";
-import { close, search } from "ionicons/icons";
+import { addCircle, closeCircle } from "ionicons/icons";
 import appHeader from "@/components/appHeader.vue";
 import appFooter from "@/components/appFooter.vue";
 import InquiriesList from "@/components/InquiriesList.vue";
@@ -299,8 +298,8 @@ export default defineComponent({
       showSellProductForm,
       formRef,
       sellFormRef,
-      close,
-      search,
+      addCircle,
+      closeCircle,
       loading,
       error,
       showToast,
@@ -326,8 +325,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.appHeader {
-}
 .slideForm-enter-active,
 .slideForm-leave-active {
   transition: all 0.3s ease;
@@ -341,5 +338,15 @@ export default defineComponent({
 .slideForm-leave-from {
   opacity: 1;
   transform: translateY(0);
+}
+
+.large-fab {
+  --ion-icon-size: 2.5rem !important; /* Increased to 2.5rem (40px) and added !important */
+}
+
+.large-fab ion-icon {
+  font-size: 2.5rem !important; /* Adding direct icon sizing as backup */
+  width: 2.5rem !important;
+  height: 2.5rem !important;
 }
 </style>

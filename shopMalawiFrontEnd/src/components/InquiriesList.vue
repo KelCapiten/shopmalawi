@@ -43,7 +43,7 @@
 
         <p>
           <strong>I'm looking for,</strong> {{ inquiry.name }}.
-          {{ inquiry.description }}
+          <div v-html="inquiry.description" class="inquiry-description"></div>
         </p>
 
         <div class="inquiry-date" v-if="inquiry.created_at">
@@ -159,7 +159,7 @@ export default defineComponent({
     "removeOfferedProduct",
     "editInquiry",
     "deleteInquiry",
-    "addProduct", // Added event for when the empty message button is clicked.
+    "addProduct",
   ],
   data() {
     return {
@@ -358,5 +358,33 @@ export default defineComponent({
 
 .sell-button:hover {
   background-color: #0056b3;
+}
+
+/* Add styles for rich text content */
+:deep(.inquiry-description) {
+  p {
+    margin: 0.5em 0;
+  }
+  
+  ul, ol {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+  }
+  
+  a {
+    color: #007bff;
+    text-decoration: none;
+  }
+  
+  a:hover {
+    text-decoration: underline;
+  }
+  
+  blockquote {
+    border-left: 3px solid #ccc;
+    margin: 0.5em 0;
+    padding-left: 1em;
+    color: #666;
+  }
 }
 </style>

@@ -13,7 +13,7 @@ import { getUserInfoService } from "@/services/userService";
 import type { Store, Product } from "@/types";
 import { useAuthStore } from "@/stores/authStore";
 import { useProducts } from "@/composables/useProducts";
-import { useProductsStore } from "@/stores/productsStore";
+import { useProductsStore } from "@/stores/sellStore";
 import { updateImageUrl } from "@/utils/utilities";
 
 export const useUserstoreStore = defineStore("userstoreStore", {

@@ -6,10 +6,13 @@ DB_PASSWORD="root"
 
 # SQL commands to create the database and tables
 SQL_COMMANDS="
--- Drop the database if it exists and create a new one
+-- Drop the database if exists and create a new one
 DROP DATABASE IF EXISTS \`$DB_NAME\`;
 CREATE DATABASE \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE \`$DB_NAME\`;
+
+-- Set database character set and collation
+ALTER DATABASE \`$DB_NAME\` CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- Roles Table for Role-Based Access Control (RBAC)
 CREATE TABLE IF NOT EXISTS roles (
@@ -85,7 +88,7 @@ CREATE TABLE IF NOT EXISTS user_bank_details (
 CREATE TABLE IF NOT EXISTS images (
     id INT AUTO_INCREMENT PRIMARY KEY,
     imageable_id INT NOT NULL,
-    imageable_type ENUM('product', 'store', 'event', 'user', 'system', 'payment') NOT NULL,
+    imageable_type ENUM('product', 'store', 'event', 'user', 'system', 'payment', 'inquiry') NOT NULL,
     image_path VARCHAR(255) NOT NULL,
     alt_text VARCHAR(255),
     is_primary BOOLEAN DEFAULT FALSE,
@@ -95,7 +98,7 @@ CREATE TABLE IF NOT EXISTS images (
     INDEX idx_is_primary (is_primary)
 ) ENGINE=InnoDB;
 
--- Products Table
+-- Products Table 
 CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -120,7 +123,7 @@ CREATE TABLE IF NOT EXISTS products (
     CONSTRAINT chk_markup CHECK (mark_up_amount <= price),
     CONSTRAINT chk_quantity CHECK (stock_quantity >= 0),
     INDEX idx_price_location (price, uploaded_by, is_active)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Inquiries Table
 CREATE TABLE IF NOT EXISTS product_inquiries (
@@ -245,6 +248,21 @@ CREATE TABLE IF NOT EXISTS payments (
     INDEX (order_id),
     INDEX (payment_method_id),
     CONSTRAINT chk_payment_amount CHECK (amount > 0)
+) ENGINE=InnoDB;
+
+-- Refunds Table
+CREATE TABLE IF NOT EXISTS refunds (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    reason TEXT,
+    payment_screenshots_id INT,
+    status ENUM('pending', 'approved', 'rejected', 'refunded', 'returned') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (payment_screenshots_id) REFERENCES images(id) ON DELETE SET NULL,
+    INDEX (order_id),
+    INDEX (status)
 ) ENGINE=InnoDB;
 
 -- Returns/Refunds Table
@@ -451,11 +469,44 @@ INSERT INTO roles (role_name, description) VALUES
 
 -- Insert Main Categories
 INSERT INTO categories (name, description) VALUES
-('Electronics', 'Electronic gadgets and devices'),
-('Cars', 'Wide range of books and literature'),
-('Clothing', 'Men and Women clothing for all ages'),
-('Produce', 'Agricultural products across Malawi'),
-('Services', 'Need something done? Find it here');
+('Electronics', 'Latest technology products including smartphones, laptops, TVs, cameras, and electronic accessories. Find both new and used electronics from trusted sellers across Malawi.'),
+('Cars', 'Comprehensive automotive marketplace featuring new imports, used vehicles, spare parts, and car accessories. Connect with dealerships and private sellers nationwide.'),
+('Fashion', 'Trendy clothing, footwear, and accessories for men, women, and children. Discover both local and international fashion brands, traditional wear, and custom-made clothing.'),
+('Produce', 'Fresh agricultural products directly from Malawian farmers including fruits, vegetables, grains, and livestock. Supporting local agriculture and connecting farmers to buyers.'),
+('Services', 'Professional services marketplace connecting skilled providers with clients. Find everything from home repairs to business consulting, education, and personal care services.'),
+('Home Accessories & Decor', 'Beautiful home furnishings, decorative items, kitchenware, and furniture. Transform your living space with both modern and traditional Malawian home accessories.'),
+('Food & Beverages', 'Extensive selection of local and imported food products, beverages, and specialty ingredients. From fresh produce to packaged goods, find everything for your kitchen and dining needs.'),
+('Rent/Hire', 'Comprehensive rental marketplace for properties, vehicles, equipment, and event supplies. Flexible short-term and long-term rental solutions for both personal and business needs.'),
+('Forex/Crypto', 'Secure platform for currency exchange services, cryptocurrency trading, and digital payment solutions. Connect with licensed forex dealers and cryptocurrency traders.');
+
+-- Store the IDs of the main categories in variables
+SET @electronics_id = (SELECT id FROM categories WHERE name = 'Electronics');
+SET @cars_id = (SELECT id FROM categories WHERE name = 'Cars');
+SET @fashion_id = (SELECT id FROM categories WHERE name = 'Fashion');
+SET @food_id = (SELECT id FROM categories WHERE name = 'Food & Beverages');
+
+-- Insert Subcategories
+INSERT INTO categories (name, description, parent_id) VALUES
+-- Electronics subcategories
+('TVs', 'High-quality televisions and home entertainment systems from leading brands. Find smart TVs, traditional sets, and home theater equipment for every budget.', @electronics_id),
+('Phones', 'Latest smartphones and feature phones from all major brands. New and used mobile devices with warranties and authentic accessories.', @electronics_id),
+('Laptops', 'Wide range of laptops and notebooks for work, gaming, and everyday use. Both new and refurbished options available with warranty coverage.', @electronics_id),
+('Phone Accessories', 'Complete range of mobile accessories including cases, screen protectors, chargers, power banks, headphones, and smartphone enhancement tools.', @electronics_id),
+
+-- Cars subcategories
+('Used Cars', 'Quality pre-owned vehicles from verified sellers across Malawi. All makes and models with detailed history and inspection reports available.', @cars_id),
+('IT Cars', 'Newly imported vehicles with full documentation and warranty coverage. Direct imports from Japan, UK, and other major markets.', @cars_id),
+('Car Accessories', 'Comprehensive selection of automotive parts, accessories, and maintenance supplies. Both original and aftermarket options available.', @cars_id),
+
+-- Fashion subcategories
+('Men\'s Clothing', 'Clothing for men', @fashion_id),
+('Women\'s Clothing', 'Clothing for women', @fashion_id),
+('Kids\' Clothing', 'Clothing for kids', @fashion_id),
+('Fashion Accessories', 'Jewelry, handbags, scarves, hats, belts, sunglasses, and watches', @fashion_id),
+
+-- Food & Beverages subcategories
+('Drinks (Non-Alcoholic)', 'Water, juices, soft drinks, coffee, tea, energy drinks', @food_id),
+('Alcohol', 'Beers, wines, spirits, and cocktails', @food_id);
 
 -- Insert Event Categories
 INSERT INTO event_categories (name, description) VALUES
@@ -465,43 +516,22 @@ INSERT INTO event_categories (name, description) VALUES
 ('Cultural', 'Cultural festivals and celebrations'),
 ('Education', 'Educational workshops and seminars');
 
--- Store the IDs of the main categories in variables
-SET @electronics_id = (SELECT id FROM categories WHERE name = 'Electronics');
-SET @car_id = (SELECT id FROM categories WHERE name = 'Cars');
-SET @clothing_id = (SELECT id FROM categories WHERE name = 'Clothing');
-SET @Produce_id = (SELECT id FROM categories WHERE name = 'Produce');
-
--- Insert Subcategories for Electronics
-INSERT INTO categories (name, description, parent_id) VALUES
-('TVs', 'Televisions and home entertainment systems', @electronics_id),
-('Phones', 'Smartphones and mobile devices', @electronics_id),
-('Laptops', 'Laptops and notebooks', @electronics_id);
-
--- Insert Subcategories for Cars
-INSERT INTO categories (name, description, parent_id) VALUES
-('Used Cars', 'Buy a local used car', @car_id),
-('IT Cars', 'Buy a newly imported car', @car_id);
-
--- Insert Subcategories for Clothing
-INSERT INTO categories (name, description, parent_id) VALUES
-('Men\'s Clothing', 'Clothing for men', @clothing_id) ,
-('Women\'s Clothing', 'Clothing for women', @clothing_id),
-('Kids\' Clothing', 'Clothing for kids', @clothing_id);
-
 -- Insert locations
 INSERT INTO locations (name) VALUES
-('Karonga'),
-('Mzuzu'),
-('Lilongwe'),
-('Blantyre'),
-('Kasungu');
+('Karonga'), ('Mzuzu'), ('Lilongwe'), ('Blantyre'), ('Kasungu'),
+('Balaka'), ('Chikwawa'), ('Chiradzulu'), ('Chitipa'), ('Dedza'),
+('Dowa'), ('Likoma'), ('Machinga'), ('Mangochi'), ('Mchinji'),
+('Mulanje'), ('Mwanza'), ('Mzimba Boma'), ('Neno'), ('Nkhatabay'),
+('Nkhotakota'), ('Nsanje'), ('Ntcheu'), ('Ntchisi'), ('Phalombe'),
+('Rumphi'), ('Salima'), ('Thyolo'), ('Zomba');
 
 -- Insert Payment Methods
 INSERT INTO payment_methods (method_name, description) VALUES
-('mobile_money', 'Mobile Money services like Airtel Money, TNM Mpamba'),
-('bank_transfer', 'Direct bank transfers'),
-('cash_on_delivery', 'Payment upon delivery'),
-('local_payment_gateway', 'Local online payment gateways');
+('National Bank', 'National Bank payment method'),
+('Standard Bank', 'Standard Bank payment method'),
+('Airtel Money', 'Airtel Money payment method'),
+('Mpamba', 'Mpamba payment method'),
+('Visa', 'Visa payment method');
 "
 
 # Run MySQL commands

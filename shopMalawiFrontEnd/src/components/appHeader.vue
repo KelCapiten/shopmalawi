@@ -2,7 +2,12 @@
   <ion-header>
     <ion-toolbar>
       <ion-buttons slot="start">
-        <img src="/assets/logo.png" alt="ShopMalawi Logo" class="header-logo" />
+        <img
+          src="/assets/logo.png"
+          alt="ShopMalawi Logo"
+          class="header-logo"
+          @click="goHome"
+        />
       </ion-buttons>
       <ion-buttons slot="end">
         <ion-button aria-label="Cart">
@@ -19,9 +24,11 @@
         :placeholder="searchPlaceholder"
         show-cancel-button="focus"
         class="custom-searchbar"
-        :value="searchQuery"
-        @ionInput="updateSearchQuery"
+        v-model="searchQuery"
         @keyup.enter="handleSearch"
+        @ionInput="handleSearchInput"
+        inputmode="search"
+        :ref="setSearchbarRef"
       ></ion-searchbar>
     </ion-toolbar>
 
@@ -30,8 +37,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-import { useRouter } from "vue-router";
+import { ref, onMounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import CategorySegment from "@/components/CategorySegment.vue";
 import { cartOutline } from "ionicons/icons";
 
@@ -43,23 +50,59 @@ const props = defineProps({
 
 function toggleTheme() {}
 const router = useRouter();
+const route = useRoute();
 const searchQuery = ref("");
 
-function updateSearchQuery(e: CustomEvent) {
-  searchQuery.value = e.detail.value;
+const searchbarRef = ref<HTMLElement | null>(null);
+
+function setSearchbarRef(el: HTMLElement) {
+  searchbarRef.value = el;
+}
+
+function handleSearchInput(event: CustomEvent) {
+  searchQuery.value = event.detail.value;
+}
+
+function goHome() {
+  router.push({ name: "shop" });
 }
 
 function handleSearch() {
-  router.push({
-    name: "SearchResults",
-    query: { query: searchQuery.value },
-  });
+  const query = searchQuery.value.trim();
+  if (!query) return;
+
+  router
+    .push({
+      name: "SearchResults",
+      query: { query },
+    })
+    .catch((error) => {
+      console.error("Navigation failed:", error);
+    });
 }
+
+// Initialize searchQuery from route
+onMounted(() => {
+  if (route.query.query) {
+    searchQuery.value = route.query.query as string;
+  }
+});
+
+// Watch for route changes
+watch(
+  () => route.query.query,
+  (newQuery) => {
+    if (newQuery) {
+      searchQuery.value = newQuery as string;
+    }
+  }
+);
 </script>
 
 <style scoped>
 .header-logo {
   max-height: 40px;
+  cursor: pointer;
 }
 .search-bar {
   --background: var(--ion-color-light);
@@ -83,6 +126,7 @@ ion-searchbar.custom-searchbar {
   --border-radius: 20px;
   border-radius: 50px;
   --box-shadow: none;
+  -webkit-autofill: none;
 }
 
 ion-header,

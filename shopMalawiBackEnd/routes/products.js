@@ -4,7 +4,6 @@ import { authenticateUser } from "../middleware/authMiddleware.js";
 import {
   addProduct,
   getAllProducts,
-  getProductById,
   deactivateProduct,
   activateProduct,
   editProduct,
@@ -30,6 +29,5 @@ router.put(
 router.put("/deactivateProduct/:id", authenticateUser, deactivateProduct);
 router.put("/activateProduct/:id", authenticateUser, activateProduct);
 router.get("/getAllProducts", getAllProducts);
-router.get("/getProduct/:id", getProductById);
 
 export default router;

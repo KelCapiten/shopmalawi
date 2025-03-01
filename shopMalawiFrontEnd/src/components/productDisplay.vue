@@ -179,9 +179,8 @@
               <p
                 v-if="imageSize !== 'small' && showDescription"
                 class="description"
-              >
-                {{ product.description }}
-              </p>
+                v-html="product.description"
+              ></p>
             </div>
 
             <div
@@ -557,6 +556,22 @@ p {
   margin-top: 4px;
   height: 32px;
   overflow: hidden;
+}
+
+/* Add styling for rich text elements */
+.description :deep(ul),
+.description :deep(ol) {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.description :deep(li) {
+  margin: 2px 0;
+}
+
+.description :deep(b),
+.description :deep(strong) {
+  font-weight: bold;
 }
 
 .side-counter {

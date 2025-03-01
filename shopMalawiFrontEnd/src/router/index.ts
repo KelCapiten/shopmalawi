@@ -82,6 +82,11 @@ const routes: Array<RouteRecordRaw> = [
     component: StorePage,
     meta: { requiresAuth: true },
   },
+  {
+    path: "/search",
+    name: "SearchResults",
+    component: SearchResultsPage,
+  },
 ];
 
 const router = createRouter({

@@ -123,7 +123,7 @@ import ImageUploader from "@/components/ImageUploader.vue";
 import AccountDetailsManager from "@/components/AccountDetailsManager.vue";
 import usePaymentMethods from "@/composables/usePaymentMethods";
 import useLocations from "@/composables/useLocations";
-import { useOrdersStore } from "@/stores/ordersStore";
+import { useOrdersStore } from "@/stores/buyStore";
 
 export default {
   name: "PaymentMethod",

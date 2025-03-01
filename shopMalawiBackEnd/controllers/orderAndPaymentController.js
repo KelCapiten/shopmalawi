@@ -74,7 +74,7 @@ export const createOrderAndPayment = async (req, res) => {
     const generatedTransactionId = transaction_id || `TX-${order_id}`;
 
     const [paymentResult] = await connection.query(
-      `INSERT INTO payments (order_id, amount, payment_method_id, payment_screenshots_id, transaction_id) VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO payments (order_id, amount, payment_method_id, screenshot_image_id, transaction_id) VALUES (?, ?, ?, ?, ?)`,
       [
         order_id,
         payment_amount,
@@ -128,10 +128,10 @@ export const getBuyOrders = async (req, res) => {
         pd.description     AS product_description,
         pd.price           AS current_unit_price,
         pd.mark_up_amount,
-        pd.subcategory_id,
-        pd.subcategory_name,
-        pd.maincategory_id,
-        pd.maincategory_name,
+        pd.category_id,
+        c.name            AS category_name,
+        pc.id             AS maincategory_id,
+        pc.name           AS maincategory_name,
         pd.stock_quantity,
         pd.uploaded_by,
 
@@ -163,11 +163,13 @@ export const getBuyOrders = async (req, res) => {
       FROM orders o
       LEFT JOIN order_items oi           ON o.id = oi.order_id
       LEFT JOIN products pd              ON oi.product_id = pd.id
+      LEFT JOIN categories c             ON pd.category_id = c.id
+      LEFT JOIN categories pc            ON c.parent_id = pc.id
       LEFT JOIN images img               ON pd.id = img.imageable_id
                                         AND img.imageable_type = 'product'
       LEFT JOIN payments p               ON o.id = p.order_id
-      LEFT JOIN images pimg              ON p.payment_screenshots_id = pimg.id
-                                      AND pimg.imageable_type = 'payment'
+      LEFT JOIN images pimg              ON p.screenshot_image_id = pimg.id
+                                        AND pimg.imageable_type = 'payment'
       LEFT JOIN refunds r                ON o.id = r.order_id
       LEFT JOIN images rimg              ON r.payment_screenshots_id = rimg.id
                                         AND rimg.imageable_type = 'payment'
@@ -255,8 +257,8 @@ export const getBuyOrders = async (req, res) => {
             description: row.product_description,
             current_unit_price: row.current_unit_price,
             mark_up_amount: row.mark_up_amount,
-            subcategory_id: row.subcategory_id,
-            subcategory_name: row.subcategory_name,
+            category_id: row.category_id,
+            category_name: row.category_name,
             maincategory_id: row.maincategory_id,
             maincategory_name: row.maincategory_name,
             stock_quantity: row.stock_quantity,
@@ -313,10 +315,10 @@ export const getSellOrders = async (req, res) => {
         pd.description     AS product_description,
         pd.price           AS current_unit_price,
         pd.mark_up_amount,
-        pd.subcategory_id,
-        pd.subcategory_name,
-        pd.maincategory_id,
-        pd.maincategory_name,
+        pd.category_id,
+        c.name            AS category_name,
+        pc.id             AS maincategory_id,
+        pc.name           AS maincategory_name,
         pd.stock_quantity,
         pd.uploaded_by,
 
@@ -348,10 +350,12 @@ export const getSellOrders = async (req, res) => {
       FROM orders o
       LEFT JOIN order_items oi           ON o.id = oi.order_id
       LEFT JOIN products pd              ON oi.product_id = pd.id
+      LEFT JOIN categories c             ON pd.category_id = c.id
+      LEFT JOIN categories pc            ON c.parent_id = pc.id
       LEFT JOIN images img               ON pd.id = img.imageable_id
                                         AND img.imageable_type = 'product'
       LEFT JOIN payments p               ON o.id = p.order_id
-      LEFT JOIN images pimg              ON p.payment_screenshots_id = pimg.id
+      LEFT JOIN images pimg              ON p.screenshot_image_id = pimg.id
                                         AND pimg.imageable_type = 'payment'
       LEFT JOIN refunds r                ON o.id = r.order_id
       LEFT JOIN images rimg              ON r.payment_screenshots_id = rimg.id
@@ -436,8 +440,8 @@ export const getSellOrders = async (req, res) => {
             description: row.product_description,
             current_unit_price: row.current_unit_price,
             mark_up_amount: row.mark_up_amount,
-            subcategory_id: row.subcategory_id,
-            subcategory_name: row.subcategory_name,
+            category_id: row.category_id,
+            category_name: row.category_name,
             maincategory_id: row.maincategory_id,
             maincategory_name: row.maincategory_name,
             stock_quantity: row.stock_quantity,

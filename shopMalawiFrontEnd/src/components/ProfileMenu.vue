@@ -13,6 +13,10 @@
       >
         Add Another Store
       </div>
+      <div class="dropdown-item" @click="goToSell">Add Product</div>
+      <div class="dropdown-item" @click="goToPaymentMethods">
+        Payment Methods
+      </div>
       <div class="dropdown-item" @click="goToOrders">Your Orders</div>
       <div class="dropdown-item" @click="goToProfile">Profile</div>
       <div class="dropdown-item" @click="logout">Logout</div>
@@ -26,12 +30,14 @@ import { IonIcon } from "@ionic/vue";
 import { menu, personCircleOutline } from "ionicons/icons";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserstoreStore } from "@/stores/userstoreStore";
+import { useRouter } from "vue-router";
 
 const emit = defineEmits<{ (e: "addStore"): void }>();
 
 const authStore = useAuthStore();
 const userstore = useUserstoreStore();
 const showDropdown = ref(false);
+const router = useRouter();
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value;
@@ -56,8 +62,18 @@ const addStore = () => {
   emit("addStore");
 };
 
+const goToSell = () => {
+  router.push("/sell");
+  showDropdown.value = false;
+};
+
 const goToOrders = () => {
   console.log("Go to Orders");
+};
+
+const goToPaymentMethods = () => {
+  router.push("/payment-methods");
+  showDropdown.value = false;
 };
 
 const goToProfile = () => {

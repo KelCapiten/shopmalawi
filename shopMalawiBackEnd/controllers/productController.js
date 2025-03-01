@@ -1,12 +1,29 @@
 //controllers/productController.js
 import db from "../config/db.js";
+import sanitizeHtml from "sanitize-html";
+
+// Configure sanitization options - matched to form capabilities
+const sanitizeOptions = {
+  allowedTags: ["b", "strong", "ul", "ol", "li"],
+  allowedAttributes: {},
+  allowedStyles: {},
+};
 
 // endpoint to add products
 export const addProduct = async (req, res) => {
   const { name, description, price, category_id, stockQuantity } = req.body;
 
+  // Sanitize HTML content
+  const sanitizedDescription = sanitizeHtml(description, sanitizeOptions);
+
   // Basic validation
-  if (!name || !description || !price || !req.files || req.files.length === 0) {
+  if (
+    !name ||
+    !sanitizedDescription ||
+    !price ||
+    !req.files ||
+    req.files.length === 0
+  ) {
     return res.status(400).json({
       message: "All required fields and at least one image are necessary.",
     });
@@ -17,50 +34,20 @@ export const addProduct = async (req, res) => {
 
   const connection = await db.getConnection();
   try {
-    // 1) Fetch category info
-    const [categoryInfo] = await connection.query(
-      `SELECT 
-         c1.name AS category_name, 
-         c1.id AS category_id,
-         c1.parent_id,
-         c2.name AS maincategory_name, 
-         c2.id AS maincategory_id
-       FROM categories c1
-       LEFT JOIN categories c2 ON c1.parent_id = c2.id
-       WHERE c1.id = ?`,
-      [category_id]
-    );
-
-    if (categoryInfo.length === 0) {
-      return res.status(400).json({ message: "Invalid category_id" });
-    }
-
-    const { category_name, parent_id, maincategory_id, maincategory_name } =
-      categoryInfo[0];
-
-    // Determine if the category is a main category or subcategory
-    const isMainCategory = parent_id === null;
-
-    // 2) Start transaction
     await connection.beginTransaction();
 
-    // 3) Insert product into `products` table
+    // Insert product into `products` table
     const [productResult] = await connection.query(
       `INSERT INTO products 
-       (name, description, price, mark_up_amount, 
-        subcategory_id, subcategory_name, 
-        maincategory_id, maincategory_name, 
+       (name, description, price, mark_up_amount, category_id, 
         stock_quantity, uploaded_by) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         name,
-        description,
+        sanitizedDescription,
         price,
         markUpAmount,
-        isMainCategory ? category_id : category_id, // subcategory_id
-        isMainCategory ? category_name : category_name, // subcategory_name
-        isMainCategory ? category_id : maincategory_id, // maincategory_id
-        isMainCategory ? category_name : maincategory_name, // maincategory_name
+        category_id,
         stockQuantity,
         uploadedBy,
       ]
@@ -68,7 +55,7 @@ export const addProduct = async (req, res) => {
 
     const productId = productResult.insertId;
 
-    // 4) Insert images into `images` table (polymorphic approach)
+    // Insert images into `images` table
     const imageQueries = req.files.map((file, index) => {
       const modifiedFilePath = `/${file.path.replace(/\\/g, "/")}`;
       return connection.query(
@@ -80,14 +67,11 @@ export const addProduct = async (req, res) => {
     });
 
     await Promise.all(imageQueries);
-
-    // 5) Commit transaction
     await connection.commit();
 
     res.status(201).json({ message: "Product added successfully", productId });
   } catch (error) {
     console.error("Error adding product:", error);
-    // Rollback on error
     await connection.rollback();
     res.status(500).json({ message: "Failed to add product" });
   } finally {
@@ -115,10 +99,10 @@ export const getAllProducts = async (req, res) => {
         p.name, 
         p.description, 
         p.price,
-        p.subcategory_id, 
-        p.subcategory_name, 
-        p.maincategory_id, 
-        p.maincategory_name, 
+        p.category_id,
+        c.name as category_name,
+        mc.name as maincategory_name,
+        mc.id as maincategory_id,
         p.stock_quantity, 
         p.is_active,
         p.uploaded_by AS uploaded_by_userID, 
@@ -131,6 +115,8 @@ export const getAllProducts = async (req, res) => {
       FROM products p
       LEFT JOIN users u
         ON p.uploaded_by = u.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN categories mc ON c.parent_id = mc.id
       LEFT JOIN images i
         ON i.imageable_id = p.id
         AND i.imageable_type = 'product'
@@ -167,17 +153,14 @@ export const getAllProducts = async (req, res) => {
     // Filter by category_id
     if (category_id) {
       if (isMainCategory) {
-        // If it's a main category, include all products in its subcategories
+        // If it's a main category, include all products in that category or its subcategories
         whereConditions.push(`
-          (p.maincategory_id = ? 
-            OR p.subcategory_id IN (
-              SELECT id FROM categories WHERE parent_id = ?
-            )
-          )`);
+          (c.id = ? OR c.parent_id = ?)
+        `);
         queryParams.push(parseInt(category_id, 10), parseInt(category_id, 10));
       } else {
-        // If it's a subcategory, include only products in that subcategory
-        whereConditions.push(`p.subcategory_id = ?`);
+        // If it's a subcategory, include only products in that category
+        whereConditions.push(`c.id = ?`);
         queryParams.push(parseInt(category_id, 10));
       }
     }
@@ -232,8 +215,8 @@ export const getAllProducts = async (req, res) => {
           name: product.name,
           description: product.description,
           price: product.price,
-          subcategory_id: product.subcategory_id,
-          subcategory_name: product.subcategory_name,
+          category_id: product.category_id,
+          category_name: product.category_name,
           maincategory_id: product.maincategory_id,
           maincategory_name: product.maincategory_name,
           stock_quantity: product.stock_quantity,
@@ -348,103 +331,6 @@ export const getAllProducts = async (req, res) => {
   }
 };
 
-// endpoint to get a product by ID
-export const getProductById = async (req, res) => {
-  const connection = await db.getConnection();
-  try {
-    const { id } = req.params;
-
-    // Validate the product ID
-    const parsedId = parseInt(id, 10);
-    if (isNaN(parsedId)) {
-      return res.status(400).json({ message: "Invalid product ID" });
-    }
-
-    // Updated query: LEFT JOIN on `images` table, matching `imageable_id` and `imageable_type`
-    const query = `
-      SELECT 
-        p.id,
-        p.name,
-        p.description,
-        p.price,
-        p.mark_up_amount,
-        p.subcategory_id,
-        p.subcategory_name,
-        p.maincategory_id,
-        p.maincategory_name,
-        p.stock_quantity,
-        p.uploaded_by AS uploaded_by_userID,
-        u.username AS uploaded_by,
-        i.image_path,
-        i.alt_text,
-        i.is_primary,
-        p.created_at
-      FROM products p
-      LEFT JOIN users u 
-        ON p.uploaded_by = u.id
-      LEFT JOIN images i
-        ON i.imageable_id = p.id
-        AND i.imageable_type = 'product'
-      WHERE p.id = ?
-    `;
-
-    // Execute the query
-    const [rows] = await connection.query(query, [parsedId]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-
-    const product = rows.reduce((acc, row) => {
-      // If acc is still null, initialize with the product data
-      if (!acc) {
-        return {
-          id: row.id,
-          name: row.name,
-          description: row.description,
-          price: row.price,
-          mark_up_amount: row.mark_up_amount,
-          subcategory_id: row.subcategory_id,
-          subcategory_name: row.subcategory_name,
-          maincategory_id: row.maincategory_id,
-          maincategory_name: row.maincategory_name,
-          stock_quantity: row.stock_quantity,
-          uploaded_by_userID: row.uploaded_by_userID,
-          uploaded_by: row.uploaded_by,
-          created_at: row.created_at,
-          images: row.image_path
-            ? [
-                {
-                  image_path: row.image_path,
-                  alt_text: row.alt_text,
-                  is_primary: !!row.is_primary,
-                },
-              ]
-            : [],
-        };
-      }
-
-      // If there's already a product, just add the image if it exists
-      if (row.image_path) {
-        acc.images.push({
-          image_path: row.image_path,
-          alt_text: row.alt_text,
-          is_primary: !!row.is_primary,
-        });
-      }
-      return acc;
-    }, null);
-
-    // Send the product as JSON
-    res.status(200).json(product);
-  } catch (error) {
-    console.error("Error fetching product by ID:", error);
-    res.status(500).json({ message: "Failed to fetch product" });
-  } finally {
-    connection.release();
-  }
-};
-
 // Endpoint to deactivate a product (set is_active to false)
 export const deactivateProduct = async (req, res) => {
   const { id } = req.params; // Expect product id in the URL params
@@ -513,16 +399,17 @@ export const activateProduct = async (req, res) => {
 
 // Endpoint to edit a product
 export const editProduct = async (req, res) => {
-  // Get product id from URL params
   const { id } = req.params;
-  // Get updated product fields from request body
   const { name, description, price, category_id, stockQuantity } = req.body;
 
-  // Basic validation: ensure required fields are provided
+  // Sanitize HTML content
+  const sanitizedDescription = sanitizeHtml(description, sanitizeOptions);
+
+  // Basic validation
   if (
     !id ||
     !name ||
-    !description ||
+    !sanitizedDescription ||
     !price ||
     !category_id ||
     !stockQuantity
@@ -532,12 +419,11 @@ export const editProduct = async (req, res) => {
     });
   }
 
-  // Calculate markup amount
   const markUpAmount = parseFloat(price) * 0.1;
 
   const connection = await db.getConnection();
   try {
-    // 1) Fetch category info for the updated category_id
+    // Fetch category info
     const [categoryInfo] = await connection.query(
       `SELECT 
          c1.name AS category_name, 
@@ -555,31 +441,24 @@ export const editProduct = async (req, res) => {
       return res.status(400).json({ message: "Invalid category_id" });
     }
 
-    const { category_name, parent_id, maincategory_id, maincategory_name } =
-      categoryInfo[0];
-    // Determine if the category is a main category
-    const isMainCategory = parent_id === null;
-
-    // 2) Start transaction
     await connection.beginTransaction();
 
-    // 3) Update product in the `products` table
+    // Update product with correct column names
     await connection.query(
       `UPDATE products 
-       SET name = ?, description = ?, price = ?, mark_up_amount = ?, 
-           subcategory_id = ?, subcategory_name = ?, 
-           maincategory_id = ?, maincategory_name = ?, 
+       SET name = ?, 
+           description = ?, 
+           price = ?, 
+           mark_up_amount = ?, 
+           category_id = ?,
            stock_quantity = ?
        WHERE id = ?`,
       [
         name,
-        description,
+        sanitizedDescription,
         price,
         markUpAmount,
-        isMainCategory ? category_id : category_id,
-        isMainCategory ? category_name : category_name,
-        isMainCategory ? category_id : maincategory_id,
-        isMainCategory ? category_name : maincategory_name,
+        category_id,
         stockQuantity,
         id,
       ]
@@ -605,7 +484,6 @@ export const editProduct = async (req, res) => {
     }
 
     await connection.commit();
-
     res.status(200).json({ message: "Product updated successfully." });
   } catch (error) {
     console.error("Error editing product:", error);

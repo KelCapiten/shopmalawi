@@ -42,33 +42,10 @@
 
             <!-- Product Description -->
             <div class="product-description">
-              <h3>Description</h3>
-              <p>{{ product.description }}</p>
-            </div>
-            <!-- Product Description -->
-            <div class="product-description">
-              <h3>Description</h3>
-              <p>{{ product.description }}</p>
-            </div>
-            <!-- Product Description -->
-            <div class="product-description">
-              <h3>Description</h3>
-              <p>{{ product.description }}</p>
-            </div>
-            <!-- Product Description -->
-            <div class="product-description">
-              <h3>Description</h3>
-              <p>{{ product.description }}</p>
-            </div>
-            <!-- Product Description -->
-            <div class="product-description">
-              <h3>Description</h3>
-              <p>{{ product.description }}</p>
-            </div>
-            <!-- Product Description -->
-            <div class="product-description">
-              <h3>Description</h3>
-              <p>{{ product.description }}</p>
+              <div
+                v-html="product.description"
+                class="description-content"
+              ></div>
             </div>
           </div>
         </div>
@@ -217,6 +194,25 @@ export default defineComponent({
   font-size: 1.2rem;
   font-weight: bold;
   margin-bottom: 5px;
+}
+
+.description-content {
+  padding: 10px 0;
+}
+
+.description-content :deep(ul),
+.description-content :deep(ol) {
+  padding-left: 20px;
+  margin: 10px 0;
+}
+
+.description-content :deep(li) {
+  margin: 5px 0;
+}
+
+.description-content :deep(strong),
+.description-content :deep(b) {
+  font-weight: bold;
 }
 
 .buy-segment-wrapper {
