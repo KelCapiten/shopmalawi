@@ -1,6 +1,6 @@
 //src/components/AccountDetailsManager.vue
 <template>
-  <div class="account-details-container">
+  <div>
     <div class="settings-content">
       <h4 class="settings-title">Manage Your Payment Methods</h4>
       <div v-if="loading" class="loading-message">
@@ -60,23 +60,12 @@
         <h4>Add A Payment Method</h4>
 
         <div class="form-group custom-selector">
-          <label>Payment Method</label>
-          <div class="selector-display" tabindex="0">
-            <IonSelect
-              v-model="form.payment_method_id"
-              placeholder="Select Payment Method"
-              required
-              :class="{ invalid: validationErrors.payment_method_id }"
-            >
-              <IonSelectOption
-                v-for="bank in banks"
-                :key="bank.id"
-                :value="bank.id"
-              >
-                {{ bank.name }}
-              </IonSelectOption>
-            </IonSelect>
-          </div>
+          <CustomDropdownSelector
+            v-model="form.payment_method_id"
+            :options="banks"
+            :label="'Select Payment Method'"
+            :placeholder="'Select Payment Method'"
+          />
           <span v-if="validationErrors.payment_method_id" class="error-text">
             {{ validationErrors.payment_method_id }}
           </span>
@@ -145,7 +134,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch } from "vue";
-import { IonSelect, IonSelectOption } from "@ionic/vue";
+import CustomDropdownSelector from "./CustomDropdownSelector.vue";
 import useBankDetails, {
   AddBankDetailsPayload,
   UpdateBankDetailsPayload,
@@ -177,11 +166,28 @@ export default defineComponent({
     },
   },
   components: {
-    IonSelect,
-    IonSelectOption,
+    CustomDropdownSelector,
   },
   emits: ["close"],
   setup(props, { emit }) {
+    interface FormData {
+      user_id: number;
+      payment_method_id: number | null;
+      account_number: string;
+      account_holder_name: string;
+      branch_code: string;
+    }
+
+    const form = ref<FormData>({
+      user_id: props.userId,
+      payment_method_id: props.payment_method_id
+        ? Number(props.payment_method_id)
+        : null,
+      account_number: "",
+      account_holder_name: "",
+      branch_code: "",
+    });
+
     const editingRecord = ref<any>(null);
     const {
       bankDetails,
@@ -192,14 +198,6 @@ export default defineComponent({
       modifyBankDetails,
       removeBankDetails,
     } = useBankDetails();
-
-    const form = ref({
-      user_id: props.userId,
-      payment_method_id: props.payment_method_id || null,
-      account_number: "",
-      account_holder_name: "",
-      branch_code: "",
-    });
 
     const validationErrors = ref({
       payment_method_id: "",
@@ -223,7 +221,7 @@ export default defineComponent({
     watch(
       () => props.payment_method_id,
       (newVal) => {
-        form.value.payment_method_id = newVal;
+        form.value.payment_method_id = newVal ? Number(newVal) : null;
         loadBankDetails();
       }
     );
@@ -297,7 +295,9 @@ export default defineComponent({
     const resetForm = () => {
       form.value = {
         user_id: props.userId,
-        payment_method_id: props.payment_method_id || null,
+        payment_method_id: props.payment_method_id
+          ? Number(props.payment_method_id)
+          : null,
         account_number: "",
         account_holder_name: "",
         branch_code: "",
@@ -411,16 +411,12 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.account-details-container {
-  margin: 1rem 0;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-}
-
 .settings-content {
-  margin-top: 0.5rem;
-  background: #fff;
+  background: white;
   border-radius: 10px;
-  padding: 20px;
+  padding: 5px 20px;
+  max-height: 80vh;
+  overflow-y: auto;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -441,8 +437,7 @@ export default defineComponent({
   color: #333;
 }
 
-.form-group input,
-.selector-display {
+.form-group input {
   width: 100%;
   padding: 8px;
   border: 1px solid #ccc;
@@ -450,8 +445,7 @@ export default defineComponent({
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.form-group input:focus,
-.selector-display:focus {
+.form-group input:focus {
   border-color: orange;
   box-shadow: 0 0 5px rgba(255, 165, 0, 0.5);
   outline: none;

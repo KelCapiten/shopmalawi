@@ -619,7 +619,6 @@ export default defineComponent({
   width: 90%;
   max-width: 500px;
   max-height: 90vh;
-  overflow-y: auto;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 </style>

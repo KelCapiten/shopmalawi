@@ -70,43 +70,13 @@
             </div>
           </div>
 
-          <!-- Custom Selector for Category -->
-          <div class="form-group custom-selector">
-            <label>Store Category (optional)</label>
-            <div
-              ref="selectorRef"
-              class="selector-display"
-              tabindex="0"
-              @click="toggleCategoryDropdown"
-            >
-              <span>{{ selectedCategoryLabel }}</span>
-              <svg
-                class="selector-icon"
-                xmlns="http://www.w3.org/2000/svg"
-                height="24"
-                width="24"
-                viewBox="0 0 24 24"
-              >
-                <path d="M7 10l5 5 5-5z" />
-              </svg>
-            </div>
-            <Teleport to="body">
-              <div
-                v-if="showCategoryList"
-                class="selector-dropdown"
-                :style="dropdownStyle"
-              >
-                <div
-                  class="selector-option"
-                  v-for="cat in categories"
-                  :key="cat.id"
-                  @click="selectCategory(cat)"
-                >
-                  {{ cat.name }}
-                </div>
-              </div>
-            </Teleport>
-          </div>
+          <!-- Using the new CustomDropdownSelector component -->
+          <CustomDropdownSelector
+            v-model="newStoreForm.category_id"
+            :options="categories"
+            label="Store Category (optional)"
+            placeholder="Select a category"
+          />
         </div>
 
         <div class="button-group">
@@ -119,23 +89,17 @@
 </template>
 
 <script lang="ts">
-import {
-  defineComponent,
-  ref,
-  onMounted,
-  onUnmounted,
-  computed,
-  nextTick,
-} from "vue";
+import { defineComponent, ref, onMounted, onUnmounted, nextTick } from "vue";
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import { useCategories } from "@/composables/useCategories";
 import ImageUploader from "@/components/ImageUploader.vue";
-import { Teleport } from "vue";
+import CustomDropdownSelector from "@/components/CustomDropdownSelector.vue";
 
 export default defineComponent({
   name: "StoreRegistrationForm",
   components: {
     ImageUploader,
+    CustomDropdownSelector,
   },
   props: {
     showUploaders: {
@@ -155,10 +119,7 @@ export default defineComponent({
     const userstore = useUserstoreStore();
     const { categories, fetchCategories } = useCategories();
     const formContainerRef = ref<HTMLElement | null>(null);
-    const showCategoryList = ref(false);
     const descriptionTextarea = ref<HTMLTextAreaElement | null>(null);
-    const selectorRef = ref<HTMLElement | null>(null);
-    const dropdownStyle = ref({});
 
     const handleBannerImages = (selectedFiles: File[]) => {
       userstore.uploadedBannerImages = selectedFiles;
@@ -193,14 +154,9 @@ export default defineComponent({
       nextTick(() => {
         adjustHeight();
       });
-      window.addEventListener("click", handleClickOutside);
-      window.addEventListener("scroll", updateDropdownPosition);
-      window.addEventListener("resize", updateDropdownPosition);
     });
+
     onUnmounted(() => {
-      window.removeEventListener("click", handleClickOutside);
-      window.removeEventListener("scroll", updateDropdownPosition);
-      window.removeEventListener("resize", updateDropdownPosition);
       // Clear the form
       userstore.newStoreForm = {
         brand_name: "",
@@ -209,51 +165,6 @@ export default defineComponent({
         category_id: 0,
       };
     });
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!(event.target instanceof Element)) return;
-      if (
-        !selectorRef.value?.contains(event.target) &&
-        !event.target.closest(".selector-dropdown")
-      ) {
-        showCategoryList.value = false;
-      }
-    };
-
-    const selectedCategoryLabel = computed(() => {
-      if (!userstore.newStoreForm.category_id) return "Select a category";
-      const cat = categories.value.find(
-        (c) => c.id === userstore.newStoreForm.category_id
-      );
-      return cat ? cat.name : "Select a category";
-    });
-
-    const updateDropdownPosition = () => {
-      if (!selectorRef.value) return;
-
-      const rect = selectorRef.value.getBoundingClientRect();
-      dropdownStyle.value = {
-        position: "fixed",
-        top: `${rect.bottom + window.scrollY + 4}px`,
-        left: `${rect.left + window.scrollX}px`,
-        width: `${rect.width}px`,
-        zIndex: "10000",
-      };
-    };
-
-    const toggleCategoryDropdown = () => {
-      showCategoryList.value = !showCategoryList.value;
-      if (showCategoryList.value) {
-        nextTick(() => {
-          updateDropdownPosition();
-        });
-      }
-    };
-
-    const selectCategory = (cat: { id: number; name: string }) => {
-      userstore.newStoreForm.category_id = cat.id;
-      showCategoryList.value = false;
-    };
 
     const submitForm = async () => {
       try {
@@ -274,11 +185,7 @@ export default defineComponent({
 
     return {
       formContainerRef,
-      showCategoryList,
       categories,
-      selectedCategoryLabel,
-      toggleCategoryDropdown,
-      selectCategory,
       submitForm,
       close,
       newStoreForm: userstore.newStoreForm,
@@ -287,8 +194,6 @@ export default defineComponent({
       adjustHeight,
       handleBannerImages,
       handleProfileImages,
-      selectorRef,
-      dropdownStyle,
     };
   },
 });
@@ -396,47 +301,5 @@ button[type="button"] {
 }
 button[type="button"]:hover {
   background-color: #bbb;
-}
-.custom-selector {
-  position: relative;
-}
-.selector-display {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #fff;
-  padding: 8px;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-.selector-display:focus {
-  border-color: orange;
-  box-shadow: 0 0 5px rgba(255, 165, 0, 0.5);
-  outline: none;
-}
-.selector-display span {
-  color: #555;
-}
-.selector-icon {
-  fill: #555;
-  width: 16px;
-  height: 16px;
-}
-.selector-dropdown {
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  max-height: 180px;
-  overflow-y: auto;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-.selector-option {
-  padding: 8px;
-  cursor: pointer;
-}
-.selector-option:hover {
-  background: #f0f0f0;
 }
 </style>
