@@ -1,4 +1,4 @@
-//\src\components\AccountDetailsManager.vue
+//src/components/AccountDetailsManager.vue
 <template>
   <div class="account-details-container">
     <div class="settings-content">
@@ -146,7 +146,8 @@ export default defineComponent({
     IonSelect,
     IonSelectOption,
   },
-  setup(props) {
+  emits: ["close"],
+  setup(props, { emit }) {
     const editingRecord = ref<any>(null);
     const {
       bankDetails,
@@ -256,6 +257,7 @@ export default defineComponent({
       setTimeout(() => {
         formCleared.value = false;
       }, 1000);
+      emit("close");
     };
 
     const resetForm = () => {

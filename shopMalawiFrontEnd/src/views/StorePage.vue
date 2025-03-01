@@ -6,6 +6,7 @@
       <HeroSection
         :ownerIdFromQuery="userstore.ownerIdFromQuery"
         @infoClicked="toggleBrandStory"
+        @openPaymentMethods="openPaymentMethods"
       />
 
       <!-- Brand Story Card with Expand/Collapse -->
@@ -38,6 +39,22 @@
         @storeSelected="handleStoreSelected"
       />
 
+      <!-- Account Details Popup -->
+      <transition name="fade">
+        <div
+          v-if="showAccountDetails"
+          class="account-details-overlay"
+          @click.self="closeAccountDetails"
+        >
+          <div class="account-details-popup">
+            <AccountDetailsManager
+              :userId="selectedUserId"
+              @close="closeAccountDetails"
+            />
+          </div>
+        </div>
+      </transition>
+
       <!-- Segment Buttons -->
       <IonSegment v-model="selectedSegment" class="store-segment">
         <IonSegmentButton value="all">
@@ -48,7 +65,7 @@
         </IonSegmentButton>
       </IonSegment>
 
-      <!-- Filters Bar (for 'all' segment) -->
+      <!-- Filters Bar -->
       <div v-if="selectedSegment === 'all'" class="filter-bar">
         <button
           v-for="filter in filters"
@@ -140,6 +157,25 @@
         />
       </div>
     </div>
+
+    <!-- Confirmation Popup -->
+    <div v-if="showConfirmationPopup" class="confirmation-popup-overlay">
+      <div class="confirmation-popup">
+        <h5>Deactivate Product (Not Delete)</h5>
+        <p>
+          Are you sure you want to deactivate this product? It will no longer be
+          visible to customers.
+        </p>
+        <div class="confirmation-buttons">
+          <button class="cancel-button" @click="showConfirmationPopup = false">
+            Cancel
+          </button>
+          <button class="confirm-button" @click="confirmDeactivateProduct">
+            Deactivate
+          </button>
+        </div>
+      </div>
+    </div>
   </IonPage>
 </template>
 
@@ -160,6 +196,7 @@ import sellProductForm from "@/components/sellProductForm.vue";
 import StoreSelector from "@/components/storeSelector.vue";
 import AddProductToStore from "@/components/AddProductToStore.vue";
 import OrdersList from "@/components/OrdersList.vue";
+import AccountDetailsManager from "@/components/AccountDetailsManager.vue";
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useProductsStore } from "@/stores/sellStore";
@@ -179,6 +216,7 @@ export default defineComponent({
     StoreSelector,
     AddProductToStore,
     OrdersList,
+    AccountDetailsManager,
   },
   setup() {
     const userstore = useUserstoreStore();
@@ -239,13 +277,28 @@ export default defineComponent({
       },
     ];
 
+    const showConfirmationPopup = ref(false);
+    const productToDeactivate = ref<number | null>(null);
+
     async function handleDeactivateProduct(productId: number) {
+      productToDeactivate.value = productId;
+      showConfirmationPopup.value = true;
+    }
+
+    async function confirmDeactivateProduct() {
       try {
-        await productsStore.deactivateProduct(productId);
-        userstore.updateProductInCache(productId, { is_active: false });
-        await userstore.fetchSelectedStoreProducts();
+        if (productToDeactivate.value) {
+          await productsStore.deactivateProduct(productToDeactivate.value);
+          userstore.updateProductInCache(productToDeactivate.value, {
+            is_active: false,
+          });
+          await userstore.fetchSelectedStoreProducts();
+        }
       } catch (error) {
         console.error("Failed to deactivate product", error);
+      } finally {
+        showConfirmationPopup.value = false;
+        productToDeactivate.value = null;
       }
     }
 
@@ -309,6 +362,19 @@ export default defineComponent({
       await userstore.toggleSellerPick(productId);
     };
 
+    const showAccountDetails = ref(false);
+    const selectedUserId = ref<number>(0);
+
+    const openPaymentMethods = (userId: number) => {
+      selectedUserId.value = userId;
+      showAccountDetails.value = true;
+    };
+
+    const closeAccountDetails = () => {
+      showAccountDetails.value = false;
+      selectedUserId.value = 0;
+    };
+
     watch(
       () => userstore.selectedStore,
       (newStore) => {
@@ -341,6 +407,12 @@ export default defineComponent({
       closeAddProductPopup,
       handleRemoveProductFromStore,
       handleSellerPick,
+      showConfirmationPopup,
+      confirmDeactivateProduct,
+      showAccountDetails,
+      selectedUserId,
+      openPaymentMethods,
+      closeAccountDetails,
     };
   },
 });
@@ -384,15 +456,6 @@ export default defineComponent({
   cursor: pointer;
   padding: 0.5rem 0.75rem;
   font-size: 0.9rem;
-  transition: background 0.3s, color 0.3s;
-  outline: none;
-}
-.filter-button.active {
-  background: #007aff;
-  color: #fff;
-  border-radius: 4px;
-}
-.filter-icon {
   font-size: 1.1rem;
 }
 .ProductDisplay {
@@ -461,5 +524,102 @@ export default defineComponent({
   width: 100%;
   height: 80%;
   border-radius: 4px;
+}
+
+.confirmation-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.confirmation-popup {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.confirmation-popup h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+}
+
+.confirmation-popup p {
+  margin: 0 0 1.5rem 0;
+  color: #666;
+  line-height: 1.4;
+}
+
+.confirmation-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.cancel-button,
+.confirm-button {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.cancel-button {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.confirm-button {
+  background: #dc3545;
+  color: white;
+}
+
+.cancel-button:hover {
+  background: #e4e4e4;
+}
+
+.confirm-button:hover {
+  background: #c82333;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.account-details-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.account-details-popup {
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 </style>

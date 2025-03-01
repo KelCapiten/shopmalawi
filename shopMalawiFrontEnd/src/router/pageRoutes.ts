@@ -1,4 +1,4 @@
-//\src\router\index.ts
+//src/router/index.ts
 import { createRouter, createWebHistory } from "@ionic/vue-router";
 import { RouteRecordRaw } from "vue-router";
 import SellDashboard from "@/views/SellDashboard.vue";

@@ -14,8 +14,8 @@
         Add Another Store
       </div>
       <div class="dropdown-item" @click="goToSell">Add Product</div>
-      <div class="dropdown-item" @click="goToPaymentMethods">
-        Payment Methods
+      <div class="dropdown-item" @click="openPaymentMethods">
+        Your Payment Details
       </div>
       <div class="dropdown-item" @click="goToOrders">Your Orders</div>
       <div class="dropdown-item" @click="goToProfile">Profile</div>
@@ -32,7 +32,10 @@ import { useAuthStore } from "@/stores/authStore";
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import { useRouter } from "vue-router";
 
-const emit = defineEmits<{ (e: "addStore"): void }>();
+const emit = defineEmits<{
+  (e: "addStore"): void;
+  (e: "openPaymentMethods", userId: number): void;
+}>();
 
 const authStore = useAuthStore();
 const userstore = useUserstoreStore();
@@ -71,8 +74,10 @@ const goToOrders = () => {
   console.log("Go to Orders");
 };
 
-const goToPaymentMethods = () => {
-  router.push("/payment-methods");
+const openPaymentMethods = () => {
+  if (authStore.user?.id) {
+    emit("openPaymentMethods", authStore.user.id);
+  }
   showDropdown.value = false;
 };
 

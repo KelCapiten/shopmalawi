@@ -219,7 +219,7 @@ import {
   archiveOutline,
 } from "ionicons/icons";
 import { useUserstoreStore } from "@/stores/userstoreStore";
-import router from "@/router";
+import router from "@/router/pageRoutes";
 
 export default defineComponent({
   name: "ProductDisplay",

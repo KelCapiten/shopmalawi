@@ -84,7 +84,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, computed } from "vue";
-import router from "@/router";
+import router from "@/router/pageRoutes";
 import { loadProductFromSessionStorage } from "@/utils/utilities";
 import PaymentMethod from "@/components/PaymentMethod.vue";
 import productDisplay from "@/components/productDisplay.vue";

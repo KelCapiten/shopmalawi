@@ -1,6 +1,6 @@
 //src/stores/authStore.ts
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 
 interface User {
@@ -9,6 +9,7 @@ interface User {
   firstName: string;
   lastName: string;
   role: string;
+  phone: string; // Add phone property
 }
 
 export const useAuthStore = defineStore("auth", () => {
@@ -40,11 +41,36 @@ export const useAuthStore = defineStore("auth", () => {
     return !!token.value;
   };
 
+  // Add new computed getters
+  const getUserFullName = computed(() => {
+    if (!user.value) return "";
+    return `${user.value.firstName || ""} ${user.value.lastName || ""}`.trim();
+  });
+
+  const getUserInitials = computed(() => {
+    if (!user.value) return "U";
+    return (
+      `${user.value.firstName?.[0] || ""}${
+        user.value.lastName?.[0] || ""
+      }`.toUpperCase() || "U"
+    );
+  });
+
+  const getUserDetails = computed(() => ({
+    name: getUserFullName.value,
+    username: user.value?.username || "N/A",
+    phone: user.value?.phone || "N/A",
+    role: user.value?.role || "N/A",
+  }));
+
   return {
     token,
     user,
     setAuth,
     clearAuth,
     isAuthenticated,
+    getUserFullName,
+    getUserInitials,
+    getUserDetails,
   };
 });

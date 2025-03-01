@@ -53,10 +53,10 @@
           <IonCol size="6" @click="toggleOrdersList">
             <div class="tile">
               <IonIcon :icon="ordersIcon" class="tile-icon" />
-              <p class="tile-label">Manage Order</p>
+              <p class="tile-label">Manage Your Orders</p>
             </div>
           </IonCol>
-          <IonCol size="6" @click="goToCoupons">
+          <IonCol size="6" @click="goToStore">
             <div class="tile">
               <IonIcon :icon="productsIcon" class="tile-icon" />
               <p class="tile-label">Manage Your Products</p>
@@ -78,7 +78,7 @@
           </IonCol>
         </IonRow>
         <IonRow>
-          <IonCol size="6" @click="toggleCategoryManager">
+          <IonCol size="6" @click="toggleCategoryManager" v-if="isAdmin">
             <div class="tile">
               <IonIcon :icon="settingsIcon" class="tile-icon" />
               <p class="tile-label">Settings</p>
@@ -122,7 +122,7 @@
 
 <script>
 import { computed, ref, nextTick, onMounted } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/authStore";
 import appFooter from "@/components/appFooter.vue";
 import CategoriesManager from "@/components/CategoriesManager.vue";
@@ -148,26 +148,10 @@ export default {
   setup() {
     const authStore = useAuthStore();
     const route = useRoute();
+    const router = useRouter();
 
-    const user = computed(() => ({
-      name:
-        (authStore.user?.firstName || "") +
-        " " +
-        (authStore.user?.lastName || ""),
-      username: authStore.user?.username || "N/A",
-      phone: authStore.user?.phone || "N/A",
-    }));
-
-    const userInitial = computed(() => {
-      const names = user.value.name.split(" ");
-      return (
-        names
-          .map((n) => n.charAt(0))
-          .join("")
-          .toUpperCase() || "U"
-      );
-    });
-
+    const user = computed(() => authStore.getUserDetails);
+    const userInitial = computed(() => authStore.getUserInitials);
     const userId = computed(() => authStore.user?.id);
 
     // Assign new icons for the updated tiles
@@ -239,7 +223,9 @@ export default {
     };
 
     const goToWishlist = () => {};
-    const goToCoupons = () => {};
+    const goToStore = () => {
+      router.push("/store");
+    };
     const goToHistory = () => {};
 
     // Automatically activate the orders tab if the route query parameter is set.
@@ -249,6 +235,8 @@ export default {
         scrollToSection(ordersListRef);
       }
     });
+
+    const isAdmin = computed(() => user.value?.role === "admin");
 
     return {
       user,
@@ -272,11 +260,12 @@ export default {
       historyIcon,
       paymentIcon,
       goToWishlist,
-      goToCoupons,
+      goToStore,
       goToHistory,
       ordersListRef,
       categoriesManagerRef,
       accountDetailsManagerRef,
+      isAdmin,
     };
   },
 };

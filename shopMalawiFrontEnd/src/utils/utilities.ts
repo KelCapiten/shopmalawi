@@ -1,5 +1,5 @@
 // src/utils/utilities.ts
-import router from "@/router";
+import router from "@/router/pageRoutes";
 import { Product } from "@/types/types";
 import type { Category } from "@/types/types";
 

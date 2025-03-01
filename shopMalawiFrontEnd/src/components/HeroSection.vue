@@ -73,7 +73,10 @@
         </button>
       </template>
       <!-- ProfileMenu always displayed for the owner -->
-      <ProfileMenu @addStore="registerStore" />
+      <ProfileMenu
+        @addStore="registerStore"
+        @openPaymentMethods="handleOpenPaymentMethods"
+      />
     </div>
   </div>
 
@@ -122,7 +125,7 @@ export default defineComponent({
       default: undefined,
     },
   },
-  emits: ["infoClicked"],
+  emits: ["infoClicked", "openPaymentMethods"],
   components: {
     IonIcon,
     IonAlert,
@@ -203,6 +206,10 @@ export default defineComponent({
       emit("infoClicked");
     };
 
+    const handleOpenPaymentMethods = (userId: number) => {
+      emit("openPaymentMethods", userId);
+    };
+
     onMounted(() => {
       setTimeout(() => {
         startDeleteAnimation.value = true;
@@ -229,6 +236,7 @@ export default defineComponent({
       alertButtons,
       onAlertDismiss,
       infoIconClicked,
+      handleOpenPaymentMethods,
     };
   },
 });
