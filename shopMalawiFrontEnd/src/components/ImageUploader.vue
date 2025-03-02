@@ -544,7 +544,9 @@ export default defineComponent({
 
 <style scoped>
 .form-label {
-  font-size: small;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #3d3d3d;
 }
 .upload-area {
   display: flex;

@@ -1,21 +1,21 @@
-//\src\views\PayPage.vue
+//src/views/PayPage.vue
 <template>
   <IonPage>
     <IonHeader>
       <IonToolbar>
         <IonTitle>{{
-          product ? product.name : "Your Purchase is Ready!"
+          purchase.product ? purchase.product.name : "Your Purchase is Ready!"
         }}</IonTitle>
       </IonToolbar>
     </IonHeader>
 
     <IonContent>
       <productDisplay
-        :products="productDisplayData"
+        :products="purchase.productDisplayData"
         :enableCounter="true"
         :showDescription="false"
-        @increment="handleIncrement"
-        @decrement="handleDecrement"
+        @increment="purchase.handleIncrement"
+        @decrement="purchase.handleDecrement"
       />
 
       <PaymentMethod ref="paymentMethodRef" />
@@ -29,31 +29,31 @@
             <IonRow>
               <IonCol size="6">Item</IonCol>
               <IonCol class="ion-text-end">{{
-                product?.name || "Product Name"
+                purchase.product?.name || "Product Name"
               }}</IonCol>
             </IonRow>
             <IonRow>
               <IonCol size="6">Cost per Item</IonCol>
               <IonCol class="ion-text-end"
-                >MWK {{ costPerItem.toFixed(2) }}</IonCol
+                >MWK {{ purchase.costPerItem.toFixed(2) }}</IonCol
               >
             </IonRow>
             <IonRow>
               <IonCol size="6">Quantity</IonCol>
               <IonCol class="ion-text-end"
-                >x{{ product?.orderCount || 1 }}</IonCol
+                >x{{ purchase.product?.orderCount || 1 }}</IonCol
               >
             </IonRow>
             <IonRow>
               <IonCol size="6"><strong>Subtotal</strong></IonCol>
               <IonCol class="ion-text-end"
-                >MWK {{ subtotal.toFixed(2) }}</IonCol
+                >MWK {{ purchase.subtotal.toFixed(2) }}</IonCol
               >
             </IonRow>
             <IonRow>
               <IonCol size="6"><strong>Total</strong></IonCol>
               <IonCol class="ion-text-end"
-                ><strong>MWK {{ total.toFixed(2) }}</strong></IonCol
+                ><strong>MWK {{ purchase.total.toFixed(2) }}</strong></IonCol
               >
             </IonRow>
           </IonGrid>
@@ -66,16 +66,16 @@
       leftButtonText="Cancel"
       rightButtonText="Pay"
       disclaimerText="Upon clicking 'Pay', I confirm I have read and acknowledged <a href='#' class='terms-link'>all terms and policies</a>."
-      @left-button-click="onCancelOrder"
-      @right-button-click="onPlaceOrder"
+      @left-button-click="purchase.cancelOrder"
+      @right-button-click="purchase.placeOrder"
     />
 
     <!-- Centered Success Popup -->
     <transition name="fade">
-      <div v-if="showSuccessPopup" class="success-popup">
+      <div v-if="purchase.showSuccessPopup" class="success-popup">
         <div class="popup-content">
           <h2>Success!</h2>
-          <p>{{ popupMessage }}</p>
+          <p>{{ purchase.popupMessage }}</p>
         </div>
       </div>
     </transition>
@@ -83,14 +83,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, computed } from "vue";
-import router from "@/router/pageRoutes";
-import { loadProductFromSessionStorage } from "@/utils/utilities";
+import { defineComponent, onMounted, ref } from "vue";
+import { useBuyAndPayStore } from "@/stores/buyAndPayStore";
 import PaymentMethod from "@/components/PaymentMethod.vue";
 import productDisplay from "@/components/productDisplay.vue";
 import BuySegment from "@/components/BuySegment.vue";
-import { useOrdersStore } from "@/stores/buyStore";
-import useOrderPayment from "@/composables/useOrderPayment";
 
 export default defineComponent({
   name: "PayPage",
@@ -100,113 +97,17 @@ export default defineComponent({
     BuySegment,
   },
   setup() {
-    const ordersStore = useOrdersStore();
-    const { submitOrderAndPayment, loading, error, orderResponse } =
-      useOrderPayment();
-    const product = ref<any>(null);
-    const paymentMethodRef = ref<any>(null);
-    const showSuccessPopup = ref(false);
-    const popupMessage = ref("");
+    const purchase = useBuyAndPayStore();
+    const paymentMethodRef = ref(null);
 
     onMounted(() => {
-      const loadedProduct = loadProductFromSessionStorage<any>();
-      if (loadedProduct) {
-        product.value = loadedProduct;
-      } else {
-        router.replace({ name: "shop" });
-      }
+      purchase.initializeProduct();
+      purchase.setPaymentMethodRef(paymentMethodRef);
     });
-
-    const productDisplayData = computed(() => {
-      return product.value
-        ? [{ subcategory_name: "Selected Product", products: [product.value] }]
-        : [];
-    });
-
-    const costPerItem = computed(() =>
-      product.value ? parseFloat(product.value.price) : 0
-    );
-    const subtotal = computed(
-      () => costPerItem.value * (product.value?.orderCount || 1)
-    );
-    const total = computed(() => subtotal.value);
-
-    const onCancelOrder = () => router.back();
-
-    const onPlaceOrder = async () => {
-      if (!paymentMethodRef.value || !paymentMethodRef.value.validate()) {
-        return;
-      }
-      ordersStore.setTotalAmount(total.value);
-      ordersStore.setPaymentAmount(total.value);
-      ordersStore.setOrderItems([
-        {
-          product_id: product.value.id,
-          quantity: product.value.orderCount || 1,
-          price: costPerItem.value,
-        },
-      ]);
-      ordersStore.initUserId();
-
-      const orderData = {
-        user_id: ordersStore.payload.user_id,
-        shipping_address: ordersStore.payload.shipping_address,
-        shipping_town: ordersStore.payload.shipping_town,
-        total_amount: ordersStore.payload.total_amount,
-        payment_method_id: ordersStore.payload.payment_method_id,
-        payment_amount: ordersStore.payload.payment_amount,
-        order_items: ordersStore.payload.order_items,
-      };
-
-      await submitOrderAndPayment(
-        orderData,
-        ordersStore.payload.paymentScreenshot!
-      );
-
-      if (orderResponse.value) {
-        popupMessage.value = `${orderResponse.value.message}. Order ID: ${orderResponse.value.order_id}.`;
-        showSuccessPopup.value = true;
-        setTimeout(() => {
-          showSuccessPopup.value = false;
-          router.push({ name: "Profile", query: { activateOrders: "true" } });
-        }, 10000);
-      }
-    };
-
-    function handleIncrement(item: any) {
-      if (product.value && product.value.id === item.id) {
-        const currentCount = product.value.orderCount || 1;
-        if (currentCount < product.value.stock_quantity) {
-          product.value.orderCount = currentCount + 1;
-        }
-      }
-    }
-
-    function handleDecrement(item: any) {
-      if (product.value && product.value.id === item.id) {
-        product.value.orderCount = Math.max(
-          (product.value.orderCount || 1) - 1,
-          1
-        );
-      }
-    }
 
     return {
-      product,
-      productDisplayData,
-      costPerItem,
-      subtotal,
-      total,
-      onCancelOrder,
-      onPlaceOrder,
-      handleIncrement,
-      handleDecrement,
-      loading,
-      error,
-      orderResponse,
+      purchase,
       paymentMethodRef,
-      showSuccessPopup,
-      popupMessage,
     };
   },
 });

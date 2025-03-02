@@ -116,7 +116,7 @@
         </div>
       </div>
       <div class="ProductDisplay" v-else-if="selectedSegment === 'orders'">
-        <OrdersList />
+        <OrdersList :userId="authStore.user?.id || 0" />
       </div>
     </IonContent>
 

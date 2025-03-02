@@ -2,13 +2,13 @@
 <template>
   <div>
     <div class="settings-content">
-      <h4 class="settings-title">Manage Your Payment Methods</h4>
+      <h4 v-if="heading" class="settings-title">Manage Your Payment Methods</h4>
       <div v-if="loading" class="loading-message">
         Loading account details...
       </div>
-      <div v-if="heading" class="loading-message">
-        {{ heading }}
-      </div>
+      <h5 v-if="heading2" class="loading-message">
+        {{ heading2 }}
+      </h5>
       <div v-if="error" class="error-message">{{ error }}</div>
       <div v-if="!loading && bankDetails.length > 0" class="account-list">
         <div
@@ -161,6 +161,10 @@ export default defineComponent({
       default: null,
     },
     heading: {
+      type: Boolean,
+      default: true,
+    },
+    heading2: {
       type: [String],
       default: null,
     },
@@ -395,14 +399,14 @@ export default defineComponent({
       form,
       banks,
       editingRecord,
+      validationErrors,
+      formCleared,
+      showDeleteConfirmation,
       startEditing,
       cancelEditing,
       submitDetails,
       handleDelete,
-      validationErrors,
-      formCleared,
       getBackgroundStyle,
-      showDeleteConfirmation,
       cancelDelete,
       confirmDelete,
     };

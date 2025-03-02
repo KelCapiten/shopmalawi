@@ -73,3 +73,17 @@ export interface Store {
   updated_at: string;
   category_id?: number;
 }
+
+export interface OrderData {
+  user_id: number;
+  shipping_address: string;
+  shipping_town: string;
+  total_amount: number;
+  payment_method_id: number;
+  payment_amount: number;
+  order_items: {
+    product_id: number;
+    quantity: number;
+    price: number;
+  }[];
+}
