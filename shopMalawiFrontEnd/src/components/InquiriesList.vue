@@ -52,6 +52,7 @@
 
         <div class="location-and-button">
           <div class="location-badge" v-if="inquiry.location_name">
+            <ion-icon :icon="locationOutline" class="location-icon"></ion-icon>
             {{ inquiry.location_name }}
           </div>
           <button
@@ -81,7 +82,7 @@
 
         <productDisplay
           v-if="visibleProductCardGridId === inquiry.id"
-          heading="Offer your products"
+          heading="Offer your products to this request"
           class="searchResultsDisplay"
           :products="searchedProducts"
           :emptyMessageEnabled="true"
@@ -121,7 +122,7 @@ import { defineComponent, PropType } from "vue";
 import productDisplay from "@/components/productDisplay.vue";
 import imageDisplay from "@/components/imageDisplay.vue";
 import { updateImageUrl, formatDate } from "@/utils/utilities";
-import { createOutline, trashOutline } from "ionicons/icons";
+import { createOutline, trashOutline, locationOutline } from "ionicons/icons";
 
 export default defineComponent({
   name: "InquiriesList",
@@ -167,6 +168,7 @@ export default defineComponent({
       visibleProductCardGridId: null as number | null,
       createOutline,
       trashOutline,
+      locationOutline,
     };
   },
   methods: {
@@ -222,28 +224,30 @@ export default defineComponent({
 }
 
 .search-container {
-  margin: 10px 0;
+  margin: 15px 0;
   position: relative;
 }
 
 .search-input {
   width: 100%;
-  padding: 12px 16px;
+  padding: 12px 16px 12px 45px;
   font-size: 1rem;
-  border: 2px solid #ccc;
+  border: 1px solid #e0e0e0;
   border-radius: 8px;
   outline: none;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  transition: all 0.3s ease;
   box-sizing: border-box;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
 }
 
 .search-input:focus {
   border-color: #2196f3;
-  box-shadow: 0 0 8px rgba(33, 150, 243, 0.4);
+  box-shadow: 0 4px 10px rgba(33, 150, 243, 0.15);
 }
 
 .search-input::placeholder {
-  color: #999;
+  color: #9e9e9e;
   font-style: italic;
 }
 
@@ -255,11 +259,8 @@ export default defineComponent({
   left: 16px;
   top: 50%;
   transform: translateY(-50%);
-  color: #999;
-}
-
-.search-input {
-  padding-left: 40px;
+  color: #757575;
+  z-index: 1;
 }
 
 .searchResultsDisplay {
@@ -302,6 +303,11 @@ export default defineComponent({
   cursor: pointer;
   font-size: 1.2rem;
   margin-left: 10px;
+  color: #424242;
+  transition: color 0.2s ease;
+}
+
+.delete-icon:hover {
   color: #da3030;
 }
 
@@ -332,32 +338,60 @@ export default defineComponent({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 0;
+  margin: 5px 0;
 }
 
 .location-badge {
-  display: inline-block;
-  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 4px 8px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 0.75rem;
   border-radius: 4px;
-  background-color: green;
-  color: #fff;
-  font-size: 0.65rem;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.location-icon {
+  font-size: 0.9rem;
 }
 
 .sell-button {
-  padding: 6px 12px;
+  padding: 8px 16px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   background-color: #007bff;
   color: #fff;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .sell-button:hover {
   background-color: #0056b3;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.sell-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sell-button.cancel {
+  background-color: #f44336;
+}
+
+.sell-button.cancel:hover {
+  background-color: #d32f2f;
 }
 
 /* Add styles for rich text content */
