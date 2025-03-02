@@ -80,6 +80,15 @@
             :class="itemClasses"
             @click="$emit('productClicked', product)"
           >
+            <!-- Location tag that shows when infoPosition is 'bottom' -->
+            <div
+              v-if="infoPosition === 'bottom' && product.location_name"
+              class="location-tag"
+            >
+              <IonIcon :icon="locationOutline" class="location-icon" />
+              {{ product.location_name }}
+            </div>
+
             <template v-if="infoPosition === 'bottom'">
               <div class="icons-container">
                 <IonIcon
@@ -217,6 +226,7 @@ import {
   storefrontOutline,
   removeCircleOutline,
   archiveOutline,
+  locationOutline,
 } from "ionicons/icons";
 import { useUserstoreStore } from "@/stores/userstoreStore";
 import router from "@/router/pageRoutes";
@@ -323,6 +333,7 @@ export default defineComponent({
       storefrontOutline,
       removeCircleOutline,
       archiveOutline,
+      locationOutline,
       hasProducts,
       userstore,
     };
@@ -416,6 +427,29 @@ p {
 
 .item:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.location-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 0.9rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.location-icon {
+  font-size: 0.8rem;
 }
 
 .icons-container {
