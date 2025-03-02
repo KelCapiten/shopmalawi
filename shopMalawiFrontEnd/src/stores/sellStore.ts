@@ -8,7 +8,7 @@ interface NewProduct {
   name: string;
   description: string;
   price: number;
-  categoryId: string;
+  categoryId: number;
   stockQuantity: number;
   images: File[];
 }
@@ -20,7 +20,7 @@ export const useProductsStore = defineStore("productsStore", {
       name: "",
       description: "",
       price: 0,
-      categoryId: "",
+      categoryId: 0,
       stockQuantity: 1,
       images: [] as File[],
     } as NewProduct,
@@ -38,7 +38,7 @@ export const useProductsStore = defineStore("productsStore", {
     setPrice(price: number) {
       this.product.price = price;
     },
-    setCategoryId(categoryId: string) {
+    setCategoryId(categoryId: number) {
       this.product.categoryId = categoryId;
     },
     setStockQuantity(quantity: number) {
@@ -53,7 +53,7 @@ export const useProductsStore = defineStore("productsStore", {
         name: "",
         description: "",
         price: 0,
-        categoryId: "",
+        categoryId: 0,
         stockQuantity: 0,
         images: [],
       };
@@ -86,7 +86,7 @@ export const useProductsStore = defineStore("productsStore", {
             name: this.product.name,
             description: this.product.description,
             price: this.product.price,
-            category_id: parseInt(this.product.categoryId, 10),
+            category_id: this.product.categoryId,
             stockQuantity: this.product.stockQuantity,
             images: this.product.images,
           });
@@ -97,7 +97,7 @@ export const useProductsStore = defineStore("productsStore", {
             name: this.product.name,
             description: this.product.description,
             price: this.product.price,
-            category_id: parseInt(this.product.categoryId, 10),
+            category_id: this.product.categoryId,
             stockQuantity: this.product.stockQuantity,
             images: this.product.images,
           });

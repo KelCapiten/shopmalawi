@@ -18,6 +18,7 @@
             placeholderMessage="Update banner image."
             :showLabel="false"
             :circular="false"
+            :shaded="true"
             @uploaded-images="handleBannerImages"
           />
         </div>

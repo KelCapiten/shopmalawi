@@ -2,7 +2,8 @@
 <template>
   <div class="form-group">
     <label v-if="showLabel" class="form-label">{{ label }}</label>
-    <div class="upload-area" :class="{ circular: circular }">
+
+    <div class="upload-area" :class="{ circular: circular, shaded: shaded }">
       <!-- File input for gallery uploads -->
       <input
         type="file"
@@ -15,13 +16,19 @@
 
       <div v-if="previewImages.length === 0" class="upload-placeholder">
         <div class="upload-actions">
-          <button class="action-button" @click="openGallery">
+          <button
+            class="action-button"
+            :class="{ 'shaded-button': shaded }"
+            @click="openGallery"
+          >
             <ion-icon :icon="cloudUploadOutline" class="action-icon"></ion-icon>
             <span>Gallery</span>
           </button>
+
           <button
             v-if="hasCameraSupport"
             class="action-button"
+            :class="{ 'shaded-button': shaded }"
             @click="openCamera"
           >
             <ion-icon :icon="cameraOutline" class="action-icon"></ion-icon>
@@ -30,6 +37,7 @@
         </div>
         <p>{{ placeholderMessage }}</p>
       </div>
+
       <div v-else class="image-preview" :class="{ circular: circular }">
         <div v-if="showControls" class="preview-controls">
           <button class="control-button" @click="clearImages">
@@ -46,6 +54,7 @@
             <ion-icon :icon="cameraOutline" class="control-icon"></ion-icon>
           </button>
         </div>
+
         <swiper :pagination="paginationOptions" :modules="[Pagination]">
           <swiper-slide v-for="(image, index) in previewImages" :key="index">
             <img
@@ -186,6 +195,10 @@ export default defineComponent({
       type: Boolean,
       default: true,
     },
+    shaded: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ["uploaded-images"],
   setup(props, { emit }) {
@@ -218,6 +231,8 @@ export default defineComponent({
       cameraPreviews.value = [];
       try {
         await startCamera();
+        await switchCamera();
+        await switchCamera();
       } catch (error) {
         console.error("Error accessing camera:", error);
         showCameraModal.value = false;
@@ -539,7 +554,7 @@ export default defineComponent({
   border: 2px dashed #ccc;
   border-radius: 8px;
   text-align: center;
-  background-color: #f9f9f9;
+  background-color: white;
   position: relative;
   overflow: hidden;
 }
@@ -547,6 +562,9 @@ export default defineComponent({
   border-radius: 50%;
   width: 110px;
   height: 110px;
+}
+.upload-area.shaded {
+  background-color: rgb(241, 241, 241);
 }
 .upload-placeholder {
   color: #777;
@@ -568,6 +586,11 @@ export default defineComponent({
   padding: 10px;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.action-button.shaded-button {
+  border-color: rgb(192, 192, 192);
+  background-color: white;
 }
 .action-button:hover {
   background-color: #f0f0f0;

@@ -348,9 +348,7 @@ export const useUserstoreStore = defineStore("userstoreStore", {
         if (this.stores.length > 0) {
           this.selectedStore = this.stores[0];
         } else {
-          const authStore = useAuthStore();
-          this.selectedStore = this.getDefaultStore(authStore.user?.id);
-          this.stores = [this.selectedStore];
+          this.fetchStore;
         }
       } catch (error) {
         console.error("Error deleting store:", error);

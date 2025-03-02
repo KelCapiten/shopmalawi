@@ -15,42 +15,35 @@
     />
 
     <div class="form-group">
-      <label class="form-label">Item Name</label>
-      <ion-input
-        class="form-input"
+      <label>Item Name</label>
+      <input
+        type="text"
         v-model="productStore.product.name"
         placeholder="Enter item name"
         required
-      ></ion-input>
+      />
     </div>
 
     <div class="form-group">
-      <label class="form-label">Price</label>
-      <ion-input
-        class="form-input"
-        v-model="priceInput"
+      <label>Price</label>
+      <input
         type="number"
+        v-model="priceInput"
         placeholder="Enter price"
         required
-      ></ion-input>
+      />
     </div>
 
     <div class="form-group">
-      <label class="form-label">Category</label>
-      <ion-select
-        class="form-input"
-        v-model="productStore.product.categoryId"
+      <CustomDropdownSelector
+        :modelValue="productStore.product.categoryId"
+        @update:modelValue="
+          (value) => productStore.setCategoryId(Number(value))
+        "
+        :options="subcategories"
+        label="Category"
         placeholder="Select category"
-        required
-      >
-        <ion-select-option
-          v-for="subcategory in subcategories"
-          :key="subcategory.id"
-          :value="subcategory.id"
-        >
-          {{ subcategory.name }}
-        </ion-select-option>
-      </ion-select>
+      />
       <div v-if="categoriesLoading" class="loading-message">
         Loading categories...
       </div>
@@ -60,14 +53,13 @@
     </div>
 
     <div class="form-group">
-      <label class="form-label">How many do you have for sale?</label>
-      <ion-input
-        class="form-input"
+      <label>How many do you have for sale?</label>
+      <input
         type="number"
         v-model.number="productStore.product.stockQuantity"
         placeholder="Enter stock quantity"
         required
-      ></ion-input>
+      />
     </div>
 
     <div class="form-group">
@@ -163,8 +155,9 @@ import { ref, defineComponent, onMounted, computed, watch } from "vue";
 import { useProductsStore } from "@/stores/sellStore";
 import ImageUploader from "@/components/ImageUploader.vue";
 import SavingOverlay from "@/components/SavingOverlay.vue";
+import CustomDropdownSelector from "@/components/CustomDropdownSelector.vue";
 import { useCategories } from "@/composables/useCategories";
-import { computeSubcategories, updateImageUrl } from "@/utils/utilities";
+import { updateImageUrl } from "@/utils/utilities";
 import { closeCircle, list, reorderFour, happy } from "ionicons/icons";
 
 export default defineComponent({
@@ -182,6 +175,7 @@ export default defineComponent({
   components: {
     ImageUploader,
     SavingOverlay,
+    CustomDropdownSelector,
   },
   emits: ["product-saved", "close-form"],
   setup(_, { emit }) {
@@ -222,9 +216,15 @@ export default defineComponent({
       fetchCategories,
     } = useCategories();
 
-    const subcategories = computed(() =>
-      computeSubcategories(categories.value)
-    );
+    const subcategories = computed(() => {
+      return categories.value.reduce((acc: any[], category: any) => {
+        acc.push(category);
+        if (category.subcategories) {
+          acc.push(...category.subcategories);
+        }
+        return acc;
+      }, []);
+    });
 
     onMounted(() => {
       fetchCategories();
@@ -396,7 +396,6 @@ export default defineComponent({
       initialImages,
       closeForm,
       closeCircle,
-      // Rich text editor
       descriptionEditor,
       applyFormatting,
       updateDescription,
@@ -432,7 +431,24 @@ export default defineComponent({
   align-items: center;
 }
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 15px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+.form-group input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.form-group input:focus {
+  border-color: orange;
+  box-shadow: 0 0 5px rgba(255, 165, 0, 0.5);
+  outline: none;
 }
 .form-label {
   font-weight: bold;
@@ -450,10 +466,17 @@ export default defineComponent({
   font-size: 0.9rem;
 }
 .submit-button {
-  margin-top: 10px;
-  font-size: 1rem;
+  margin-top: 20px;
   font-weight: bold;
-  border-radius: 8px;
+  font-size: 1rem;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  width: 100%;
+  transition: transform 0.1s ease;
+}
+
+.submit-button:active {
+  transform: scale(0.98);
 }
 .loading-message {
   margin-top: 5px;
@@ -497,17 +520,19 @@ export default defineComponent({
   width: 100%;
   min-height: 120px;
   max-height: 300px;
-  padding: 10px;
+  padding: 8px;
   border: 1px solid #ccc;
-  border-radius: 0 0 5px 5px;
-  background-color: #f9f9f9;
-  font-size: 0.9rem;
+  border-radius: 4px;
+  background-color: #fff;
+  font-size: 1rem;
   overflow-y: auto;
   line-height: 1.5;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 .rich-text-editor:focus {
+  border-color: orange;
+  box-shadow: 0 0 5px rgba(255, 165, 0, 0.5);
   outline: none;
-  border-color: var(--ion-color-primary);
 }
 .rich-text-editor[placeholder]:empty:before {
   content: attr(placeholder);
