@@ -11,7 +11,8 @@ const sanitizeOptions = {
 
 // endpoint to add products
 export const addProduct = async (req, res) => {
-  const { name, description, price, category_id, stockQuantity } = req.body;
+  const { name, description, price, category_id, stockQuantity, location_id } =
+    req.body;
 
   // Sanitize HTML content
   const sanitizedDescription = sanitizeHtml(description, sanitizeOptions);
@@ -21,11 +22,13 @@ export const addProduct = async (req, res) => {
     !name ||
     !sanitizedDescription ||
     !price ||
+    !location_id ||
     !req.files ||
     req.files.length === 0
   ) {
     return res.status(400).json({
-      message: "All required fields and at least one image are necessary.",
+      message:
+        "All required fields (including location) and at least one image are necessary.",
     });
   }
 
@@ -36,18 +39,31 @@ export const addProduct = async (req, res) => {
   try {
     await connection.beginTransaction();
 
+    // Validate location exists
+    const [locationCheck] = await connection.query(
+      "SELECT id FROM locations WHERE id = ?",
+      [location_id]
+    );
+
+    if (locationCheck.length === 0) {
+      return res.status(400).json({
+        message: "Invalid location_id provided",
+      });
+    }
+
     // Insert product into `products` table
     const [productResult] = await connection.query(
       `INSERT INTO products 
        (name, description, price, mark_up_amount, category_id, 
-        stock_quantity, uploaded_by) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        location_id, stock_quantity, uploaded_by) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name,
         sanitizedDescription,
         price,
         markUpAmount,
         category_id,
+        location_id,
         stockQuantity,
         uploadedBy,
       ]
@@ -77,6 +93,8 @@ export const addProduct = async (req, res) => {
         p.price,
         p.mark_up_amount,
         p.category_id,
+        p.location_id,
+        l.name as location_name,
         c.name as category_name,
         mc.name as maincategory_name,
         mc.id as maincategory_id,
@@ -89,6 +107,7 @@ export const addProduct = async (req, res) => {
       LEFT JOIN users u ON p.uploaded_by = u.id
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN categories mc ON c.parent_id = mc.id
+      LEFT JOIN locations l ON p.location_id = l.id
       WHERE p.id = ?`,
       [productId]
     );
@@ -144,6 +163,8 @@ export const getAllProducts = async (req, res) => {
         p.description, 
         p.price,
         p.category_id,
+        p.location_id,
+        l.name as location_name,
         c.name as category_name,
         mc.name as maincategory_name,
         mc.id as maincategory_id,
@@ -161,6 +182,7 @@ export const getAllProducts = async (req, res) => {
         ON p.uploaded_by = u.id
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN categories mc ON c.parent_id = mc.id
+      LEFT JOIN locations l ON p.location_id = l.id
       LEFT JOIN images i
         ON i.imageable_id = p.id
         AND i.imageable_type = 'product'
@@ -260,6 +282,8 @@ export const getAllProducts = async (req, res) => {
           description: product.description,
           price: product.price,
           category_id: product.category_id,
+          location_id: product.location_id,
+          location_name: product.location_name,
           category_name: product.category_name,
           maincategory_id: product.maincategory_id,
           maincategory_name: product.maincategory_name,
@@ -444,7 +468,8 @@ export const activateProduct = async (req, res) => {
 // Endpoint to edit a product
 export const editProduct = async (req, res) => {
   const { id } = req.params;
-  const { name, description, price, category_id, stockQuantity } = req.body;
+  const { name, description, price, category_id, stockQuantity, location_id } =
+    req.body;
 
   // Sanitize HTML content
   const sanitizedDescription = sanitizeHtml(description, sanitizeOptions);
@@ -456,6 +481,7 @@ export const editProduct = async (req, res) => {
     !sanitizedDescription ||
     !price ||
     !category_id ||
+    !location_id ||
     !stockQuantity
   ) {
     return res.status(400).json({
@@ -467,6 +493,18 @@ export const editProduct = async (req, res) => {
 
   const connection = await db.getConnection();
   try {
+    // Validate location exists
+    const [locationCheck] = await connection.query(
+      "SELECT id FROM locations WHERE id = ?",
+      [location_id]
+    );
+
+    if (locationCheck.length === 0) {
+      return res.status(400).json({
+        message: "Invalid location_id provided",
+      });
+    }
+
     // Fetch category info
     const [categoryInfo] = await connection.query(
       `SELECT 
@@ -495,6 +533,7 @@ export const editProduct = async (req, res) => {
            price = ?, 
            mark_up_amount = ?, 
            category_id = ?,
+           location_id = ?,
            stock_quantity = ?
        WHERE id = ?`,
       [
@@ -503,6 +542,7 @@ export const editProduct = async (req, res) => {
         price,
         markUpAmount,
         category_id,
+        location_id,
         stockQuantity,
         id,
       ]

@@ -19,7 +19,7 @@
       <input
         type="text"
         v-model="productStore.product.name"
-        placeholder="Enter item name"
+        placeholder="What are you selling?"
         required
       />
     </div>
@@ -29,7 +29,7 @@
       <input
         type="number"
         v-model="priceInput"
-        placeholder="Enter price"
+        placeholder="How much is it?"
         required
       />
     </div>
@@ -42,13 +42,31 @@
         "
         :options="subcategories"
         label="Category"
-        placeholder="Select category"
+        placeholder="Select a category that best fits the item"
       />
       <div v-if="categoriesLoading" class="loading-message">
         Loading categories...
       </div>
       <div v-if="categoriesError" class="error-message">
         {{ categoriesError }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <CustomDropdownSelector
+        :modelValue="productStore.product.locationId"
+        @update:modelValue="
+          (value) => productStore.setLocationId(Number(value))
+        "
+        :options="locations"
+        label="Where is the item?"
+        placeholder="Select location"
+      />
+      <div v-if="locationsLoading" class="loading-message">
+        Loading locations...
+      </div>
+      <div v-if="locationsError" class="error-message">
+        {{ locationsError }}
       </div>
     </div>
 
@@ -123,7 +141,9 @@
         @blur="handleEditorBlur"
         @focus="handleEditorFocus"
         :placeholder="
-          !editorFocused && !hasContent ? 'Enter a brief description' : ''
+          !editorFocused && !hasContent
+            ? 'Tell us a bit more about what you are advertising...'
+            : ''
         "
       ></div>
     </div>
@@ -159,6 +179,7 @@ import CustomDropdownSelector from "@/components/CustomDropdownSelector.vue";
 import { useCategories } from "@/composables/useCategories";
 import { updateImageUrl } from "@/utils/utilities";
 import { closeCircle, list, reorderFour, happy } from "ionicons/icons";
+import useLocations from "@/composables/useLocations";
 
 export default defineComponent({
   name: "SellItemForm",
@@ -216,6 +237,13 @@ export default defineComponent({
       fetchCategories,
     } = useCategories();
 
+    const {
+      locations,
+      loading: locationsLoading,
+      error: locationsError,
+      fetchLocations,
+    } = useLocations();
+
     const subcategories = computed(() => {
       return categories.value.reduce((acc: any[], category: any) => {
         acc.push(category);
@@ -228,6 +256,7 @@ export default defineComponent({
 
     onMounted(() => {
       fetchCategories();
+      fetchLocations();
       // Initialize editor with any existing description content
       if (productStore.product.description && descriptionEditor.value) {
         descriptionEditor.value.innerHTML = productStore.product.description;
@@ -410,6 +439,9 @@ export default defineComponent({
       hasContent,
       handleEditorFocus,
       handleEditorBlur,
+      locations,
+      locationsLoading,
+      locationsError,
     };
   },
 });

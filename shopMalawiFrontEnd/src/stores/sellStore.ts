@@ -9,6 +9,7 @@ interface NewProduct {
   description: string;
   price: number;
   categoryId: number;
+  locationId: number; // Add locationId
   stockQuantity: number;
   images: File[];
 }
@@ -21,6 +22,7 @@ export const useProductsStore = defineStore("productsStore", {
       description: "",
       price: 0,
       categoryId: 0,
+      locationId: 0, // Add locationId with default value
       stockQuantity: 1,
       images: [] as File[],
     } as NewProduct,
@@ -47,6 +49,9 @@ export const useProductsStore = defineStore("productsStore", {
     setImages(images: File[]) {
       this.product.images = images;
     },
+    setLocationId(locationId: number) {
+      this.product.locationId = locationId;
+    },
     clearProduct() {
       this.product = {
         id: undefined,
@@ -54,6 +59,7 @@ export const useProductsStore = defineStore("productsStore", {
         description: "",
         price: 0,
         categoryId: 0,
+        locationId: 0,
         stockQuantity: 0,
         images: [],
       };
@@ -67,6 +73,7 @@ export const useProductsStore = defineStore("productsStore", {
         !this.product.description ||
         this.product.price <= 0 ||
         !this.product.categoryId ||
+        !this.product.locationId || // Add locationId check
         this.product.stockQuantity <= 0 ||
         this.product.images.length === 0
       ) {
@@ -87,6 +94,7 @@ export const useProductsStore = defineStore("productsStore", {
             description: this.product.description,
             price: this.product.price,
             category_id: this.product.categoryId,
+            location_id: this.product.locationId,
             stockQuantity: this.product.stockQuantity,
             images: this.product.images,
           });
@@ -98,6 +106,7 @@ export const useProductsStore = defineStore("productsStore", {
             description: this.product.description,
             price: this.product.price,
             category_id: this.product.categoryId,
+            location_id: this.product.locationId,
             stockQuantity: this.product.stockQuantity,
             images: this.product.images,
           });

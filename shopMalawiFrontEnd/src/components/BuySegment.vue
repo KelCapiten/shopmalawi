@@ -17,7 +17,11 @@
       </IonButton>
 
       <!-- Cart Button (badge removed) -->
-      <IonButton @click="onCartClick" class="cart-button">
+      <IonButton
+        v-if="!buyAndPayStore.isProductOwner"
+        @click="onCartClick"
+        class="cart-button"
+      >
         <div class="button-content">
           <IonIcon :icon="cartOutline" class="big-icon" />
           <IonLabel class="button-label">cart</IonLabel>
@@ -25,7 +29,7 @@
       </IonButton>
     </IonButtons>
 
-    <IonButtons slot="primary">
+    <IonButtons v-if="!buyAndPayStore.isProductOwner" slot="primary">
       <IonButton
         fill="outline"
         color="dark"
@@ -49,9 +53,12 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from "vue";
+import { defineProps, defineEmits, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { storefrontOutline, cartOutline } from "ionicons/icons";
+import { useBuyAndPayStore } from "@/stores/buyAndPayStore";
+
+const buyAndPayStore = useBuyAndPayStore();
 
 const props = defineProps({
   leftButtonText: {
@@ -85,6 +92,10 @@ const emit = defineEmits([
 ]);
 
 const router = useRouter();
+
+onMounted(() => {
+  buyAndPayStore.initializeProduct();
+});
 
 function onStoreClick(): void {
   emit("store-click");

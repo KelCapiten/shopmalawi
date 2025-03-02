@@ -15,6 +15,7 @@ export const useBuyAndPayStore = defineStore("buyAndPayStore", () => {
   const popupMessage = ref("");
   const paymentMethodRef = ref<any>(null);
   const productOwnerID = ref(0);
+  const isProductOwner = ref(false);
 
   // Initialize order payload with user_id
   const orderPayload = ref({
@@ -60,8 +61,8 @@ export const useBuyAndPayStore = defineStore("buyAndPayStore", () => {
     if (loadedProduct) {
       product.value = loadedProduct;
       productOwnerID.value = loadedProduct.uploaded_by_userID;
-      // Update user_id when initializing
       orderPayload.value.user_id = authStore.user?.id || 0;
+      isProductOwner.value = authStore.user?.id === productOwnerID.value;
     } else {
       router.replace({ name: "shop" });
     }
@@ -186,6 +187,7 @@ export const useBuyAndPayStore = defineStore("buyAndPayStore", () => {
     costPerItem,
     subtotal,
     total,
+    isProductOwner,
 
     // Actions
     initializeProduct,

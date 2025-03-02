@@ -6,6 +6,7 @@ export interface SearchProductsParams {
   query?: string;
   subcategory_id?: number;
   maincategory_id?: number;
+  location_id?: number;
   priceRange?: string;
   sortBy?: string;
   uploaded_by?: number;

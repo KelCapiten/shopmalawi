@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS products (
     price DECIMAL(12, 2) NOT NULL COMMENT 'Amount in Malawian Kwacha (MWK)',
     mark_up_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (mark_up_amount >= 0) COMMENT 'Amount in Malawian Kwacha (MWK)',
     category_id INT,
+    location_id INT NOT NULL,
     stock_quantity INT NOT NULL DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     uploaded_by INT NOT NULL,
@@ -114,15 +115,17 @@ CREATE TABLE IF NOT EXISTS products (
     FULLTEXT (name, description),
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
     FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE RESTRICT,
     INDEX (category_id),
     INDEX (uploaded_by),
+    INDEX (location_id),
     INDEX idx_price_active (price, is_active),
     INDEX idx_name (name),
     CONSTRAINT chk_price CHECK (price >= 0),
     CONSTRAINT chk_stock CHECK (stock_quantity >= 0),
     CONSTRAINT chk_markup CHECK (mark_up_amount <= price),
     CONSTRAINT chk_quantity CHECK (stock_quantity >= 0),
-    INDEX idx_price_location (price, uploaded_by, is_active)
+    INDEX idx_price_location (price, location_id, uploaded_by, is_active)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Inquiries Table

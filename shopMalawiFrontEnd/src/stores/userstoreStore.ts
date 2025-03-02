@@ -330,7 +330,8 @@ export const useUserstoreStore = defineStore("userstoreStore", {
           name: selectedProduct.name,
           description: selectedProduct.description,
           price: parseFloat(selectedProduct.price),
-          categoryId: selectedProduct.subcategory_id,
+          categoryId: selectedProduct.category_id,
+          locationId: selectedProduct.location_id,
           stockQuantity: selectedProduct.stock_quantity,
           images: selectedProduct.images || [],
         };

@@ -1,10 +1,13 @@
 //src/types/index.ts
+
+// Image related interfaces
 export interface Image {
   image_path: string;
   alt_text: string;
   is_primary: boolean;
 }
 
+// Product related interfaces
 export interface Product {
   id: number;
   name: string;
@@ -22,6 +25,8 @@ export interface Product {
   images: Image[];
   created_at: string;
   isSellerPick?: boolean;
+  location_id: number; // Add location_id
+  location_name: string; // Add location_name
 }
 
 export interface AddProductResponse {
@@ -30,6 +35,38 @@ export interface AddProductResponse {
   product: Product;
 }
 
+export interface AddProductPayload {
+  name: string;
+  description: string;
+  price: number;
+  category_id: number;
+  location_id: number;
+  stockQuantity: number;
+  images: File[];
+}
+
+export interface EditProductPayload {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  category_id: number;
+  location_id: number;
+  stockQuantity: number;
+  images?: File[];
+}
+
+export interface GetProductsFilters {
+  category_id?: number;
+  startDate?: string;
+  endDate?: string;
+  groupBy?: string;
+  uploaded_by?: number;
+  includeInactive?: boolean;
+  store_id?: number;
+}
+
+// Category related interfaces
 export interface Category {
   id: number;
   name: string;
@@ -38,6 +75,7 @@ export interface Category {
   subcategories?: Category[];
 }
 
+// Payment related interfaces
 export interface BankDetails {
   id: number;
   user_id: number;
@@ -55,11 +93,13 @@ export interface PaymentMethod {
   description: string;
 }
 
+// Location related interfaces
 export interface Location {
   id: number;
   name: string;
 }
 
+// Store related interfaces
 export interface Store {
   id: number;
   brand_name: string;
@@ -74,6 +114,7 @@ export interface Store {
   category_id?: number;
 }
 
+// Order related interfaces
 export interface OrderData {
   user_id: number;
   shipping_address: string;

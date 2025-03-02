@@ -22,6 +22,7 @@ export function useProducts() {
     uploaded_by?: number;
     includeInactive?: boolean;
     store_id?: number;
+    location_id?: number;
   }) {
     loading.value = true;
     error.value = null;
@@ -40,6 +41,7 @@ export function useProducts() {
     description: string;
     price: number;
     category_id: number;
+    location_id: number;
     stockQuantity: number;
     images: File[];
   }): Promise<AddProductResponse> {
@@ -62,6 +64,7 @@ export function useProducts() {
     description: string;
     price: number;
     category_id: number;
+    location_id: number;
     stockQuantity: number;
     images?: File[];
   }) {

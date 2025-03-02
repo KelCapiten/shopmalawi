@@ -20,6 +20,8 @@ export const searchProducts = async (req, res) => {
         p.price,
         p.mark_up_amount,
         p.category_id,
+        p.location_id,
+        l.name as location_name,
         c.name as category_name,
         mc.name as maincategory_name,
         mc.id as maincategory_id,
@@ -33,6 +35,7 @@ export const searchProducts = async (req, res) => {
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN categories mc ON c.parent_id = mc.id
+      LEFT JOIN locations l ON p.location_id = l.id
       LEFT JOIN images pi ON p.id = pi.imageable_id AND pi.imageable_type = 'product'
       LEFT JOIN users u ON p.uploaded_by = u.id
       WHERE 1=1
@@ -117,6 +120,8 @@ export const searchProducts = async (req, res) => {
           price: product.price,
           mark_up_amount: product.mark_up_amount,
           category_id: product.category_id,
+          location_id: product.location_id,
+          location_name: product.location_name,
           category_name: product.category_name,
           maincategory_id: product.maincategory_id,
           maincategory_name: product.maincategory_name,
@@ -179,6 +184,8 @@ export const searchProductsExcludingOffered = async (req, res) => {
         p.price, 
         p.mark_up_amount, 
         p.category_id,
+        p.location_id,
+        l.name as location_name,
         c.name as category_name,
         mc.name as maincategory_name,
         mc.id as maincategory_id,
@@ -193,6 +200,7 @@ export const searchProductsExcludingOffered = async (req, res) => {
         products p
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN categories mc ON c.parent_id = mc.id
+      LEFT JOIN locations l ON p.location_id = l.id
       LEFT JOIN 
         images pi ON p.id = pi.imageable_id AND pi.imageable_type = 'product'
       LEFT JOIN 
@@ -285,6 +293,8 @@ export const searchProductsExcludingOffered = async (req, res) => {
           price: product.price,
           mark_up_amount: product.mark_up_amount,
           category_id: product.category_id,
+          location_id: product.location_id,
+          location_name: product.location_name,
           category_name: product.category_name,
           maincategory_id: product.maincategory_id,
           maincategory_name: product.maincategory_name,

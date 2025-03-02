@@ -1,35 +1,13 @@
-// src/services/productService.ts
 import apiClient from "./apiClient";
-import type { Product, AddProductResponse } from "@/types/types";
+import type {
+  Product,
+  AddProductResponse,
+  AddProductPayload,
+  EditProductPayload,
+  GetProductsFilters,
+} from "@/types/types";
 
-interface AddProductPayload {
-  name: string;
-  description: string;
-  price: number;
-  category_id: number;
-  stockQuantity: number;
-  images: File[];
-}
-
-interface EditProductPayload {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  category_id: number;
-  stockQuantity: number;
-  images?: File[];
-}
-
-interface GetProductsFilters {
-  category_id?: number;
-  startDate?: string;
-  endDate?: string;
-  groupBy?: string;
-  uploaded_by?: number;
-  includeInactive?: boolean;
-  store_id?: number;
-}
+// Remove interface definitions since they're now in types.ts
 
 export async function addProduct(
   payload: AddProductPayload
@@ -39,6 +17,7 @@ export async function addProduct(
   formData.append("description", payload.description);
   formData.append("price", payload.price.toString());
   formData.append("category_id", payload.category_id.toString());
+  formData.append("location_id", payload.location_id.toString()); // Add location_id
   formData.append("stockQuantity", payload.stockQuantity.toString());
 
   payload.images.forEach((image: File) => {
@@ -62,6 +41,7 @@ export async function editProduct(
   formData.append("description", payload.description);
   formData.append("price", payload.price.toString());
   formData.append("category_id", payload.category_id.toString());
+  formData.append("location_id", payload.location_id.toString()); // Add location_id
   formData.append("stockQuantity", payload.stockQuantity.toString());
   if (payload.images && payload.images.length > 0) {
     payload.images.forEach((file) => {
