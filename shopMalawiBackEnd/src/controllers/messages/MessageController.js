@@ -1,7 +1,7 @@
-import db from "../../config/db.js";
-import DbTransactionService from "../../services/DbTransactionService.js";
-import ErrorHandlingService from "../../services/ErrorHandlingService.js";
-import { uploadFile } from "../../services/FileUploadService.js";
+import db from "../../../config/db.js";
+import DbTransactionService from "../../../services/DbTransactionService.js";
+import ErrorHandlingService from "../../../services/ErrorHandlingService.js";
+import { uploadFile } from "../../../services/FileUploadService.js";
 import { cache } from "../../config/cache.js";
 
 class MessageController {

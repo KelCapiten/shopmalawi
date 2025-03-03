@@ -1,5 +1,5 @@
 //\controllers\paymentsCrontroller.js
-import db from "../config/db.js";
+import db from "../../config/db.js";
 
 export const getPaymentMethods = async (req, res) => {
   const { user_id } = req.query;
