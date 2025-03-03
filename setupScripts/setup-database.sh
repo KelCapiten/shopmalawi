@@ -450,16 +450,56 @@ CREATE TABLE IF NOT EXISTS messages (
     text TEXT NOT NULL,
     is_read BOOLEAN DEFAULT FALSE,
     parent_message_id INT DEFAULT NULL,
+    edited_at TIMESTAMP NULL DEFAULT NULL,
+    delivery_status ENUM('pending', 'sent', 'delivered', 'failed', 'seen') DEFAULT 'pending',
+    delivered_at TIMESTAMP NULL DEFAULT NULL,
     deleted_at TIMESTAMP NULL DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (parent_message_id) REFERENCES messages(id) ON DELETE SET NULL,
-    INDEX (conversation_id),
-    INDEX (sender_id),
-    INDEX (parent_message_id),
-    INDEX (created_at),
-    INDEX (deleted_at)
+    INDEX idx_conversation_date (conversation_id, created_at),
+    INDEX idx_sender_date (sender_id, created_at),
+    INDEX idx_delivery_status (delivery_status),
+    INDEX idx_parent_message (parent_message_id),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB;
+
+-- Message Edit History Table
+CREATE TABLE IF NOT EXISTS message_edit_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    message_id INT NOT NULL,
+    previous_text TEXT NOT NULL,
+    edited_by INT NOT NULL,
+    edited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+    FOREIGN KEY (edited_by) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_message_date (message_id, edited_at)
+) ENGINE=InnoDB;
+
+-- User Presence Table
+CREATE TABLE IF NOT EXISTS user_presence (
+    user_id INT PRIMARY KEY,
+    status ENUM('online', 'offline', 'away') DEFAULT 'offline',
+    last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_status (status),
+    INDEX idx_last_active (last_active)
+) ENGINE=InnoDB;
+
+-- Conversation Metadata Table
+CREATE TABLE IF NOT EXISTS conversation_metadata (
+    conversation_id INT PRIMARY KEY,
+    title VARCHAR(255),
+    description TEXT,
+    avatar_url VARCHAR(255),
+    is_group BOOLEAN DEFAULT FALSE,
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_is_group (is_group)
 ) ENGINE=InnoDB;
 
 -- Message Attachments Table (Files and media in messages)
@@ -567,6 +607,28 @@ BEGIN
         AND sender_id != NEW.user_id
         AND created_at <= NEW.last_read_at;
     END IF;
+END//
+
+-- Add triggers for user presence
+CREATE TRIGGER after_user_activity
+AFTER UPDATE ON conversation_participants
+FOR EACH ROW
+BEGIN
+    UPDATE user_presence 
+    SET status = 'online',
+        last_active = NOW()
+    WHERE user_id = NEW.user_id;
+END//
+
+-- Add trigger for auto-offline after inactivity
+CREATE EVENT check_user_presence
+ON SCHEDULE EVERY 5 MINUTE
+DO
+BEGIN
+    UPDATE user_presence 
+    SET status = 'offline'
+    WHERE last_active < NOW() - INTERVAL 15 MINUTE
+    AND status != 'offline';
 END//
 
 DELIMITER ;
