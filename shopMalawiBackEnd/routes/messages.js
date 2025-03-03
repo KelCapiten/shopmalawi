@@ -1,6 +1,6 @@
 import express from "express";
 import { authenticateUser } from "../middleware/authMiddleware.js";
-import MessagesController from "../controllers/MessagesController.js";
+import MessagesController from "../controllers/messages/MessagesController.js";
 import {
   messageRateLimit,
   reactionRateLimit,

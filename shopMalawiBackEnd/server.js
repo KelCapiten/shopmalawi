@@ -14,10 +14,15 @@ import inquiriesRoutes from "./routes/inquiries.js";
 import bankDetailsRoutes from "./routes/bankDetails.js";
 import orderPaymentRoutes from "./routes/orderAndPayment.js";
 import userstoreRoutes from "./routes/userstore.js";
+import { createServer } from "http";
+import { configureSocket } from "./config/socket.js";
 
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
+const io = configureSocket(httpServer);
+
 const port = process.env.PORT || 5000;
 
 // Middleware
@@ -25,6 +30,12 @@ app.use(corsMiddleware);
 app.options("*", corsMiddleware);
 app.use(express.json());
 app.use("/uploads", staticMiddleware);
+
+// Make io available in req object
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
 
 // Database Middleware
 dbMiddleware(app);
@@ -42,6 +53,6 @@ app.use("/api/order-pay", orderPaymentRoutes);
 app.use("/api/userstores", userstoreRoutes);
 
 // Start Server
-app.listen(port, () => {
+httpServer.listen(port, () => {
   console.log(`shopMalawiBackEnd running on port ${port}`);
 });
