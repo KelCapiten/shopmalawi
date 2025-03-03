@@ -27,6 +27,12 @@
             <ion-label>Sell</ion-label>
           </div>
         </ion-button>
+        <ion-button router-link="/messages">
+          <div class="button-content">
+            <ion-icon :icon="chatbubbleOutline"></ion-icon>
+            <ion-label>Messages</ion-label>
+          </div>
+        </ion-button>
         <ion-button router-link="/Profile">
           <div class="button-content">
             <ion-icon :icon="personOutline"></ion-icon>
@@ -46,6 +52,7 @@ import {
   pricetagOutline,
   personOutline,
   storefrontOutline,
+  chatbubbleOutline,
 } from "ionicons/icons";
 
 export default defineComponent({
@@ -57,6 +64,7 @@ export default defineComponent({
       pricetagOutline,
       personOutline,
       storefrontOutline,
+      chatbubbleOutline,
     };
   },
 });

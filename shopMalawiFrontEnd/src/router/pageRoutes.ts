@@ -12,6 +12,7 @@ import ProductPage from "@/views/productPage.vue";
 import PayPage from "@/views/PayPage.vue";
 import LookingForPage from "@/views/LookingForPage.vue";
 import StorePage from "@/views/StorePage.vue";
+import MessagesPage from "@/views/MessagesPage.vue";
 import { useAuthStore } from "@/stores/authStore";
 
 const routes: Array<RouteRecordRaw> = [
@@ -80,6 +81,12 @@ const routes: Array<RouteRecordRaw> = [
     path: "/store",
     name: "Store",
     component: StorePage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/messages",
+    name: "Messages",
+    component: MessagesPage,
     meta: { requiresAuth: true },
   },
   {
