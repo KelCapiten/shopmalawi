@@ -415,6 +415,85 @@ CREATE TABLE IF NOT EXISTS event_tickets (
     INDEX (user_id),
     INDEX (ticket_code)
 ) ENGINE=InnoDB;
+    
+-- Conversations Table (Main chat container)
+CREATE TABLE IF NOT EXISTS conversations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_message_id INT DEFAULT NULL,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    INDEX (last_message_id),
+    INDEX (deleted_at)
+) ENGINE=InnoDB;
+
+-- Conversation Participants Table (Users in each conversation)
+CREATE TABLE IF NOT EXISTS conversation_participants (
+    conversation_id INT NOT NULL,
+    user_id INT NOT NULL,
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_archived BOOLEAN DEFAULT FALSE,
+    PRIMARY KEY (conversation_id, user_id),
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX (user_id),
+    INDEX (conversation_id),
+    INDEX (is_archived)
+) ENGINE=InnoDB;
+
+-- Messages Table (Individual chat messages)
+CREATE TABLE IF NOT EXISTS messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    conversation_id INT NOT NULL,
+    sender_id INT NOT NULL,
+    text TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    parent_message_id INT DEFAULT NULL,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_message_id) REFERENCES messages(id) ON DELETE SET NULL,
+    INDEX (conversation_id),
+    INDEX (sender_id),
+    INDEX (parent_message_id),
+    INDEX (created_at),
+    INDEX (deleted_at)
+) ENGINE=InnoDB;
+
+-- Message Attachments Table (Files and media in messages)
+CREATE TABLE IF NOT EXISTS message_attachments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    message_id INT NOT NULL,
+    file_type ENUM('image', 'document', 'audio', 'video', 'other') NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_size INT NOT NULL,
+    mime_type VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+    INDEX (message_id),
+    INDEX (file_type)
+) ENGINE=InnoDB;
+
+-- Message Reactions Table (Emoji reactions to messages)
+CREATE TABLE IF NOT EXISTS message_reactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    message_id INT NOT NULL,
+    user_id INT NOT NULL,
+    reaction_type VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_reaction (message_id, user_id),
+    INDEX (message_id),
+    INDEX (user_id)
+) ENGINE=InnoDB;
+
+-- Update last_message_id foreign key after messages table is created
+ALTER TABLE conversations 
+ADD FOREIGN KEY (last_message_id) REFERENCES messages(id) ON DELETE SET NULL;
 
 -- Audit Logs Table
 CREATE TABLE IF NOT EXISTS audit_logs (
@@ -462,6 +541,31 @@ BEGIN
         UPDATE events 
         SET capacity_remaining = capacity_remaining + 1
         WHERE id = NEW.event_id AND capacity_remaining < capacity;
+    END IF;
+END//
+
+-- Message System Triggers
+CREATE TRIGGER after_message_insert
+AFTER INSERT ON messages
+FOR EACH ROW
+BEGIN
+    UPDATE conversations 
+    SET last_message_id = NEW.id,
+        updated_at = NOW()
+    WHERE id = NEW.conversation_id;
+END//
+
+-- Add trigger to mark all previous messages as read when a user reads latest
+CREATE TRIGGER after_participant_read_update
+AFTER UPDATE ON conversation_participants
+FOR EACH ROW
+BEGIN
+    IF NEW.last_read_at != OLD.last_read_at THEN
+        UPDATE messages 
+        SET is_read = TRUE
+        WHERE conversation_id = NEW.conversation_id 
+        AND sender_id != NEW.user_id
+        AND created_at <= NEW.last_read_at;
     END IF;
 END//
 
