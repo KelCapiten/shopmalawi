@@ -1,21 +1,21 @@
 //server.js
 import express from "express";
 import dotenv from "dotenv";
-import corsMiddleware from "./middleware/corsMiddleware.js";
-import staticMiddleware from "./middleware/staticMiddleware.js";
-import dbMiddleware from "./middleware/dbMiddleware.js";
-import productRoutes from "./routes/products.js";
-import usersRouters from "./routes/users.js";
-import searchRoutes from "./routes/search.js";
-import paymentRoutes from "./routes/payments.js";
-import categoriesRoutes from "./routes/categories.js";
-import locationsRoutes from "./routes/locations.js";
-import inquiriesRoutes from "./routes/inquiries.js";
-import bankDetailsRoutes from "./routes/bankDetails.js";
-import orderPaymentRoutes from "./routes/orderAndPayment.js";
-import userstoreRoutes from "./routes/userstore.js";
+import corsMiddleware from "./src/middleware/corsMiddleware.js";
+import staticMiddleware from "./src/middleware/staticMiddleware.js";
+import dbMiddleware from "./src/middleware/dbMiddleware.js";
+import productRoutes from "./src/routes/products.js";
+import usersRouters from "./src/routes/users.js";
+import searchRoutes from "./src/routes/search.js";
+import paymentRoutes from "./src/routes/payments.js";
+import categoriesRoutes from "./src/routes/categories.js";
+import locationsRoutes from "./src/routes/locations.js";
+import inquiriesRoutes from "./src/routes/inquiries.js";
+import bankDetailsRoutes from "./src/routes/bankDetails.js";
+import orderPaymentRoutes from "./src/routes/orderAndPayment.js";
+import userstoreRoutes from "./src/routes/userstore.js";
 import { createServer } from "http";
-import { configureSocket } from "./config/socket.js";
+import { configureSocket } from "./src/config/WebSocketService.js";
 
 dotenv.config();
 
