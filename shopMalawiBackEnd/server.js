@@ -1,5 +1,6 @@
-//server.js
+// server.js
 import express from "express";
+import http from "http";
 import dotenv from "dotenv";
 import corsMiddleware from "./src/middleware/corsMiddleware.js";
 import staticMiddleware from "./src/middleware/staticMiddleware.js";
@@ -14,15 +15,11 @@ import inquiriesRoutes from "./src/routes/inquiries.js";
 import bankDetailsRoutes from "./src/routes/bankDetails.js";
 import orderPaymentRoutes from "./src/routes/orderAndPayment.js";
 import userstoreRoutes from "./src/routes/userstore.js";
-import { createServer } from "http";
-import { configureSocket } from "./src/config/WebSocketService.js";
+import { initWebSocket } from "./src/services/websocketService.js";
 
 dotenv.config();
 
 const app = express();
-const httpServer = createServer(app);
-const io = configureSocket(httpServer);
-
 const port = process.env.PORT || 5000;
 
 // Middleware
@@ -30,12 +27,6 @@ app.use(corsMiddleware);
 app.options("*", corsMiddleware);
 app.use(express.json());
 app.use("/uploads", staticMiddleware);
-
-// Make io available in req object
-app.use((req, res, next) => {
-  req.io = io;
-  next();
-});
 
 // Database Middleware
 dbMiddleware(app);
@@ -52,7 +43,10 @@ app.use("/api/bank-details", bankDetailsRoutes);
 app.use("/api/order-pay", orderPaymentRoutes);
 app.use("/api/userstores", userstoreRoutes);
 
-// Start Server
-httpServer.listen(port, () => {
+// Create HTTP server and initialize WebSocket service
+const server = http.createServer(app);
+initWebSocket(server);
+
+server.listen(port, () => {
   console.log(`shopMalawiBackEnd running on port ${port}`);
 });

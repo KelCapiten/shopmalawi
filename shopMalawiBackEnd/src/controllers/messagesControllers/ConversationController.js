@@ -1,66 +1,93 @@
 import db from "../../config/db.js";
+import DbTransactionService from "../../services/DbTransactionService.js";
 import ErrorHandlingService from "../../services/ErrorHandlingService.js";
+import ParticipantVerificationService from "../../services/ParticipantVerificationService.js";
 import { cache } from "../../config/cache.js";
 
 class ConversationController {
   // Create new conversation
   async createConversation(req, res) {
-    const connection = await db.getConnection();
     try {
-      await connection.beginTransaction();
-
       const { participantIds, initialMessage, title, description, isGroup } =
         req.body;
       const userId = req.user.id;
+
+      // Input validation
+      if (
+        !participantIds ||
+        !Array.isArray(participantIds) ||
+        participantIds.length === 0
+      ) {
+        return res
+          .status(400)
+          .json({ error: "Invalid or empty participants list" });
+      }
 
       // Ensure current user is included in participants
       if (!participantIds.includes(userId)) {
         participantIds.push(userId);
       }
 
-      // Create conversation
-      const [conversation] = await connection.query(
-        "INSERT INTO conversations () VALUES ()",
-        []
+      const result = await DbTransactionService.withTransaction(
+        async (connection) => {
+          // Validate participants exist
+          const [validUsers] = await connection.query(
+            "SELECT id FROM users WHERE id IN (?)",
+            [participantIds]
+          );
+
+          if (validUsers.length !== participantIds.length) {
+            throw new Error("One or more invalid participants");
+          }
+
+          // Create conversation
+          const [conversation] = await connection.query(
+            "INSERT INTO conversations () VALUES ()",
+            []
+          );
+
+          // Add participants
+          const participantValues = participantIds.map((id) => [
+            conversation.insertId,
+            id,
+          ]);
+          await connection.query(
+            "INSERT INTO conversation_participants (conversation_id, user_id) VALUES ?",
+            [participantValues]
+          );
+
+          // Add conversation metadata
+          await connection.query(
+            `INSERT INTO conversation_metadata 
+           (conversation_id, title, description, is_group, created_by) 
+           VALUES (?, ?, ?, ?, ?)`,
+            [
+              conversation.insertId,
+              title || null,
+              description || null,
+              isGroup || false,
+              userId,
+            ]
+          );
+
+          // Add initial message if provided
+          if (initialMessage) {
+            await connection.query(
+              "INSERT INTO messages (conversation_id, sender_id, text, delivery_status) VALUES (?, ?, ?, ?)",
+              [conversation.insertId, userId, initialMessage, "sent"]
+            );
+          }
+
+          return conversation.insertId;
+        }
       );
 
-      // Add participants
-      const participantValues = participantIds.map((id) => [
-        conversation.insertId,
-        id,
-      ]);
-      await connection.query(
-        "INSERT INTO conversation_participants (conversation_id, user_id) VALUES ?",
-        [participantValues]
-      );
-
-      // Add conversation metadata
-      await connection.query(
-        `INSERT INTO conversation_metadata 
-         (conversation_id, title, description, is_group, created_by) 
-         VALUES (?, ?, ?, ?, ?)`,
-        [conversation.insertId, title, description, isGroup || false, userId]
-      );
-
-      // Add initial message if provided
-      if (initialMessage) {
-        await connection.query(
-          "INSERT INTO messages (conversation_id, sender_id, text) VALUES (?, ?, ?)",
-          [conversation.insertId, userId, initialMessage]
-        );
-      }
-
-      await connection.commit();
-      res.status(201).json({ id: conversation.insertId });
+      await cache.del(`conversations:${userId}*`);
+      res.status(201).json({ id: result });
     } catch (error) {
-      await connection.rollback();
-      console.error("Error in createConversation:", error);
-      res.status(500).json({ error: "Internal server error" });
-    } finally {
-      connection.release();
+      ErrorHandlingService.handleError(error, res);
     }
   }
-
   // Get all conversations for a user
   async getConversations(req, res) {
     try {
@@ -143,14 +170,9 @@ class ConversationController {
       const { id } = req.params;
       const userId = req.user.id;
 
-      // First verify user is a participant
-      const participantQuery = `
-        SELECT 1 FROM conversation_participants 
-        WHERE conversation_id = ? AND user_id = ?
-      `;
-      const [isParticipant] = await db.query(participantQuery, [id, userId]);
-
-      if (!isParticipant.length) {
+      const isParticipant =
+        await ParticipantVerificationService.verifyParticipant(id, userId);
+      if (!isParticipant) {
         return res
           .status(403)
           .json({ error: "Not authorized to view this conversation" });
@@ -196,48 +218,7 @@ class ConversationController {
       const [messages] = await db.query(query, [id]);
       res.json(messages);
     } catch (error) {
-      console.error("Error in getConversation:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  }
-
-  // Archive conversation
-  async archiveConversation(req, res) {
-    try {
-      const { conversationId } = req.params;
-      const userId = req.user.id;
-
-      await db.query(
-        `UPDATE conversation_participants 
-         SET is_archived = TRUE 
-         WHERE conversation_id = ? AND user_id = ?`,
-        [conversationId, userId]
-      );
-
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error in archiveConversation:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  }
-
-  // Unarchive conversation
-  async unarchiveConversation(req, res) {
-    try {
-      const { conversationId } = req.params;
-      const userId = req.user.id;
-
-      await db.query(
-        `UPDATE conversation_participants 
-         SET is_archived = FALSE 
-         WHERE conversation_id = ? AND user_id = ?`,
-        [conversationId, userId]
-      );
-
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error in unarchiveConversation:", error);
-      res.status(500).json({ error: "Internal server error" });
+      ErrorHandlingService.handleError(error, res);
     }
   }
 
@@ -247,14 +228,12 @@ class ConversationController {
       const { conversationId } = req.params;
       const userId = req.user.id;
 
-      // Verify user is a participant
-      const [isParticipant] = await db.query(
-        `SELECT 1 FROM conversation_participants 
-         WHERE conversation_id = ? AND user_id = ?`,
-        [conversationId, userId]
-      );
-
-      if (!isParticipant.length) {
+      const isParticipant =
+        await ParticipantVerificationService.verifyParticipant(
+          conversationId,
+          userId
+        );
+      if (!isParticipant) {
         return res
           .status(403)
           .json({ error: "Not authorized to delete this conversation" });
@@ -269,11 +248,69 @@ class ConversationController {
 
       res.json({ success: true });
     } catch (error) {
-      console.error("Error in deleteConversation:", error);
-      res.status(500).json({ error: "Internal server error" });
+      ErrorHandlingService.handleError(error, res);
     }
   }
 
+  // Archive conversation
+  async archiveConversation(req, res) {
+    try {
+      const { conversationId } = req.params;
+      const userId = req.user.id;
+
+      const isParticipant =
+        await ParticipantVerificationService.verifyParticipant(
+          conversationId,
+          userId
+        );
+      if (!isParticipant) {
+        return res
+          .status(403)
+          .json({ error: "Not authorized to archive this conversation" });
+      }
+
+      await db.query(
+        `UPDATE conversation_participants 
+         SET is_archived = TRUE 
+         WHERE conversation_id = ? AND user_id = ?`,
+        [conversationId, userId]
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      ErrorHandlingService.handleError(error, res);
+    }
+  }
+
+  // Unarchive conversation
+  async unarchiveConversation(req, res) {
+    try {
+      const { conversationId } = req.params;
+      const userId = req.user.id;
+
+      const isParticipant =
+        await ParticipantVerificationService.verifyParticipant(
+          conversationId,
+          userId
+        );
+      if (!isParticipant) {
+        return res
+          .status(403)
+          .json({ error: "Not authorized to unarchive this conversation" });
+      }
+
+      await db.query(
+        `UPDATE conversation_participants 
+         SET is_archived = FALSE 
+         WHERE conversation_id = ? AND user_id = ?`,
+        [conversationId, userId]
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      ErrorHandlingService.handleError(error, res);
+    }
+  }
   // Update conversation metadata
   async updateConversationMetadata(req, res) {
     try {
