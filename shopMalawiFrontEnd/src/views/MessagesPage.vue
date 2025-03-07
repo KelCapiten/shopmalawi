@@ -1,3 +1,4 @@
+//src/views/MessagesPage.vue
 <template>
   <ion-page>
     <appHeader :showSearchBar="false" :showCategorySegment="false" />
@@ -22,22 +23,24 @@
             <ion-item
               v-for="conv in conversations"
               :key="conv.id"
-              :class="{ selected: selectedConversation?.id === conv.id }"
+              :class="{
+                selected:
+                  selectedConversation && selectedConversation.id === conv.id,
+              }"
               @click="selectConversation(conv)"
-              button
             >
               <ion-avatar slot="start">
                 <img
-                  :src="conv.otherUser.avatar || '/default-avatar.png'"
-                  :alt="conv.otherUser.name || conv.otherUser.username"
+                  :src="conv.avatar_url || '/default-avatar.png'"
+                  :alt="conv.title || 'Conversation'"
                 />
               </ion-avatar>
               <ion-label>
-                <h3>{{ conv.otherUser.name || conv.otherUser.username }}</h3>
-                <p class="last-message">{{ conv.lastMessage?.text }}</p>
+                <h3>{{ conv.title || "Conversation" }}</h3>
+                <p class="last-message">{{ conv.last_message?.text }}</p>
               </ion-label>
               <ion-note slot="end">{{
-                formatTime(conv.lastMessage?.timestamp)
+                formatTime(conv.last_message?.created_at)
               }}</ion-note>
             </ion-item>
           </ion-list>
@@ -51,39 +54,43 @@
             </ion-button>
             <ion-avatar>
               <img
-                :src="
-                  selectedConversation.otherUser.avatar || '/default-avatar.png'
-                "
-                :alt="selectedConversation.otherUser.name"
+                :src="selectedConversation.avatar_url || '/default-avatar.png'"
+                :alt="selectedConversation.title || 'Conversation'"
               />
             </ion-avatar>
-            <h3>{{ selectedConversation.otherUser.name }}</h3>
+            <h3>{{ selectedConversation.title || "Conversation" }}</h3>
           </div>
 
           <div class="messages-list" ref="messagesList">
             <div v-if="loadingMessages" class="loading-messages">
               <ion-spinner />
             </div>
-            <div v-else>
+            <div v-else-if="selectedConversation.last_message">
               <div
-                v-for="message in selectedConversation.messages"
-                :key="message.id"
-                :class="['message', message.isOwn ? 'own' : 'other']"
+                :class="[
+                  'message',
+                  selectedConversation.last_message ? 'own' : 'other',
+                ]"
               >
                 <div class="message-bubble">
-                  {{ message.text }}
+                  {{ selectedConversation.last_message.text }}
                   <div class="message-time">
-                    {{ formatTime(message.timestamp) }}
+                    {{
+                      formatTime(selectedConversation.last_message.created_at)
+                    }}
                     <ion-icon
-                      v-if="message.isOwn"
+                      v-if="selectedConversation.last_message"
                       :icon="checkmarkDone"
                       class="message-status"
-                      :class="{ read: message.isRead }"
+                      :class="{
+                        read: selectedConversation.last_message.is_read,
+                      }"
                     />
                   </div>
                 </div>
               </div>
             </div>
+            <div v-else>No messages yet</div>
           </div>
 
           <div class="message-input">
@@ -92,7 +99,8 @@
                 v-model="newMessage"
                 placeholder="Type a message..."
                 @keyup.enter="sendMessage"
-              ></ion-input>
+              >
+              </ion-input>
               <ion-button fill="clear" @click="sendMessage">
                 <ion-icon :icon="sendOutline"></ion-icon>
               </ion-button>
@@ -112,6 +120,7 @@
 </template>
 
 <script lang="ts">
+import { useRoute } from "vue-router";
 import { defineComponent, ref, onMounted, watch, computed } from "vue";
 import { useMessagesStore } from "@/stores/messagesStore";
 import {
@@ -122,7 +131,8 @@ import {
 } from "ionicons/icons";
 import appHeader from "@/components/appHeader.vue";
 import appFooter from "@/components/appFooter.vue";
-import type { Conversation } from "@/types/types";
+import type { Conversation } from "@/types/messagesTypes";
+import { useAuthStore } from "@/stores/authStore";
 
 export default defineComponent({
   name: "MessagesPage",
@@ -137,16 +147,39 @@ export default defineComponent({
     const isMobile = ref(window.innerWidth <= 768);
     const isMobileAndShowingMessages = ref(false);
     const loadingMessages = ref(false);
+    const conversations = computed(() =>
+      store.ConversationsList ? store.ConversationsList.conversations : []
+    );
+    const route = useRoute();
+    const authStore = useAuthStore();
 
     onMounted(async () => {
-      await store.fetchConversations();
-
-      // If there's a selected conversation, reload it
+      store.initializeWebSocket();
+      await store.getConversationsList();
+      console.log("Conversations loaded:", conversations.value);
       if (store.selectedConversation) {
-        await store.selectConversation(store.selectedConversation.id);
+        scrollToBottom();
       }
-
       window.addEventListener("resize", updateIsMobile);
+
+      const queryOwnerId = route.query.sellerId
+        ? Number(route.query.sellerId)
+        : null;
+
+      if (queryOwnerId !== null) {
+        const payload = {
+          participantIds: [queryOwnerId],
+          initialMessage: "Hello! I'd like to chat about your products.",
+          isGroup: false,
+        };
+        const newConversation = await store.startNewConversation(payload);
+        if (newConversation) {
+          console.log("New conversation started with ID:", newConversation);
+          await store.getConversationsList();
+          store.selectedConversationId = newConversation.id;
+          scrollToBottom();
+        }
+      }
     });
 
     const updateIsMobile = () => {
@@ -162,66 +195,43 @@ export default defineComponent({
     };
 
     const selectConversation = async (conv: Conversation): Promise<void> => {
-      loadingMessages.value = true;
-
-      try {
-        await store.selectConversation(conv.id);
-        await store.markAsRead(conv.id);
-
-        // Set mobile view state after conversation is loaded
-        if (isMobile.value) {
-          isMobileAndShowingMessages.value = true;
-        }
-
-        scrollToBottom();
-      } catch (error) {
-        console.error("Error loading conversation:", error);
-      } finally {
-        loadingMessages.value = false;
+      store.selectedConversationId = conv.id;
+      if (isMobile.value) {
+        isMobileAndShowingMessages.value = true;
       }
+      scrollToBottom();
     };
-
     const goBackToList = () => {
       isMobileAndShowingMessages.value = false;
     };
 
     const sendMessage = async (): Promise<void> => {
       if (!newMessage.value.trim()) return;
-
-      if (await store.sendMessage(newMessage.value)) {
-        newMessage.value = "";
-        scrollToBottom();
-      }
+      console.log("Sending message:", newMessage.value);
+      newMessage.value = "";
+      scrollToBottom();
     };
 
-    const formatTime = (timestamp: Date | undefined): string => {
+    const formatTime = (timestamp: Date | string | undefined): string => {
       if (!timestamp) return "";
-
       const date = new Date(timestamp);
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffMins = Math.round(diffMs / 60000);
       const diffHours = Math.round(diffMs / 3600000);
       const diffDays = Math.round(diffMs / 86400000);
-
-      // If less than 24 hours ago, show time
       if (diffHours < 24) {
         if (diffMins < 60) {
           return diffMins <= 1 ? "Just now" : `${diffMins}m ago`;
         }
         return `${diffHours}h ago`;
       }
-
-      // If less than 7 days ago, show day
       if (diffDays < 7) {
         return `${diffDays}d ago`;
       }
-
-      // Otherwise show date
       return date.toLocaleDateString();
     };
 
-    // Watch for new messages and scroll to bottom
     watch(
       () => store.selectedConversation,
       (newConv) => {
@@ -233,44 +243,20 @@ export default defineComponent({
     );
 
     watch(
-      () => store.selectedConversation?.messages,
-      (newMessages) => {
-        if (newMessages) {
+      () => store.selectedConversation?.last_message,
+      (newLastMessage) => {
+        if (newLastMessage) {
           scrollToBottom();
         }
       },
       { deep: true }
-    );
-
-    // Add watch for conversation changes
-    watch(
-      () => store.conversations,
-      () => {
-        if (store.selectedConversation) {
-          scrollToBottom();
-        }
-      },
-      { deep: true }
-    );
-
-    // Update watchers to be more specific
-    watch(
-      () => store.selectedConversationId,
-      (newId) => {
-        if (newId) {
-          const conv = store.conversations.find((c) => c.id === newId);
-          if (conv && conv.messages) {
-            scrollToBottom();
-          }
-        }
-      }
     );
 
     return {
       loading: store.loading,
       loadingMessages,
-      conversations: computed(() => store.sortedConversations),
-      selectedConversation: computed(() => store.selectedConversation),
+      conversations,
+      selectedConversation: store.selectedConversation,
       newMessage,
       messagesList,
       isMobile,
@@ -289,12 +275,11 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* Styles remain unchanged */
 .messages-container {
   display: grid;
   grid-template-columns: 300px 1fr;
-  height: calc(
-    100vh - 112px
-  ); /* Adjusted to account for header (56px) and footer (56px) */
+  height: calc(100vh - 112px);
   background: #f5f5f5;
   position: relative;
   overflow: hidden;
@@ -407,11 +392,10 @@ export default defineComponent({
 @media (max-width: 768px) {
   .messages-container {
     display: block;
-    height: calc(100vh - 112px); /* Adjusted to account for header and footer */
+    height: calc(100vh - 112px);
     position: relative;
     overflow: hidden;
   }
-
   .conversations-list,
   .message-details {
     position: absolute;
@@ -424,25 +408,20 @@ export default defineComponent({
     transition: transform 0.3s ease-in-out;
     background: white;
   }
-
   .conversations-list {
     transform: translateX(0);
     z-index: 1;
   }
-
   .message-details {
     transform: translateX(100%);
     z-index: 2;
   }
-
   .showing-messages .conversations-list {
     transform: translateX(-100%);
   }
-
   .showing-messages .message-details {
     transform: translateX(0);
   }
-
   .message-header {
     position: sticky;
     top: 0;
@@ -452,7 +431,6 @@ export default defineComponent({
     align-items: center;
     padding: 0.5rem;
   }
-
   .message-input {
     position: sticky;
     bottom: 0;
@@ -460,29 +438,25 @@ export default defineComponent({
     z-index: 3;
     padding: 0.5rem;
   }
-
   .messages-list {
-    height: calc(100% - 130px); /* Increased to provide more space for input */
+    height: calc(100% - 130px);
     overflow-y: auto;
     padding: 1rem;
-    padding-bottom: 2rem; /* Added extra padding at bottom */
+    padding-bottom: 2rem;
   }
 }
 
 @media (max-width: 480px) {
   .messages-container {
-    height: calc(100vh - 112px); /* Keep consistent with other breakpoints */
+    height: calc(100vh - 112px);
   }
-
   .message-bubble {
     max-width: 90%;
     font-size: 0.95em;
   }
-
   .message-header h3 {
     font-size: 1rem;
   }
-
   .conversations-header h2 {
     font-size: 1.2rem;
   }

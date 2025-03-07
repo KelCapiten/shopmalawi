@@ -1,7 +1,7 @@
-import db from "../config/db.js";
-import ErrorHandlingService from "../services/ErrorHandlingService.js";
-import PaginationService from "../services/PaginationService.js";
-import ParticipantVerificationService from "../services/ParticipantVerificationService.js";
+import db from "../../config/db.js";
+import ErrorHandlingService from "../../services/ErrorHandlingService.js";
+import PaginationService from "../../services/PaginationService.js";
+import ParticipantVerificationService from "../../services/ParticipantVerificationService.js";
 
 class MessageSearchController {
   // Add message search functionality

@@ -125,6 +125,7 @@
       <ShareToolbar
         :enableNavigationToolbar="true"
         :enableShareToolbar="false"
+        :sellerId="sellerIdForToolbar"
       />
     </div>
 
@@ -229,6 +230,11 @@ export default defineComponent({
       ? Number(route.query.ownerId)
       : undefined;
     userstore.setOwnerIdFromQuery(queryOwnerId);
+
+    const sellerIdForToolbar =
+      queryOwnerId !== undefined
+        ? queryOwnerId
+        : authStore.user?.id || undefined;
 
     const enableEdit = computed(() => {
       return (
@@ -393,24 +399,25 @@ export default defineComponent({
       enableStoryCard,
       showSellDashboard,
       sellDashboardContainer,
+      selectedStoreId,
+      sellerIdForToolbar,
+      showBrandStory,
+      selectedProduct,
+      showAddProductPopup,
+      showConfirmationPopup,
+      showAccountDetails,
+      selectedUserId,
       handleDeactivateProduct,
       handleActivateProduct,
       handleEditProduct,
       closeSellDashboard,
-      selectedStoreId,
       handleStoreSelected,
       toggleBrandStory,
-      showBrandStory,
       handleStorefrontClicked,
-      selectedProduct,
-      showAddProductPopup,
+      confirmDeactivateProduct,
       closeAddProductPopup,
       handleRemoveProductFromStore,
       handleSellerPick,
-      showConfirmationPopup,
-      confirmDeactivateProduct,
-      showAccountDetails,
-      selectedUserId,
       openPaymentMethods,
       closeAccountDetails,
     };

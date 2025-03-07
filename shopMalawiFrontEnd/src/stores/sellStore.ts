@@ -22,7 +22,7 @@ export const useProductsStore = defineStore("productsStore", {
       description: "",
       price: 0,
       categoryId: 0,
-      locationId: 0, // Add locationId with default value
+      locationId: 0,
       stockQuantity: 1,
       images: [] as File[],
     } as NewProduct,

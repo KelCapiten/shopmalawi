@@ -1,7 +1,7 @@
-import db from "../config/db.js";
-import ErrorHandlingService from "../services/ErrorHandlingService.js";
-import { cache } from "../config/cache.js";
-import ParticipantVerificationService from "../services/ParticipantVerificationService.js";
+import db from "../../config/db.js";
+import ErrorHandlingService from "../../services/ErrorHandlingService.js";
+import { cache } from "../../services/cacheService.js";
+import ParticipantVerificationService from "../../services/ParticipantVerificationService.js";
 
 class MessageStatusController {
   // Update typing status

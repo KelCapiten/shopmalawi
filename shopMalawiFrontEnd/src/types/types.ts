@@ -128,29 +128,3 @@ export interface OrderData {
     price: number;
   }[];
 }
-
-// Message related interfaces
-export interface User {
-  id: number;
-  username: string;
-  name: string; // Add this field
-  avatar?: string;
-}
-
-export interface Message {
-  id: number;
-  text: string;
-  timestamp: Date;
-  isOwn: boolean;
-  isRead?: boolean; // Add this field
-  sender_id: number;
-  receiver_id: number;
-}
-
-export interface Conversation {
-  id: number;
-  otherUser: User;
-  lastMessage?: Message;
-  messages: Message[];
-  unreadCount?: number;
-}

@@ -9,54 +9,53 @@
       </IonButtons>
       <IonButtons slot="end">
         <IonButton class="circle-button" fill="clear" @click="onSearchClick">
-          <IonIcon :icon="searchOutline" />
+          <IonIcon :icon="search" />
         </IonButton>
         <IonButton class="circle-button" fill="clear" @click="onShareClick">
-          <IonIcon :icon="shareSocialOutline" />
+          <IonIcon :icon="shareSocial" />
         </IonButton>
       </IonButtons>
     </IonToolbar>
   </IonHeader>
   <IonHeader v-if="enableNavigationToolbar">
     <IonToolbar class="navigation-toolbar">
-      <IonButton class="nav-icon-button" fill="clear" @click="goHome">
-        <IonIcon :icon="homeOutline" />
-      </IonButton>
-      <IonButton class="nav-icon-button" fill="clear" @click="goMessage">
-        <IonIcon :icon="chatbubbleOutline" />
-      </IonButton>
-      <IonButton class="nav-icon-button" fill="clear" @click="goBack">
-        <IonIcon :icon="chevronBackOutline" />
-        <IonLabel class="back-label">Back</IonLabel>
-      </IonButton>
+      <div class="nav-buttons-container">
+        <IonButton class="nav-icon-button" fill="clear" @click="goHome">
+          <IonIcon :icon="home" />
+        </IonButton>
+        <Button :seller-id="sellerId" class="nav-icon-button" />
+        <IonButton
+          class="nav-icon-button chevron-back-button"
+          fill="clear"
+          @click="goBack"
+        >
+          <IonIcon :icon="chevronBack" />
+          <IonLabel class="back-label">Back</IonLabel>
+        </IonButton>
+      </div>
     </IonToolbar>
   </IonHeader>
 </template>
 
 <script setup lang="ts">
 import { defineProps } from "vue";
-import {
-  IonHeader,
-  IonToolbar,
-  IonButtons,
-  IonButton,
-  IonIcon,
-  IonLabel,
-} from "@ionic/vue";
+import Button from "@/components/buttons/Button.vue";
 import {
   arrowBack,
-  searchOutline,
-  shareSocialOutline,
-  homeOutline,
-  chatbubbleOutline,
-  chevronBackOutline,
+  search,
+  shareSocial,
+  home,
+  chevronBack,
 } from "ionicons/icons";
 import { useRouter } from "vue-router";
 
-const { enableShareToolbar, enableNavigationToolbar } = defineProps({
+const props = defineProps({
   enableShareToolbar: { type: Boolean, default: false },
   enableNavigationToolbar: { type: Boolean, default: false },
+  sellerId: { type: Number },
 });
+
+const { enableShareToolbar, enableNavigationToolbar, sellerId } = props;
 
 const router = useRouter();
 
@@ -70,10 +69,6 @@ function onShareClick() {
 
 function goHome() {
   router.push("/shop");
-}
-
-function goMessage() {
-  router.push("");
 }
 
 function goBack() {
@@ -108,33 +103,80 @@ ion-toolbar {
   color: #000;
 }
 .navigation-toolbar {
-  background-color: transparent;
-  --ion-toolbar-background: rgba(206, 206, 206, 0.8);
-  border: 1px solid rgb(230, 104, 55);
-  color: #000;
-  box-shadow: none !important;
-}
-.nav-icon-button {
-  background-color: transparent;
-  border-radius: 50%;
-  padding: 8px;
-  margin: 0 4px;
-}
-.nav-icon-button ion-icon {
-  font-size: 20px;
-  color: #000;
-}
-.back-label {
-  font-size: 16px;
-  color: #000;
-  margin-left: 4px;
+  --ion-toolbar-background: rgba(255, 255, 255, 0.9);
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  border-bottom: 1px solid rgba(230, 104, 55, 0.5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+  border-top-left-radius: 15px;
+  border-bottom-left-radius: 15px;
 }
 
-/* Remove all padding and margin in navigation toolbar elements */
-.navigation-toolbar ion-button,
-.navigation-toolbar ion-icon,
-.navigation-toolbar ion-label {
-  padding: 0 !important;
-  margin: 0 !important;
+.nav-buttons-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+  width: 100%;
+}
+
+.nav-icon-button {
+  --background: transparent;
+  margin: 0px 5px;
+  transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.nav-icon-button:hover {
+  --background: rgba(230, 104, 55, 0.1);
+}
+
+.nav-icon-button ion-icon {
+  font-size: 20px;
+  color: #333;
+}
+
+.chevron-back-button ion-icon {
+  font-size: 25px;
+  color: #333;
+}
+
+.back-label {
+  font-size: 14px;
+  font-weight: bolder;
+  color: #333;
+  margin-left: 4px;
+}
+.nav-icon-button.chat-button {
+  --background: transparent;
+  --border-radius: 8px;
+  height: auto;
+  width: auto;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.nav-icon-button.chat-button:hover {
+  --background: rgba(230, 104, 55, 0.1);
+}
+
+.nav-icon-button.chat-button ion-icon {
+  font-size: 20px;
+  color: #333;
+}
+
+.nav-icon-button.chat-button span {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-left: 4px;
 }
 </style>

@@ -1,3 +1,4 @@
+//src/routes/messages.js
 import express from "express";
 import {
   ConversationController,
@@ -5,9 +6,10 @@ import {
   MessageReactionController,
   MessageStatusController,
   MessageSearchController,
-} from "../../controllers/messagesControllers/MessagesIndex.js";
-import { authenticateToken } from "../../middleware/authMiddleware.js";
-import { upload } from "../middleware/fileUploadMiddleware.js";
+  ConversationMetadataController,
+} from "../controllers/messagesControllers/MessagesIndex.js";
+import { authenticateUser } from "../middleware/authMiddleware.js";
+import { upload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -17,86 +19,165 @@ const messageController = new MessageController();
 const messageReactionController = new MessageReactionController();
 const messageStatusController = new MessageStatusController();
 const messageSearchController = new MessageSearchController();
+const conversationMetadataController = new ConversationMetadataController();
 
 // Conversation routes
 router.post(
-  "/conversations",
-  authenticateToken,
+  "/createConversation",
+  authenticateUser,
   conversationController.createConversation
 );
 router.get(
-  "/conversations",
-  authenticateToken,
-  conversationController.getUserConversations
+  "/getConversationsList",
+  authenticateUser,
+  conversationController.getConversationsList
 );
 router.get(
-  "/conversations/:id",
-  authenticateToken,
-  conversationController.getConversationById
+  "/getConversation/:id",
+  authenticateUser,
+  conversationController.getConversation
 );
 router.put(
-  "/conversations/:id",
-  authenticateToken,
-  conversationController.updateConversation
+  "/updateConversationMetadata/:id",
+  authenticateUser,
+  conversationController.updateConversationMetadata
 );
 router.delete(
-  "/conversations/:id",
-  authenticateToken,
+  "/deleteConversation/:id",
+  authenticateUser,
   conversationController.deleteConversation
 );
 
 // Message routes
 router.post(
-  "/messages",
-  authenticateToken,
+  "/sendMessage",
+  authenticateUser,
   upload.array("files"),
   messageController.sendMessage
 );
 router.get(
-  "/messages/:conversationId",
-  authenticateToken,
-  messageController.getMessages
+  "/getMessages/:conversationId",
+  authenticateUser,
+  messageController.getMessagesByCursor
 );
-router.put("/messages/:id", authenticateToken, messageController.editMessage);
+router.put("/editMessage/:id", authenticateUser, messageController.editMessage);
 router.delete(
-  "/messages/:id",
-  authenticateToken,
+  "/deleteMessage/:id",
+  authenticateUser,
   messageController.deleteMessage
+);
+
+// Conversation metadata routes
+router.get(
+  "/getConversationMetadata/:conversationId",
+  authenticateUser,
+  conversationMetadataController.getMetadata
+);
+router.put(
+  "/updateConversationMetadata/:conversationId",
+  authenticateUser,
+  conversationMetadataController.updateMetadata
+);
+router.get(
+  "/getConversationParticipants/:conversationId",
+  authenticateUser,
+  conversationMetadataController.getParticipants
+);
+router.post(
+  "/addParticipant/:conversationId",
+  authenticateUser,
+  conversationMetadataController.addParticipant
+);
+router.delete(
+  "/removeParticipant/:conversationId/:participantId",
+  authenticateUser,
+  conversationMetadataController.removeParticipant
+);
+router.put(
+  "/updateParticipantRole/:conversationId/:participantId",
+  authenticateUser,
+  conversationMetadataController.updateParticipantRole
+);
+router.post(
+  "/leaveConversation/:conversationId",
+  authenticateUser,
+  conversationMetadataController.leaveConversation
+);
+router.put(
+  "/updateConversationSettings/:conversationId",
+  authenticateUser,
+  conversationMetadataController.updateSettings
+);
+router.get(
+  "/getConversationSettings/:conversationId",
+  authenticateUser,
+  conversationMetadataController.getSettings
 );
 
 // Message reactions routes
 router.post(
-  "/messages/:messageId/reactions",
-  authenticateToken,
+  "/addMessageReaction/:messageId",
+  authenticateUser,
   messageReactionController.addReaction
 );
 router.get(
-  "/messages/:messageId/reactions",
-  authenticateToken,
+  "/getMessageReactions/:messageId",
+  authenticateUser,
   messageReactionController.getMessageReactions
 );
 router.delete(
-  "/messages/:messageId/reactions/:reactionId",
-  authenticateToken,
+  "/removeMessageReaction/:messageId/:reactionId",
+  authenticateUser,
   messageReactionController.removeReaction
 );
 
 // Message status routes
 router.put(
-  "/messages/:messageId/status",
-  authenticateToken,
-  messageStatusController.updateMessageStatus
+  "/updateTypingStatus/:conversationId",
+  authenticateUser,
+  messageStatusController.updateTypingStatus
 );
+
 router.get(
-  "/messages/:messageId/status",
-  authenticateToken,
+  "/getTypingStatus/:conversationId",
+  authenticateUser,
+  messageStatusController.getTypingStatus
+);
+
+router.put(
+  "/updateDeliveryStatus/:messageId",
+  authenticateUser,
+  messageStatusController.updateDeliveryStatus
+);
+
+router.post(
+  "/addReadReceipt/:messageId",
+  authenticateUser,
+  messageStatusController.addReadReceipt
+);
+
+router.get(
+  "/getReadReceipts/:messageId",
+  authenticateUser,
+  messageStatusController.getReadReceipts
+);
+
+router.put(
+  "/bulkMarkAsRead",
+  authenticateUser,
+  messageStatusController.bulkMarkAsRead
+);
+
+router.get(
+  "/getMessageStatus/:messageId",
+  authenticateUser,
   messageStatusController.getMessageStatus
 );
 
 // Message search routes
 router.get(
-  "/search",
-  authenticateToken,
+  "/searchMessages",
+  authenticateUser,
   messageSearchController.searchMessages
 );
 

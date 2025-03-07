@@ -1,8 +1,9 @@
-import db from "../../../config/db.js";
-import DbTransactionService from "../../../services/DbTransactionService.js";
-import ErrorHandlingService from "../../../services/ErrorHandlingService.js";
-import { uploadFile } from "../../../services/FileUploadService.js";
-import { cache } from "../../config/cache.js";
+//src/controllers/messagesControllers/MessageController.js
+import db from "../../config/db.js";
+import DbTransactionService from "../../services/dbTransactionService.js";
+import ErrorHandlingService from "../../services/ErrorHandlingService.js";
+import { uploadFile } from "../../services/FileUploadService.js";
+import { cache } from "../../services/cacheService.js";
 
 class MessageController {
   // Send a new message
@@ -28,34 +29,45 @@ class MessageController {
           }
 
           // Insert message
-          const [result] = await connection.query(
+          const [insertResult] = await connection.query(
             `INSERT INTO messages 
              (conversation_id, sender_id, text, parent_message_id, delivery_status) 
              VALUES (?, ?, ?, ?, 'sent')`,
             [conversationId, userId, text, parentMessageId]
           );
 
-          // Handle attachments
+          // Handle attachments if any
           if (files?.length) {
             await Promise.all(
-              files.map((file) => uploadFile(file, connection, result.insertId))
+              files.map((file) =>
+                uploadFile(file, connection, insertResult.insertId)
+              )
             );
           }
 
-          // Update conversation
+          // Update conversation with the new last message
           await connection.query(
             `UPDATE conversations 
              SET last_message_id = ?, 
              updated_at = NOW() 
              WHERE id = ?`,
-            [result.insertId, conversationId]
+            [insertResult.insertId, conversationId]
           );
 
-          // Clear conversation cache
-          await cache.del(`conversations:${userId}*`);
-          await cache.del(`conversation:${conversationId}`);
+          // Asynchronously clear conversation-related cache entries
+          (async () => {
+            try {
+              await cache.del(`conversations:${userId}*`);
+              await cache.del(`conversation:${conversationId}`);
+            } catch (err) {
+              console.error(
+                `Cache invalidation error for conversation ${conversationId}:`,
+                err
+              );
+            }
+          })();
 
-          return { messageId: result.insertId };
+          return { messageId: insertResult.insertId };
         }
       );
 
@@ -133,7 +145,7 @@ class MessageController {
   async updateDeliveryStatus(req, res) {
     try {
       const { messageId } = req.params;
-      const { status } = req.body; // 'delivered' or 'failed'
+      const { status } = req.body; // expected values: 'delivered' or 'failed'
 
       await db.query(
         `UPDATE messages 
@@ -184,28 +196,37 @@ class MessageController {
           }
 
           // Insert forwarded message
-          const [result] = await db.query(
+          const [insertResult] = await db.query(
             `INSERT INTO messages 
              (conversation_id, sender_id, text, forwarded_from, delivery_status) 
              VALUES (?, ?, ?, ?, 'sent')`,
-            [convId, userId, message[0].text, messageId, "sent"]
+            [convId, userId, message[0].text, messageId]
           );
 
-          // Update conversation last message
+          // Update conversation's last message
           await db.query(
             `UPDATE conversations 
              SET last_message_id = ?, updated_at = NOW() 
              WHERE id = ?`,
-            [result.insertId, convId]
+            [insertResult.insertId, convId]
           );
 
-          // Clear cache
-          await cache.del(`conversation:${convId}`);
+          // Asynchronously clear cache for this conversation
+          (async () => {
+            try {
+              await cache.del(`conversation:${convId}`);
+            } catch (err) {
+              console.error(
+                `Cache deletion error for conversation ${convId}:`,
+                err
+              );
+            }
+          })();
 
           return {
             conversationId: convId,
             success: true,
-            messageId: result.insertId,
+            messageId: insertResult.insertId,
           };
         })
       );
@@ -241,16 +262,14 @@ class MessageController {
       const { messageIds } = req.body;
       const userId = req.user.id;
 
-      // First verify user is participant in all conversations
+      // Verify user is participant in all conversations
       const [validMessages] = await db.query(
-        `
-        SELECT DISTINCT m.id 
-        FROM messages m
-        JOIN conversation_participants cp 
-          ON m.conversation_id = cp.conversation_id
-        WHERE m.id IN (?) 
-        AND cp.user_id = ?
-      `,
+        `SELECT DISTINCT m.id 
+         FROM messages m
+         JOIN conversation_participants cp 
+           ON m.conversation_id = cp.conversation_id
+         WHERE m.id IN (?) 
+         AND cp.user_id = ?`,
         [messageIds, userId]
       );
 
@@ -258,23 +277,19 @@ class MessageController {
 
       if (validIds.length > 0) {
         await db.query(
-          `
-          UPDATE messages 
-          SET is_read = TRUE 
-          WHERE id IN (?)
-        `,
+          `UPDATE messages 
+           SET is_read = TRUE 
+           WHERE id IN (?)`,
           [validIds]
         );
 
         // Update last_read_at for affected conversations
         await db.query(
-          `
-          UPDATE conversation_participants cp
-          JOIN messages m ON cp.conversation_id = m.conversation_id
-          SET cp.last_read_at = NOW()
-          WHERE m.id IN (?)
-          AND cp.user_id = ?
-        `,
+          `UPDATE conversation_participants cp
+           JOIN messages m ON cp.conversation_id = m.conversation_id
+           SET cp.last_read_at = NOW()
+           WHERE m.id IN (?)
+           AND cp.user_id = ?`,
           [validIds, userId]
         );
 
@@ -286,7 +301,16 @@ class MessageController {
 
         await Promise.all(
           conversations.map((c) =>
-            cache.del(`conversation:${c.conversation_id}`)
+            (async () => {
+              try {
+                await cache.del(`conversation:${c.conversation_id}`);
+              } catch (err) {
+                console.error(
+                  `Cache deletion error for conversation ${c.conversation_id}:`,
+                  err
+                );
+              }
+            })()
           )
         );
       }
@@ -297,7 +321,7 @@ class MessageController {
     }
   }
 
-  // Get messages by cursor (pagination)
+  // Get messages by cursor (pagination) with conditional caching, including attachments, reactions, and read receipts
   async getMessagesByCursor(req, res) {
     try {
       const {
@@ -308,10 +332,10 @@ class MessageController {
       } = req.query;
       const userId = req.user.id;
 
-      // Verify participant
+      // Verify that the user is a participant in the conversation
       const [isParticipant] = await db.query(
         `SELECT 1 FROM conversation_participants 
-         WHERE conversation_id = ? AND user_id = ?`,
+       WHERE conversation_id = ? AND user_id = ?`,
         [conversationId, userId]
       );
 
@@ -319,30 +343,65 @@ class MessageController {
         return res.status(403).json({ error: "Not authorized" });
       }
 
-      // Build query based on direction
+      // Check if cached data exists
+      let cachedData = await cache.get(`conversation:${conversationId}`);
+      if (cachedData) {
+        console.log("Serving messages from cache");
+        return res.json(JSON.parse(cachedData));
+      }
+
+      // Build the query based on pagination direction
       const operator = direction === "before" ? "<" : ">";
       const orderDir = direction === "before" ? "DESC" : "ASC";
 
       const query = `
-        SELECT m.*, 
-               JSON_OBJECT(
-                 'id', u.id,
-                 'username', u.username,
-                 'avatar', u.avatar_url
-               ) as sender
-        FROM messages m
-        JOIN users u ON m.sender_id = u.id
-        WHERE m.conversation_id = ?
+      SELECT 
+        m.*, 
+        JSON_OBJECT(
+          'id', u.id,
+          'username', u.username,
+          'avatar', u.avatar_url
+        ) AS sender,
+        (
+          SELECT JSON_ARRAYAGG(
+            JSON_OBJECT(
+              'id', ma.id,
+              'file_type', ma.file_type,
+              'file_path', ma.file_path,
+              'file_name', ma.file_name,
+              'file_size', ma.file_size,
+              'mime_type', ma.mime_type
+            )
+          )
+          FROM message_attachments ma
+          WHERE ma.message_id = m.id
+        ) AS attachments,
+        (
+          SELECT JSON_ARRAYAGG(
+            JSON_OBJECT(
+              'id', mr.id,
+              'user_id', mr.user_id,
+              'reaction_type', mr.reaction_type,
+              'created_at', mr.created_at
+            )
+          )
+          FROM message_reactions mr
+          WHERE mr.message_id = m.id
+        ) AS reactions
+      FROM messages m
+      JOIN users u ON m.sender_id = u.id
+      WHERE m.conversation_id = ?
         AND m.deleted_at IS NULL
         ${
           cursor
             ? `AND m.created_at ${operator} (SELECT created_at FROM messages WHERE id = ?)`
             : ""
         }
-        ORDER BY m.created_at ${orderDir}
-        LIMIT ?
-      `;
+      ORDER BY m.created_at ${orderDir}
+      LIMIT ?
+    `;
 
+      // Build query parameters based on whether a cursor is provided
       const params = cursor
         ? [conversationId, cursor, Number(limit)]
         : [conversationId, Number(limit)];
@@ -354,13 +413,30 @@ class MessageController {
         messages.reverse();
       }
 
-      res.json({
+      const responsePayload = {
         messages,
         cursor: {
           next: messages.length ? messages[messages.length - 1].id : null,
           prev: messages.length ? messages[0].id : null,
         },
-      });
+      };
+
+      // Cache the response payload asynchronously (TTL is assumed to be set on the cache service)
+      (async () => {
+        try {
+          await cache.set(
+            `conversation:${conversationId}`,
+            JSON.stringify(responsePayload)
+          );
+        } catch (err) {
+          console.error(
+            `Cache set error for conversation ${conversationId}:`,
+            err
+          );
+        }
+      })();
+
+      res.json(responsePayload);
     } catch (error) {
       ErrorHandlingService.handleError(error, res);
     }

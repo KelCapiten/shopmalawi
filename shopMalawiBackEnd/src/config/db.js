@@ -12,7 +12,7 @@ const pool = mysql.createPool({
   port: process.env.DB_PORT || 3306,
   waitForConnections: true,
   connectionLimit: 10, // Limit the number of concurrent connections
-  queueLimit: 0
+  queueLimit: 0,
 });
 
 // Export the pool to be used in other parts of the application
@@ -20,6 +20,6 @@ const db = pool.promise();
 
 db.getConnection()
   .then(() => console.log("Connected to the MySQL database successfully"))
-  .catch(err => console.error("Database connection failed:", err.message));
+  .catch((err) => console.error("Database connection failed:", err.message));
 
 export default db;

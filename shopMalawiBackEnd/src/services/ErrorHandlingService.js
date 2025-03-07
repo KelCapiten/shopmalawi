@@ -1,3 +1,4 @@
+//src/services/ErrorHandlingService.js
 class ErrorHandlingService {
   static DatabaseError = class extends Error {
     constructor(message, query) {

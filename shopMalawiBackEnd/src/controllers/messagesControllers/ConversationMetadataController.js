@@ -1,8 +1,9 @@
-import db from "../config/db.js";
-import ErrorHandlingService from "../services/ErrorHandlingService.js";
-import ParticipantVerificationService from "../services/ParticipantVerificationService.js";
-import PaginationService from "../services/PaginationService.js";
-import { cache } from "../config/cache.js";
+//src/controllers/messagesControllers/ConversationMetadataController.js
+import db from "../../config/db.js";
+import ErrorHandlingService from "../../services/ErrorHandlingService.js";
+import ParticipantVerificationService from "../../services/ParticipantVerificationService.js";
+import PaginationService from "../../services/PaginationService.js";
+import { cache } from "../../services/cacheService.js";
 
 class ConversationMetadataController {
   // Get conversation metadata

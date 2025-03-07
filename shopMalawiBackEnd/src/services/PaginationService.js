@@ -1,4 +1,4 @@
-// Create a new file: services/PaginationService.js
+//src/services/PaginationService.js
 class PaginationService {
   /**
    * Process pagination parameters from request

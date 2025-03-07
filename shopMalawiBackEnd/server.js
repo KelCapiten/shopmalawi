@@ -15,12 +15,13 @@ import inquiriesRoutes from "./src/routes/inquiries.js";
 import bankDetailsRoutes from "./src/routes/bankDetails.js";
 import orderPaymentRoutes from "./src/routes/orderAndPayment.js";
 import userstoreRoutes from "./src/routes/userstore.js";
+import messagesRoutes from "./src/routes/messages.js";
 import { initWebSocket } from "./src/services/websocketService.js";
 
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 1994;
 
 // Middleware
 app.use(corsMiddleware);
@@ -42,6 +43,7 @@ app.use("/api/inquiries", inquiriesRoutes);
 app.use("/api/bank-details", bankDetailsRoutes);
 app.use("/api/order-pay", orderPaymentRoutes);
 app.use("/api/userstores", userstoreRoutes);
+app.use("/api/messages", messagesRoutes);
 
 // Create HTTP server and initialize WebSocket service
 const server = http.createServer(app);
