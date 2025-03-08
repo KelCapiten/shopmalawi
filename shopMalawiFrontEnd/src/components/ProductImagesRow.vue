@@ -1,23 +1,30 @@
+//src/components/ProductImagesRow.vue
 <template>
-  <div class="images-row">
-    <div v-for="(img, idx) in images" :key="idx" class="image-wrapper">
-      <div
-        class="image-item"
-        :class="{ selected: idx === modelValue }"
-        @click="onSelect(idx)"
-      >
-        <img
-          :src="formatImagePath(img.image_path)"
-          :alt="img.alt_text || 'Product Image'"
-        />
+  <div class="images-container">
+    <div class="images-row">
+      <div v-for="(img, idx) in images" :key="idx" class="image-wrapper">
+        <div
+          class="image-item"
+          :class="{ selected: idx === modelValue }"
+          @click="onSelect(idx)"
+        >
+          <img
+            :src="formatImagePath(img.image_path)"
+            :alt="img.alt_text || 'Product Image'"
+          />
+        </div>
+        <div v-if="idx < images.length - 1" class="vertical-divider"></div>
       </div>
-      <div v-if="idx < images.length - 1" class="vertical-divider"></div>
+    </div>
+    <div class="button-container">
+      <Button :sellerId="sellerId" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { defineProps, PropType } from "vue";
+import Button from "../components/buttons/Button.vue";
 
 defineProps({
   images: {
@@ -27,6 +34,10 @@ defineProps({
   modelValue: {
     type: Number,
     default: 0,
+  },
+  sellerId: {
+    type: Number,
+    required: true,
   },
 });
 
@@ -42,17 +53,38 @@ function formatImagePath(path: string) {
 </script>
 
 <style scoped>
+.images-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  background-color: rgba(255, 255, 255, 0.281);
+}
+
 .images-row {
   display: flex;
   align-items: center;
   overflow-x: auto;
   padding: 5px 0;
-  background-color: rgba(255, 255, 255, 0.281);
+  flex-grow: 1;
+  max-width: calc(100% - 50px);
+}
+
+.button-container {
+  position: sticky;
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  padding-right: 8px;
+  margin: 0px 10px;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 1;
 }
 
 .image-wrapper {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .image-item {

@@ -1,14 +1,7 @@
-// Create a new file: services/ParticipantVerificationService.js
+//services/ParticipantVerificationService.js
 import db from "../config/db.js";
 
 class ParticipantVerificationService {
-  /**
-   * Verifies if a user is a participant in a conversation
-   * @param {number} conversationId - The conversation ID
-   * @param {number} userId - The user ID to verify
-   * @param {object} connection - Optional DB connection for transaction support
-   * @returns {Promise<boolean>} - True if participant, false otherwise
-   */
   static async verifyParticipant(conversationId, userId, connection = db) {
     const query = `
       SELECT 1 FROM conversation_participants 
@@ -19,10 +12,6 @@ class ParticipantVerificationService {
     return result.length > 0;
   }
 
-  /**
-   * Express middleware to verify conversation participant
-   * @param {string} paramName - URL param name containing conversation ID (default: 'conversationId')
-   */
   static middleware(paramName = "conversationId") {
     return async (req, res, next) => {
       try {

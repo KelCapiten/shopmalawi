@@ -25,18 +25,40 @@ export const useMessagesStore = defineStore(
 
     const { conversations, fetchConversationsList } = useMessages();
 
-    // Compute the currently selected conversation
     const selectedConversation = computed(() => {
       if (!selectedConversationId.value || !ConversationsList.value)
         return null;
-      return (
-        ConversationsList.value.conversations.find(
-          (conv) => conv.id === selectedConversationId.value
-        ) || null
-      );
-    });
 
-    // Initialize WebSocket connection
+      // Find the selected conversation
+      const conversation = ConversationsList.value.conversations.find(
+        (conv) => conv.id === selectedConversationId.value
+      );
+
+      // Clone the conversation to ensure reactivity when properties change
+      if (conversation) {
+        return { ...conversation };
+      }
+
+      return null;
+    });
+    // Dummy conversation data
+    const dummyConversation: Conversation = {
+      id: -1,
+      created_at: new Date().toISOString(),
+      updated_at: null,
+      last_message_id: null,
+      is_group: false,
+      unread_count: 0,
+      last_message: null,
+      last_activity: null,
+      message_count: 0,
+      current_user_last_read: null,
+      current_user_joined_at: new Date().toISOString(),
+      participants: [],
+      is_one_on_one: false,
+      other_participant: null,
+    };
+
     const initializeWebSocket = () => {
       if (!authStore.token || !authStore.user) {
         console.error(
@@ -52,7 +74,7 @@ export const useMessagesStore = defineStore(
       socket.value.on("newMessage", (message: Message) => {
         if (ConversationsList.value) {
           const conv = ConversationsList.value.conversations.find(
-            (c: Conversation) => c.id === message.conversationId
+            (c: Conversation) => c.id === message.conversation_id
           );
           if (conv) {
             conv.last_message = message;
@@ -66,7 +88,6 @@ export const useMessagesStore = defineStore(
       });
     };
 
-    // Send a message via WebSocket
     const sendMessage = async (text: string): Promise<boolean> => {
       if (!selectedConversationId.value || !socket.value) return false;
       try {
@@ -81,18 +102,28 @@ export const useMessagesStore = defineStore(
       }
     };
 
-    // Fetch the list of conversations
     const getConversationsList = async (params?: {
       page?: number;
       limit?: number;
+      addDummy?: boolean;
     }) => {
       loading.value = true;
       await fetchConversationsList(params);
-      ConversationsList.value = conversations.value;
+      if (params?.addDummy && conversations.value) {
+        ConversationsList.value = {
+          ...conversations.value,
+          conversations: [
+            dummyConversation,
+            ...conversations.value.conversations,
+          ],
+        };
+        selectedConversationId.value = -1;
+      } else {
+        ConversationsList.value = conversations.value;
+      }
       loading.value = false;
     };
 
-    // Start a new conversation via WebSocket
     const startNewConversation = async (
       payload: CreateConversationPayload
     ): Promise<CreateConversationResponse | null> => {

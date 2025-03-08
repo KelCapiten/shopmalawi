@@ -61,11 +61,13 @@ CREATE TABLE IF NOT EXISTS users (
     role_id INT DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    profile_picture_id INT DEFAULT NULL,
     UNIQUE (username),
     UNIQUE (email),
     UNIQUE (phone_number),
     FOREIGN KEY (role_id) REFERENCES roles(id),
     FOREIGN KEY (location_id) REFERENCES locations(id),
+    FOREIGN KEY (profile_picture_id) REFERENCES images(id) ON DELETE SET NULL,
     CONSTRAINT chk_email CHECK (email REGEXP '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
     CONSTRAINT chk_phone CHECK (phone_number REGEXP '^\+?[0-9]{10,15}$')
 ) ENGINE=InnoDB;

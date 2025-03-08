@@ -30,6 +30,7 @@
           <ProductImagesRow
             class="transparent-row"
             v-model="selectedImageIndex"
+            :sellerId="product.uploaded_by_userID"
             :images="product.images"
           />
 

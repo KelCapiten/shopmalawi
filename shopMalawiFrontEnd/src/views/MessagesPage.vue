@@ -65,13 +65,11 @@
             <div v-if="loadingMessages" class="loading-messages">
               <ion-spinner />
             </div>
-            <div v-else-if="selectedConversation.last_message">
-              <div
-                :class="[
-                  'message',
-                  selectedConversation.last_message ? 'own' : 'other',
-                ]"
-              >
+            <div
+              v-else-if="selectedConversation.last_message"
+              :key="selectedConversation.id"
+            >
+              <div :class="['message', 'own']">
                 <div class="message-bubble">
                   {{ selectedConversation.last_message.text }}
                   <div class="message-time">
@@ -79,7 +77,9 @@
                       formatTime(selectedConversation.last_message.created_at)
                     }}
                     <ion-icon
-                      v-if="selectedConversation.last_message"
+                      v-if="
+                        selectedConversation.last_message.is_read !== undefined
+                      "
                       :icon="checkmarkDone"
                       class="message-status"
                       :class="{
@@ -121,7 +121,14 @@
 
 <script lang="ts">
 import { useRoute } from "vue-router";
-import { defineComponent, ref, onMounted, watch, computed } from "vue";
+import {
+  defineComponent,
+  ref,
+  onMounted,
+  watch,
+  computed,
+  nextTick,
+} from "vue";
 import { useMessagesStore } from "@/stores/messagesStore";
 import {
   chatboxOutline,
@@ -147,39 +154,47 @@ export default defineComponent({
     const isMobile = ref(window.innerWidth <= 768);
     const isMobileAndShowingMessages = ref(false);
     const loadingMessages = ref(false);
+    // Make sure conversations is properly reactive
     const conversations = computed(() =>
       store.ConversationsList ? store.ConversationsList.conversations : []
     );
+    // Make sure selectedConversation is properly reactive
+    const selectedConversation = computed(() => store.selectedConversation);
     const route = useRoute();
     const authStore = useAuthStore();
 
     onMounted(async () => {
       store.initializeWebSocket();
-      await store.getConversationsList();
+
+      const chatWithThisID = route.query.sellerId
+        ? Number(route.query.sellerId)
+        : null;
+
+      if (chatWithThisID === null) {
+        // Just get conversations without dummy
+        await store.getConversationsList();
+      } else {
+        //if chatWithThisID is the current user, just get their conversations
+        if (authStore.user?.id === chatWithThisID) {
+          await store.getConversationsList();
+          return;
+        }
+        // Get conversations and add dummy
+        await store.getConversationsList({ addDummy: true });
+
+        // Find the dummy conversation in the list
+        const dummyConv = conversations.value.find((conv) => conv.id === -1);
+        if (dummyConv) {
+          // Use selectConversation to trigger all UI updates
+          selectConversation(dummyConv);
+        }
+      }
+
       console.log("Conversations loaded:", conversations.value);
       if (store.selectedConversation) {
         scrollToBottom();
       }
       window.addEventListener("resize", updateIsMobile);
-
-      const queryOwnerId = route.query.sellerId
-        ? Number(route.query.sellerId)
-        : null;
-
-      if (queryOwnerId !== null) {
-        const payload = {
-          participantIds: [queryOwnerId],
-          initialMessage: "Hello! I'd like to chat about your products.",
-          isGroup: false,
-        };
-        const newConversation = await store.startNewConversation(payload);
-        if (newConversation) {
-          console.log("New conversation started with ID:", newConversation);
-          await store.getConversationsList();
-          store.selectedConversationId = newConversation.id;
-          scrollToBottom();
-        }
-      }
     });
 
     const updateIsMobile = () => {
@@ -188,28 +203,37 @@ export default defineComponent({
 
     const scrollToBottom = () => {
       if (messagesList.value) {
-        setTimeout(() => {
+        nextTick(() => {
           messagesList.value!.scrollTop = messagesList.value!.scrollHeight;
-        }, 100);
+        });
       }
     };
 
     const selectConversation = async (conv: Conversation): Promise<void> => {
+      // Set the selected conversation ID in the store
       store.selectedConversationId = conv.id;
-      if (isMobile.value) {
-        isMobileAndShowingMessages.value = true;
-      }
-      scrollToBottom();
+
+      // Force a UI refresh cycle
+      nextTick(() => {
+        if (isMobile.value) {
+          isMobileAndShowingMessages.value = true;
+        }
+        // Make sure to scroll after the DOM has updated
+        scrollToBottom();
+      });
     };
+
     const goBackToList = () => {
       isMobileAndShowingMessages.value = false;
     };
 
     const sendMessage = async (): Promise<void> => {
       if (!newMessage.value.trim()) return;
-      console.log("Sending message:", newMessage.value);
-      newMessage.value = "";
-      scrollToBottom();
+      const success = await store.sendMessage(newMessage.value);
+      if (success) {
+        newMessage.value = "";
+        scrollToBottom();
+      }
     };
 
     const formatTime = (timestamp: Date | string | undefined): string => {
@@ -232,16 +256,33 @@ export default defineComponent({
       return date.toLocaleDateString();
     };
 
+    // Watch for changes to the selected conversation (including deep changes)
     watch(
-      () => store.selectedConversation,
+      selectedConversation,
       (newConv) => {
         if (newConv) {
-          scrollToBottom();
+          nextTick(() => {
+            scrollToBottom();
+          });
         }
       },
-      { immediate: true }
+      { immediate: true, deep: true }
     );
 
+    // Watch for changes to the conversation list
+    watch(
+      conversations,
+      () => {
+        if (selectedConversation.value) {
+          nextTick(() => {
+            scrollToBottom();
+          });
+        }
+      },
+      { deep: true }
+    );
+
+    // Original watches
     watch(
       () => store.selectedConversation?.last_message,
       (newLastMessage) => {
@@ -256,7 +297,7 @@ export default defineComponent({
       loading: store.loading,
       loadingMessages,
       conversations,
-      selectedConversation: store.selectedConversation,
+      selectedConversation,
       newMessage,
       messagesList,
       isMobile,

@@ -7,13 +7,13 @@ import { cache } from "../../services/cacheService.js";
 
 class ConversationController {
   // Create new conversation
+  // Create new conversation
   async createConversation(req, res) {
     try {
       const { participantIds, initialMessage, title, description, isGroup } =
         req.body;
       const userId = req.user.id;
 
-      // Input validation
       if (
         !participantIds ||
         !Array.isArray(participantIds) ||
@@ -24,15 +24,11 @@ class ConversationController {
           .json({ error: "Invalid or empty participants list" });
       }
 
-      // Ensure current user is included in participants
       if (!participantIds.includes(userId)) {
         participantIds.push(userId);
       }
-
-      // Check for unique participants (remove duplicates)
       const uniqueParticipantIds = [...new Set(participantIds)];
 
-      // Error if there's only one unique participant (trying to chat with self)
       if (uniqueParticipantIds.length === 1) {
         return res
           .status(400)
@@ -41,79 +37,32 @@ class ConversationController {
 
       const result = await DbTransactionService.withTransaction(
         async (connection) => {
-          // Validate participants exist
           const [validUsers] = await connection.query(
             "SELECT id FROM users WHERE id IN (?)",
             [uniqueParticipantIds]
           );
-
           if (validUsers.length !== uniqueParticipantIds.length) {
             throw new Error("One or more invalid participants");
           }
 
-          // Only check for existing conversations when not creating a group chat
-          if (!isGroup) {
-            if (uniqueParticipantIds.length === 2) {
-              // For 1:1 conversations, check if a non-group conversation already exists between these users
-              const [existingConversation] = await connection.query(
-                `SELECT c.id 
-               FROM conversations c
-               JOIN conversation_participants cp1 ON c.id = cp1.conversation_id AND cp1.user_id = ?
-               JOIN conversation_participants cp2 ON c.id = cp2.conversation_id AND cp2.user_id = ?
-               JOIN conversation_metadata cm ON c.id = cm.conversation_id
-               WHERE cm.is_group = 0
-               AND (SELECT COUNT(*) FROM conversation_participants WHERE conversation_id = c.id) = 2`,
-                [uniqueParticipantIds[0], uniqueParticipantIds[1]]
-              );
-
-              if (existingConversation && existingConversation.length > 0) {
-                // If conversation exists and there's an initial message to add
-                if (initialMessage) {
-                  await connection.query(
-                    "INSERT INTO messages (conversation_id, sender_id, text, delivery_status) VALUES (?, ?, ?, ?)",
-                    [existingConversation[0].id, userId, initialMessage, "sent"]
-                  );
-                }
-                return existingConversation[0].id;
-              }
-            } else if (uniqueParticipantIds.length > 2) {
-              // For multi-user non-group chats, check if a conversation with exactly these participants exists
-              // First, get all conversations where all the specified participants are members
-              const [potentialConversations] = await connection.query(
-                `SELECT cp.conversation_id 
-               FROM conversation_participants cp
-               JOIN conversation_metadata cm ON cp.conversation_id = cm.conversation_id
-               WHERE cp.user_id IN (?)
-               AND cm.is_group = 0
-               GROUP BY cp.conversation_id
-               HAVING COUNT(DISTINCT cp.user_id) = ?`,
-                [uniqueParticipantIds, uniqueParticipantIds.length]
-              );
-
-              // Now check if any of these conversations have exactly these participants (no extra members)
-              for (const convo of potentialConversations) {
-                const [memberCount] = await connection.query(
-                  `SELECT COUNT(*) as count 
-                 FROM conversation_participants 
-                 WHERE conversation_id = ?`,
-                  [convo.conversation_id]
-                );
-
-                if (memberCount[0].count === uniqueParticipantIds.length) {
-                  // Found a conversation with exactly the same participants
-                  if (initialMessage) {
-                    await connection.query(
-                      "INSERT INTO messages (conversation_id, sender_id, text, delivery_status) VALUES (?, ?, ?, ?)",
-                      [convo.conversation_id, userId, initialMessage, "sent"]
-                    );
-                  }
-                  return convo.conversation_id;
-                }
-              }
+          // For 1:1 chats, check if an existing non-group conversation exists.
+          if (!isGroup && uniqueParticipantIds.length === 2) {
+            const [existingConversation] = await connection.query(
+              `SELECT c.id 
+           FROM conversations c
+           JOIN conversation_participants cp1 ON c.id = cp1.conversation_id AND cp1.user_id = ?
+           JOIN conversation_participants cp2 ON c.id = cp2.conversation_id AND cp2.user_id = ?
+           JOIN conversation_metadata cm ON c.id = cm.conversation_id
+           WHERE cm.is_group = 0
+           AND (SELECT COUNT(*) FROM conversation_participants WHERE conversation_id = c.id) = 2`,
+              [uniqueParticipantIds[0], uniqueParticipantIds[1]]
+            );
+            if (existingConversation && existingConversation.length > 0) {
+              return existingConversation[0].id;
             }
           }
 
-          // No existing conversation found or creating a group chat, create a new one
+          // Create a new conversation
           const [conversation] = await connection.query(
             "INSERT INTO conversations () VALUES ()",
             []
@@ -129,15 +78,33 @@ class ConversationController {
             [participantValues]
           );
 
-          // Add conversation metadata
+          // Prepare conversation metadata
+          let metaTitle = title || null;
+          let metaAvatarUrl = null;
+          if (!isGroup && uniqueParticipantIds.length === 2) {
+            const recipientId = uniqueParticipantIds.find(
+              (id) => id !== userId
+            );
+            const [recipientRows] = await connection.query(
+              "SELECT username, (SELECT image_path FROM images WHERE id = profile_picture_id) as avatar_url FROM users WHERE id = ?",
+              [recipientId]
+            );
+            if (recipientRows && recipientRows.length > 0) {
+              metaTitle = recipientRows[0].username;
+              metaAvatarUrl = recipientRows[0].avatar_url;
+            }
+          }
+
+          // Insert conversation metadata with the recipient's username and profile picture if applicable
           await connection.query(
             `INSERT INTO conversation_metadata
-           (conversation_id, title, description, is_group, created_by)
-           VALUES (?, ?, ?, ?, ?)`,
+         (conversation_id, title, description, avatar_url, is_group, created_by)
+         VALUES (?, ?, ?, ?, ?, ?)`,
             [
               conversation.insertId,
-              title || null,
+              metaTitle,
               description || null,
+              metaAvatarUrl,
               isGroup || false,
               userId,
             ]
@@ -155,12 +122,9 @@ class ConversationController {
         }
       );
 
-      // Asynchronously clear cache for conversations list for the user
       (async () => {
         try {
           await cache.del(`conversations:${userId}*`);
-
-          // Clear cache for all participants
           for (const participantId of uniqueParticipantIds) {
             if (participantId !== userId) {
               await cache.del(`conversations:${participantId}*`);
@@ -195,65 +159,66 @@ class ConversationController {
 
       // Enhanced query to include more conversation metadata and participant information
       const query = `
-        SELECT 
-          c.*,
-          cm.title,
-          cm.description,
-          cm.is_group,
-          cm.avatar_url,
-          cm.created_by,
-          COUNT(DISTINCT CASE WHEN m.is_read = FALSE AND m.sender_id != ? THEN m.id END) as unread_count,
-          (
-            SELECT MAX(m2.created_at) 
-            FROM messages m2 
-            WHERE m2.conversation_id = c.id
-          ) as last_activity,
-          JSON_OBJECT(
-            'id', m.id,
-            'text', m.text,
-            'sender_id', m.sender_id,
-            'created_at', m.created_at,
-            'delivery_status', m.delivery_status,
-            'is_read', m.is_read,
-            'has_attachments', (SELECT COUNT(*) > 0 FROM message_attachments ma WHERE ma.message_id = m.id)
-          ) as last_message,
-          (
-            SELECT JSON_ARRAYAGG(
-              JSON_OBJECT(
-                'user_id', u.id,
-                'username', u.username,
-                'first_name', u.first_name,
-                'last_name', u.last_name,
-                'status', COALESCE(up.status, 'offline'),
-                'last_active', up.last_active,
-                'joined_at', cp2.joined_at,
-                'last_read_at', cp2.last_read_at
-              )
+      SELECT 
+        c.*,
+        cm.title,
+        cm.description,
+        cm.is_group,
+        cm.avatar_url,
+        cm.created_by,
+        COUNT(DISTINCT CASE WHEN m.is_read = FALSE AND m.sender_id != ? THEN m.id END) as unread_count,
+        (
+          SELECT MAX(m2.created_at) 
+          FROM messages m2 
+          WHERE m2.conversation_id = c.id
+        ) as last_activity,
+        JSON_OBJECT(
+          'id', m.id,
+          'text', m.text,
+          'sender_id', m.sender_id,
+          'created_at', m.created_at,
+          'delivery_status', m.delivery_status,
+          'is_read', m.is_read,
+          'has_attachments', (SELECT COUNT(*) > 0 FROM message_attachments ma WHERE ma.message_id = m.id)
+        ) as last_message,
+        (
+          SELECT JSON_ARRAYAGG(
+            JSON_OBJECT(
+              'user_id', u.id,
+              'username', u.username,
+              'first_name', u.first_name,
+              'last_name', u.last_name,
+              'profile_picture_url', (SELECT image_path FROM images WHERE id = u.profile_picture_id),
+              'status', COALESCE(up.status, 'offline'),
+              'last_active', up.last_active,
+              'joined_at', cp2.joined_at,
+              'last_read_at', cp2.last_read_at
             )
-            FROM conversation_participants cp2
-            JOIN users u ON cp2.user_id = u.id
-            LEFT JOIN user_presence up ON u.id = up.user_id
-            WHERE cp2.conversation_id = c.id
-          ) as participants,
-          (
-            SELECT COUNT(*)
-            FROM messages msg
-            WHERE msg.conversation_id = c.id
-            AND msg.deleted_at IS NULL
-          ) as message_count,
-          cp.last_read_at as current_user_last_read,
-          cp.joined_at as current_user_joined_at
-        FROM conversations c
-        JOIN conversation_participants cp ON c.id = cp.conversation_id AND cp.user_id = ?
-        LEFT JOIN conversation_metadata cm ON c.id = cm.conversation_id
-        LEFT JOIN messages m ON m.id = c.last_message_id
-        WHERE cp.user_id = ? 
-        AND c.deleted_at IS NULL
-        AND cp.is_archived = FALSE
-        GROUP BY c.id
-        ORDER BY COALESCE(c.updated_at, c.created_at) DESC
-        LIMIT ? OFFSET ?
-      `;
+          )
+          FROM conversation_participants cp2
+          JOIN users u ON cp2.user_id = u.id
+          LEFT JOIN user_presence up ON u.id = up.user_id
+          WHERE cp2.conversation_id = c.id
+        ) as participants,
+        (
+          SELECT COUNT(*)
+          FROM messages msg
+          WHERE msg.conversation_id = c.id
+          AND msg.deleted_at IS NULL
+        ) as message_count,
+        cp.last_read_at as current_user_last_read,
+        cp.joined_at as current_user_joined_at
+      FROM conversations c
+      JOIN conversation_participants cp ON c.id = cp.conversation_id AND cp.user_id = ?
+      LEFT JOIN conversation_metadata cm ON c.id = cm.conversation_id
+      LEFT JOIN messages m ON m.id = c.last_message_id
+      WHERE cp.user_id = ? 
+      AND c.deleted_at IS NULL
+      AND cp.is_archived = FALSE
+      GROUP BY c.id
+      ORDER BY COALESCE(c.updated_at, c.created_at) DESC
+      LIMIT ? OFFSET ?
+    `;
 
       const [conversations] = await db.query(query, [
         userId,
@@ -266,11 +231,11 @@ class ConversationController {
       // Get total count for pagination
       const [{ total }] = await db.query(
         `SELECT COUNT(DISTINCT c.id) as total 
-         FROM conversations c 
-         JOIN conversation_participants cp ON c.id = cp.conversation_id 
-         WHERE cp.user_id = ? 
-         AND c.deleted_at IS NULL 
-         AND cp.is_archived = FALSE`,
+       FROM conversations c 
+       JOIN conversation_participants cp ON c.id = cp.conversation_id 
+       WHERE cp.user_id = ? 
+       AND c.deleted_at IS NULL 
+       AND cp.is_archived = FALSE`,
         [userId]
       );
 
@@ -289,20 +254,17 @@ class ConversationController {
 
       // Process each conversation to format data
       const processedConversations = conversations.map((conversation) => {
-        // Safely parse JSON values
         conversation.participants = safeJsonParse(
           conversation.participants,
           []
         );
         conversation.last_message = safeJsonParse(conversation.last_message);
 
-        // Calculate additional metadata
         conversation.is_one_on_one =
           !conversation.is_group &&
           Array.isArray(conversation.participants) &&
           conversation.participants.length === 2;
 
-        // If it's a one-on-one chat, get the other participant for easy access
         if (conversation.is_one_on_one) {
           conversation.other_participant =
             conversation.participants.find((p) => p.user_id !== userId) || null;
@@ -340,56 +302,103 @@ class ConversationController {
   // Get single conversation with messages
   async getConversation(req, res) {
     try {
-      const { id } = req.params;
+      const conversationId = req.params.conversationId;
       const userId = req.user.id;
 
       const isParticipant =
-        await ParticipantVerificationService.verifyParticipant(id, userId);
+        await ParticipantVerificationService.verifyParticipant(
+          conversationId,
+          userId
+        );
       if (!isParticipant) {
         return res
           .status(403)
-          .json({ error: "Not authorized to view this conversation" });
+          .json({ error: "Not authorized to access this conversation" });
       }
 
-      const query = `
-        SELECT 
-          m.*, 
-          ma.id as attachment_id,
-          ma.file_type,
-          ma.file_path,
-          ma.file_name,
-          cm.title,
-          cm.description,
-          cm.is_group,
-          cm.avatar_url,
-          JSON_ARRAYAGG(
-            JSON_OBJECT(
-              'id', mr.id,
-              'user_id', mr.user_id,
-              'reaction_type', mr.reaction_type
-            )
-          ) as reactions,
-          (
-            SELECT JSON_ARRAYAGG(
-              JSON_OBJECT(
-                'user_id', mrr.user_id,
-                'read_at', mrr.read_at
-              )
-            )
-            FROM message_read_receipts mrr
-            WHERE mrr.message_id = m.id
-          ) as read_receipts
-        FROM messages m
-        LEFT JOIN message_attachments ma ON m.id = ma.message_id
-        LEFT JOIN conversation_metadata cm ON m.conversation_id = cm.conversation_id
-        LEFT JOIN message_reactions mr ON m.id = mr.message_id
-        WHERE m.conversation_id = ?
-        AND m.deleted_at IS NULL
-        GROUP BY m.id
-        ORDER BY m.created_at ASC
-      `;
-      const [messages] = await db.query(query, [id]);
-      res.json(messages);
+      const { page, limit, offset } = (() => {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 20;
+        const offset = (page - 1) * limit;
+        return { page, limit, offset };
+      })();
+
+      const cacheKey = `conversation:${conversationId}:${page}:${limit}`;
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        return res.json(JSON.parse(cached));
+      }
+
+      const [messages] = await db.query(
+        `SELECT 
+           id, conversation_id, sender_id, text, parent_message_id, delivery_status, 
+           created_at, edited_at, deleted_at, is_read, has_attachments, attachment_id, 
+           file_type, file_path, file_name, forwarded_from
+         FROM messages 
+         WHERE conversation_id = ? AND deleted_at IS NULL
+         ORDER BY created_at ASC
+         LIMIT ? OFFSET ?`,
+        [conversationId, limit, offset]
+      );
+
+      const messageIds = messages.map((msg) => msg.id);
+      let reactions = [];
+      if (messageIds.length) {
+        const [reactionRows] = await db.query(
+          "SELECT * FROM message_reactions WHERE message_id IN (?)",
+          [messageIds]
+        );
+        reactions = reactionRows;
+      }
+
+      let readReceipts = [];
+      if (messageIds.length) {
+        const [receiptRows] = await db.query(
+          "SELECT * FROM read_receipts WHERE message_id IN (?)",
+          [messageIds]
+        );
+        readReceipts = receiptRows;
+      }
+
+      const reactionsByMsg = reactions.reduce((acc, r) => {
+        acc[r.message_id] = acc[r.message_id] || [];
+        acc[r.message_id].push(r);
+        return acc;
+      }, {});
+
+      const receiptsByMsg = readReceipts.reduce((acc, r) => {
+        acc[r.message_id] = acc[r.message_id] || [];
+        acc[r.message_id].push(r);
+        return acc;
+      }, {});
+
+      const enrichedMessages = messages.map((msg) => ({
+        ...msg,
+        reactions: reactionsByMsg[msg.id] || [],
+        read_receipts: receiptsByMsg[msg.id] || [],
+      }));
+
+      const [totalCountRows] = await db.query(
+        `SELECT COUNT(*) as total FROM messages 
+         WHERE conversation_id = ? AND deleted_at IS NULL`,
+        [conversationId]
+      );
+      const total = totalCountRows[0].total;
+
+      const result = {
+        conversationId,
+        messages: enrichedMessages,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasMore: page * limit < total,
+        },
+      };
+
+      await cache.set(cacheKey, JSON.stringify(result), 60);
+      res.json(result);
     } catch (error) {
       ErrorHandlingService.handleError(error, res);
     }
