@@ -9,7 +9,7 @@ interface User {
   firstName: string;
   lastName: string;
   role: string;
-  phone: string; // Add phone property
+  phone: string;
 }
 
 export const useAuthStore = defineStore("auth", () => {

@@ -154,45 +154,18 @@ export default defineComponent({
     const isMobile = ref(window.innerWidth <= 768);
     const isMobileAndShowingMessages = ref(false);
     const loadingMessages = ref(false);
-    // Make sure conversations is properly reactive
     const conversations = computed(() =>
       store.ConversationsList ? store.ConversationsList.conversations : []
     );
-    // Make sure selectedConversation is properly reactive
     const selectedConversation = computed(() => store.selectedConversation);
     const route = useRoute();
     const authStore = useAuthStore();
 
     onMounted(async () => {
       store.initializeWebSocket();
-
-      const chatWithThisID = route.query.sellerId
-        ? Number(route.query.sellerId)
-        : null;
-
-      if (chatWithThisID === null) {
-        // Just get conversations without dummy
-        await store.getConversationsList();
-      } else {
-        //if chatWithThisID is the current user, just get their conversations
-        if (authStore.user?.id === chatWithThisID) {
-          await store.getConversationsList();
-          return;
-        }
-        // Get conversations and add dummy
-        await store.getConversationsList({ addDummy: true });
-
-        // Find the dummy conversation in the list
-        const dummyConv = conversations.value.find((conv) => conv.id === -1);
-        if (dummyConv) {
-          // Use selectConversation to trigger all UI updates
-          selectConversation(dummyConv);
-        }
-      }
-
-      console.log("Conversations loaded:", conversations.value);
-      if (store.selectedConversation) {
-        scrollToBottom();
+      await store.getConversationsList();
+      if (store.selectedConversationId === -1 && store.selectedConversation) {
+        selectConversation(store.selectedConversation);
       }
       window.addEventListener("resize", updateIsMobile);
     });
@@ -210,15 +183,11 @@ export default defineComponent({
     };
 
     const selectConversation = async (conv: Conversation): Promise<void> => {
-      // Set the selected conversation ID in the store
-      store.selectedConversationId = conv.id;
-
-      // Force a UI refresh cycle
+      store.selectConversation(conv);
       nextTick(() => {
         if (isMobile.value) {
           isMobileAndShowingMessages.value = true;
         }
-        // Make sure to scroll after the DOM has updated
         scrollToBottom();
       });
     };

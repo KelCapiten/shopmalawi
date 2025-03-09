@@ -1,7 +1,8 @@
 // src/stores/messagesStore.ts
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { io } from "socket.io-client";
+import { useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/authStore";
 import type {
   GetConversationsResponse,
@@ -18,10 +19,22 @@ export const useMessagesStore = defineStore(
   "messages",
   () => {
     const authStore = useAuthStore();
+    const route = useRoute();
     const socket = ref<any>(null);
     const ConversationsList = ref<GetConversationsResponse | null>(null);
     const selectedConversationId = ref<number | null>(null);
     const loading = ref(false);
+    const sellerId = ref<number | undefined>(undefined);
+    sellerId.value = route.query.sellerId
+      ? Number(route.query.sellerId)
+      : undefined;
+
+    watch(
+      () => route.query.sellerId,
+      (newSellerId) => {
+        sellerId.value = newSellerId ? Number(newSellerId) : undefined;
+      }
+    );
 
     const { conversations, fetchConversationsList } = useMessages();
 
@@ -29,19 +42,12 @@ export const useMessagesStore = defineStore(
       if (!selectedConversationId.value || !ConversationsList.value)
         return null;
 
-      // Find the selected conversation
       const conversation = ConversationsList.value.conversations.find(
         (conv) => conv.id === selectedConversationId.value
       );
-
-      // Clone the conversation to ensure reactivity when properties change
-      if (conversation) {
-        return { ...conversation };
-      }
-
-      return null;
+      return conversation ? { ...conversation } : null;
     });
-    // Dummy conversation data
+
     const dummyConversation: Conversation = {
       id: -1,
       created_at: new Date().toISOString(),
@@ -105,11 +111,17 @@ export const useMessagesStore = defineStore(
     const getConversationsList = async (params?: {
       page?: number;
       limit?: number;
-      addDummy?: boolean;
     }) => {
       loading.value = true;
+
       await fetchConversationsList(params);
-      if (params?.addDummy && conversations.value) {
+
+      if (
+        sellerId.value &&
+        authStore.user &&
+        sellerId.value !== authStore.user.id &&
+        conversations.value
+      ) {
         ConversationsList.value = {
           ...conversations.value,
           conversations: [
@@ -117,11 +129,16 @@ export const useMessagesStore = defineStore(
             ...conversations.value.conversations,
           ],
         };
-        selectedConversationId.value = -1;
+        selectedConversationId.value = dummyConversation.id;
       } else {
         ConversationsList.value = conversations.value;
       }
+
       loading.value = false;
+    };
+
+    const selectConversation = (conversation: Conversation) => {
+      selectedConversationId.value = conversation.id;
     };
 
     const startNewConversation = async (
@@ -158,9 +175,11 @@ export const useMessagesStore = defineStore(
       ConversationsList,
       selectedConversationId,
       selectedConversation,
+      sellerId,
       initializeWebSocket,
       sendMessage,
       getConversationsList,
+      selectConversation,
       startNewConversation,
     };
   },

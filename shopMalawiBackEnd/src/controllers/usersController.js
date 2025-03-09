@@ -344,13 +344,25 @@ export const getUserInfo = async (req, res) => {
   }
   try {
     const [users] = await db.query(
-      "SELECT id, username, first_name, last_name, email, phone_number, verified, location_id, role_id FROM users WHERE id = ?",
+      "SELECT id, username, first_name, last_name, email, phone_number, verified, location_id, role_id, profile_picture_id FROM users WHERE id = ?",
       [requestedUserId]
     );
     if (users.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
     const user = users[0];
+    // Fetch the profile picture if available
+    let profilePictureUrl = null;
+    if (user.profile_picture_id) {
+      const [profilePicRows] = await db.query(
+        "SELECT image_path FROM images WHERE id = ?",
+        [user.profile_picture_id]
+      );
+      if (profilePicRows.length) {
+        profilePictureUrl = profilePicRows[0].image_path;
+      }
+    }
+    // Full user info for admin or self
     if (
       authenticatedUser &&
       ((authUserRole && authUserRole.toLowerCase() === "admin") ||
@@ -382,13 +394,16 @@ export const getUserInfo = async (req, res) => {
         locationId: user.location_id,
         role: roleName,
         location: location,
+        profilePictureUrl,
       };
       return res.status(200).json(userInfo);
     } else {
+      // Public info
       const publicInfo = {
         id: user.id,
         firstName: user.first_name,
         lastName: user.last_name,
+        profilePictureUrl,
       };
       return res.status(200).json(publicInfo);
     }

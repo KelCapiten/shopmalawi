@@ -25,8 +25,8 @@ export interface Product {
   images: Image[];
   created_at: string;
   isSellerPick?: boolean;
-  location_id: number; // Add location_id
-  location_name: string; // Add location_name
+  location_id: number;
+  location_name: string;
 }
 
 export interface AddProductResponse {
